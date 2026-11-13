@@ -856,8 +856,22 @@
       }, 2300);
     }
 
-    // 현재 활성화된 클럽 객체 반환
+    // 현재 활성화된 클럽 객체 반환 (0개일 때도 안전하게 처리)
     function getActiveClub() {
+      if (!appState.clubs || appState.clubs.length === 0) {
+        return {
+          id: null,
+          name: "모임 없음",
+          category: "새 모임을 추가하세요",
+          icon: "📋",
+          subtitle: "상단 '+ 모임 추가'를 눌러 시작하세요",
+          activeSubGroupId: "all",
+          subGroups: [{ id: "all", name: "전체 통합", icon: "📋" }],
+          members: [],
+          meetings: [],
+          monthlyDues: []
+        };
+      }
       let club = appState.clubs.find(c => c.id === appState.activeClubId);
       if (!club) {
         club = appState.clubs[0];
@@ -1047,6 +1061,9 @@
       container.innerHTML = club.subGroups.map(g => {
         const isActive = g.id === club.activeSubGroupId;
         const memberCount = g.id === "all" ? club.members.length : club.members.filter(m => m.subGroupId === g.id).length;
+        const delBtn = (isActive && g.id !== "all")
+          ? `<span onclick="event.stopPropagation(); handleDeleteSubGroup('${g.id}')" class="ml-1.5 px-1 rounded bg-white/20 hover:bg-rose-500 text-white text-[10px] cursor-pointer" title="소모임 삭제">✕</span>`
+          : '';
         
         return `
           <button onclick="setActiveSubGroup('${g.id}')" class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 border ${
@@ -1057,6 +1074,7 @@
             <span>${g.icon}</span>
             <span>${g.name}</span>
             <span class="text-[10px] ml-0.5 opacity-80">(${memberCount})</span>
+            ${delBtn}
           </button>
         `;
       }).join('');
@@ -1079,6 +1097,19 @@
 
       badge.textContent = filteredMeetings.length;
 
+      if (!club.id) {
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl border border-indigo-200 text-center space-y-3 shadow-xs">
+            <span class="text-4xl block">✨</span>
+            <p class="text-sm font-bold text-slate-800">등록된 모임이 없습니다.</p>
+            <p class="text-xs text-slate-500">깨끗하게 비워졌습니다! 아래 버튼을 눌러 새 모임을 만들어 보세요.</p>
+            <button onclick="document.getElementById('modal-create-club').classList.remove('hidden')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+              + 첫 모임(클럽) 만들기
+            </button>
+          </div>
+        `;
+        return;
+      }
       if (filteredMeetings.length === 0) {
         container.innerHTML = `
           <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
@@ -1472,20 +1503,30 @@
     // --- 최상위 클럽 선택 바텀시트 렌더링 ---
     window.openClubSelectorModal = function() {
       const container = document.getElementById('club-selection-list');
+      if (appState.clubs.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">등록된 모임이 없습니다. 아래 버튼을 눌러 새 모임을 만드세요.</div>`;
+        document.getElementById('modal-select-club').classList.remove('hidden');
+        return;
+      }
       container.innerHTML = appState.clubs.map(c => {
         const isCurrent = c.id === appState.activeClubId;
         return `
           <div onclick="switchClub('${c.id}')" class="p-3 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
             isCurrent ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
           }">
-            <div class="flex items-center space-x-3">
-              <span class="text-2xl">${c.icon}</span>
-              <div>
-                <h4 class="font-extrabold text-sm text-slate-900">${c.name}</h4>
+            <div class="flex items-center space-x-3 min-w-0">
+              <span class="text-2xl shrink-0">${c.icon}</span>
+              <div class="min-w-0">
+                <h4 class="font-extrabold text-sm text-slate-900 truncate">${c.name}</h4>
                 <p class="text-xs text-slate-500">${c.category} · ${c.members.length}명 회원</p>
               </div>
             </div>
-            ${isCurrent ? '<span class="text-indigo-600 font-extrabold text-sm">✓ 선택됨</span>' : '<span class="text-xs text-slate-400 font-medium">전환</span>'}
+            <div class="flex items-center space-x-2 shrink-0 ml-2">
+              ${isCurrent ? '<span class="text-indigo-600 font-extrabold text-xs">✓ 선택됨</span>' : '<span class="text-xs text-slate-400 font-medium">전환</span>'}
+              <button onclick="event.stopPropagation(); handleDeleteClub('${c.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition text-xs" title="모임 삭제">
+                🗑️
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1609,6 +1650,52 @@
       }
       closeDeleteConfirm();
     });
+
+    window.handleDeleteClub = function(clubId) {
+      requireAdmin('모임(클럽) 삭제', () => {
+        const targetClub = appState.clubs.find(c => c.id === clubId);
+        if (!targetClub) return;
+        closeClubSelectorModal();
+        showDeleteConfirm(
+          "모임(클럽) 삭제 확인",
+          `'<strong>${targetClub.icon} ${targetClub.name}</strong>' 모임을 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">해당 모임의 회원 명부, 일정, 정산·회비 장부가 모두 삭제됩니다.</span>`,
+          () => {
+            appState.clubs = appState.clubs.filter(c => c.id !== clubId);
+            if (appState.activeClubId === clubId) {
+              appState.activeClubId = appState.clubs.length > 0 ? appState.clubs[0].id : null;
+            }
+            saveState();
+            renderAll();
+            showToast(`'${targetClub.name}' 모임이 삭제되었습니다.`);
+          }
+        );
+      });
+    };
+
+    window.handleDeleteSubGroup = function(subGroupId) {
+      requireAdmin('소모임 삭제', () => {
+        if (subGroupId === "all") return;
+        const club = getActiveClub();
+        const targetSub = club.subGroups.find(g => g.id === subGroupId);
+        if (!targetSub) return;
+        showDeleteConfirm(
+          "소모임 삭제 확인",
+          `'<strong>${targetSub.icon} ${targetSub.name}</strong>' 소모임을 삭제하시겠습니까?<br><span class="text-slate-600">소속된 회원과 내역은 삭제되지 않고 <strong>전체 통합</strong>으로 이동됩니다.</span>`,
+          () => {
+            club.subGroups = club.subGroups.filter(g => g.id !== subGroupId);
+            club.members.forEach(m => { if (m.subGroupId === subGroupId) m.subGroupId = "all"; });
+            club.meetings.forEach(mt => { if (mt.subGroupId === subGroupId) mt.subGroupId = "all"; });
+            club.monthlyDues.forEach(d => { if (d.subGroupId === subGroupId) d.subGroupId = "all"; });
+            if (club.activeSubGroupId === subGroupId) {
+              club.activeSubGroupId = "all";
+            }
+            saveState();
+            renderAll();
+            showToast(`'${targetSub.name}' 소모임이 삭제되었습니다.`);
+          }
+        );
+      });
+    };
 
     window.handleDeleteMeeting = function(meetingId) {
       requireAdmin("모임 삭제", () => {
