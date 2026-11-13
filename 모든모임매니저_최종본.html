@@ -194,6 +194,11 @@
         <!-- 동적 주입 -->
       </div>
 
+      <!-- 회원 검색창 -->
+      <div class="relative">
+        <input id="input-member-search" type="text" placeholder="🔍 이름, 소속, 주소, 연락처로 검색..." class="w-full bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none shadow-2xs">
+      </div>
+
       <!-- 회원 목록 리스트 -->
       <div id="members-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
         <!-- 동적 렌더링 -->
@@ -390,43 +395,60 @@
   </div>
 
   <!-- ============================================== -->
-  <!-- [모달 3] 신규 회원 추가 모달 -->
+  <!-- [모달 3] 회원 등록 및 상세정보 수정 모달 -->
   <!-- ============================================== -->
   <div id="modal-add-member" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-        <h3 class="font-bold text-slate-900 text-base">신규 회원 등록</h3>
+        <h3 id="member-modal-title" class="font-bold text-slate-900 text-base">신규 회원 등록</h3>
         <button id="btn-close-member-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
       </div>
-      <div class="space-y-3 text-xs sm:text-sm">
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">소속 소모임 / 기수</label>
-          <select id="input-member-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium">
-            <!-- 동적 주입 -->
-          </select>
+      <input type="hidden" id="input-member-edit-id" value="">
+      <div class="space-y-2.5 text-xs sm:text-sm">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">소속 소모임</label>
+            <select id="input-member-subgroup" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 outline-none font-medium text-xs">
+              <!-- 동적 주입 -->
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">직책 / 역할</label>
+            <select id="input-member-role" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 outline-none font-medium text-xs">
+              <option value="일반회원">일반 회원</option>
+              <option value="회장">👑 회장 (운영진)</option>
+              <option value="부회장">🎖️ 부회장 (운영진)</option>
+              <option value="총무">💰 총무 (운영진)</option>
+              <option value="운영진">⭐ 운영진 / 감사</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">이름 *</label>
+            <input id="input-member-name" type="text" placeholder="예: 홍길동" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">세부 소속/관계</label>
+            <input id="input-member-affiliation" type="text" placeholder="예: 65골, 한얼, 은초" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
         </div>
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">이름</label>
-          <input id="input-member-name" type="text" placeholder="예: 홍길동" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block font-semibold text-slate-700 mb-1">연락처</label>
+          <input id="input-member-phone" type="text" placeholder="예: 010-1234-5678" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
         </div>
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">연락처 (선택)</label>
-          <input id="input-member-phone" type="text" placeholder="예: 010-1234-5678" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block font-semibold text-slate-700 mb-1">주소 / 거주지</label>
+          <input id="input-member-address" type="text" placeholder="예: 경기도 성남시 분당구 운중동 ..." class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
         </div>
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">직책 / 역할 (운영진 지정)</label>
-          <select id="input-member-role" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium text-xs">
-            <option value="회장">👑 회장 (운영진)</option>
-            <option value="부회장">🎖️ 부회장 (운영진)</option>
-            <option value="총무">💰 총무 (운영진/정산담당)</option>
-            <option value="운영진">⭐ 운영진 / 감사</option>
-            <option value="일반회원">일반 회원</option>
-          </select>
+          <label class="block font-semibold text-slate-700 mb-1">비고 / 메모 (답례품, 핸디, 특이사항 등)</label>
+          <input id="input-member-memo" type="text" placeholder="예: 답례품 발송 완료, 생일 5월" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
         </div>
       </div>
-      <div class="flex space-x-2 pt-2">
+      <div class="flex space-x-2 pt-1">
         <button id="btn-cancel-add-member" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
-        <button id="btn-submit-add-member" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">등록하기</button>
+        <button id="btn-submit-add-member" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">저장하기</button>
       </div>
     </div>
   </div>
@@ -1269,9 +1291,15 @@
       const currentSub = getSubGroup(club.activeSubGroupId);
       titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 회원` : `${currentSub.name} 회원 목록`;
 
+      const searchInput = document.getElementById('input-member-search');
+      const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
       const filteredMembers = club.members.filter(m => {
-        if (club.activeSubGroupId === "all") return true;
-        return m.subGroupId === club.activeSubGroupId;
+        const matchGroup = club.activeSubGroupId === "all" || m.subGroupId === club.activeSubGroupId;
+        if (!matchGroup) return false;
+        if (!query) return true;
+        const hay = `${m.name} ${m.affiliation || ''} ${m.phone || ''} ${m.address || ''} ${m.memo || ''} ${m.role || ''}`.toLowerCase();
+        return hay.includes(query);
       }).sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
 
       badge.textContent = `${filteredMembers.length}명`;
@@ -1331,11 +1359,18 @@
                   <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border ${badgeClass}">${roleIcon}${m.role}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-0.5">${m.phone || '연락처 미등록'}</p>
+                ${m.address ? `<p class="text-[11px] text-slate-500 mt-0.5">📍 ${m.address}</p>` : ''}
+                ${m.memo ? `<p class="text-[11px] text-indigo-600 mt-0.5">📝 ${m.memo}</p>` : ''}
               </div>
             </div>
-            <button onclick="handleDeleteMember('${m.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 transition text-xs" title="삭제">
-              🗑️
-            </button>
+            <div class="flex items-center space-x-1 shrink-0">
+              <button onclick="openEditMemberModal('${m.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 transition text-xs" title="정보 수정/추가">
+                ✏️
+              </button>
+              <button onclick="handleDeleteMember('${m.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 transition text-xs" title="삭제">
+                🗑️
+              </button>
+            </div>
           </div>
         `;
       }).join('');
@@ -1414,8 +1449,7 @@
 
       // 회원 등록 모달 - 소속 기수 선택
       const memberGroupSelect = document.getElementById('input-member-subgroup');
-      const activeGroups = club.subGroups.filter(g => g.id !== "all");
-      memberGroupSelect.innerHTML = activeGroups.map(g => `
+      memberGroupSelect.innerHTML = club.subGroups.map(g => `
         <option value="${g.id}">${g.name}</option>
       `).join('');
       if (club.activeSubGroupId !== "all") {
@@ -2029,10 +2063,41 @@
       }
     });
 
-    // 회원 추가 모달
+    // 회원 검색창 실시간 필터링
+    document.getElementById('input-member-search').addEventListener('input', () => {
+      renderMembers();
+    });
+
+    // 회원 추가 & 상세정보 수정 모달
+    window.openEditMemberModal = function(memberId) {
+      requireAdmin('회원 정보 수정', () => {
+        const club = getActiveClub();
+        const m = club.members.find(x => x.id === memberId);
+        if (!m) return;
+        document.getElementById('member-modal-title').textContent = '회원 정보 수정 / 추가 입력';
+        document.getElementById('input-member-edit-id').value = m.id;
+        document.getElementById('input-member-subgroup').value = m.subGroupId || (club.subGroups[0] ? club.subGroups[0].id : 'all');
+        document.getElementById('input-member-role').value = m.role || '일반회원';
+        document.getElementById('input-member-name').value = m.name || '';
+        document.getElementById('input-member-affiliation').value = m.affiliation || '';
+        document.getElementById('input-member-phone').value = m.phone || '';
+        document.getElementById('input-member-address').value = m.address || '';
+        document.getElementById('input-member-memo').value = m.memo || '';
+        document.getElementById('modal-add-member').classList.remove('hidden');
+      });
+    };
+
     document.getElementById('btn-open-add-member').addEventListener('click', () => {
       requireAdmin('회원 추가', () => {
-      document.getElementById('modal-add-member').classList.remove('hidden');
+        document.getElementById('member-modal-title').textContent = '신규 회원 등록';
+        document.getElementById('input-member-edit-id').value = '';
+        document.getElementById('input-member-role').value = '일반회원';
+        document.getElementById('input-member-name').value = '';
+        document.getElementById('input-member-affiliation').value = '';
+        document.getElementById('input-member-phone').value = '';
+        document.getElementById('input-member-address').value = '';
+        document.getElementById('input-member-memo').value = '';
+        document.getElementById('modal-add-member').classList.remove('hidden');
       });
     });
     document.getElementById('btn-close-member-modal').addEventListener('click', () => {
@@ -2043,9 +2108,13 @@
     });
     document.getElementById('btn-submit-add-member').addEventListener('click', () => {
       const club = getActiveClub();
+      const editId = document.getElementById('input-member-edit-id').value;
       const subGroupId = document.getElementById('input-member-subgroup').value;
       const name = document.getElementById('input-member-name').value.trim();
+      const affiliation = document.getElementById('input-member-affiliation').value.trim();
       const phone = document.getElementById('input-member-phone').value.trim();
+      const address = document.getElementById('input-member-address').value.trim();
+      const memo = document.getElementById('input-member-memo').value.trim();
       const role = document.getElementById('input-member-role').value;
 
       if (!name) {
@@ -2053,21 +2122,35 @@
         return;
       }
 
-      const newMember = {
-        id: `m_${Date.now()}`,
-        subGroupId,
-        name,
-        phone,
-        role
-      };
+      if (editId) {
+        const target = club.members.find(x => x.id === editId);
+        if (target) {
+          target.subGroupId = subGroupId;
+          target.name = name;
+          target.affiliation = affiliation;
+          target.phone = phone;
+          target.address = address;
+          target.memo = memo;
+          target.role = role;
+        }
+        showToast(`'${name}' 회원 정보가 수정되었습니다!`);
+      } else {
+        club.members.push({
+          id: `m_${Date.now()}`,
+          subGroupId,
+          name,
+          affiliation,
+          phone,
+          address,
+          memo,
+          role
+        });
+        showToast(`'${name}' 회원이 추가되었습니다!`);
+      }
 
-      club.members.push(newMember);
       saveState();
       document.getElementById('modal-add-member').classList.add('hidden');
-      document.getElementById('input-member-name').value = '';
-      document.getElementById('input-member-phone').value = '';
       renderAll();
-      showToast(`'${name}' 회원이 추가되었습니다!`);
     });
 
     // 회비 추가 모달
