@@ -64,10 +64,7 @@
       <button id="btn-open-create-club" class="px-2 py-1 text-[11px] bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition">
         + 모임 추가
       </button>
-      <button id="btn-reset-sample" class="px-2 py-1 text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg transition border border-slate-200 flex items-center space-x-1">
-        <span>🔄</span>
-        <span>샘플 리셋</span>
-      </button>
+
     </div>
   </header>
 
@@ -2309,13 +2306,7 @@
       renderSettlement();
     });
 
-    // 샘플 데이터 복원
-    document.getElementById('btn-reset-sample').addEventListener('click', () => {
-      appState = JSON.parse(JSON.stringify(defaultState));
-      saveState();
-      renderAll();
-      showToast("전체 멀티 모임 샘플 데이터로 복원되었습니다.");
-    });
+
 
     // 초기 구동
     renderAll();
