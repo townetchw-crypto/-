@@ -1143,7 +1143,7 @@
               <span class="text-xs font-semibold text-slate-700">참석 신청:</span>
               <div class="flex items-center space-x-1">
                 <select id="rsvp-member-select-${meeting.id}" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 font-medium outline-none">
-                  ${club.members.map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('')}
+                  ${[...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('')}
                 </select>
                 <button onclick="handleQuickRsvp('${meeting.id}', '참석')" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm">
                   신청
@@ -1272,7 +1272,7 @@
       const filteredMembers = club.members.filter(m => {
         if (club.activeSubGroupId === "all") return true;
         return m.subGroupId === club.activeSubGroupId;
-      });
+      }).sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
 
       badge.textContent = `${filteredMembers.length}명`;
 
@@ -1357,6 +1357,13 @@
       const filteredDues = club.monthlyDues.filter(d => {
         if (club.activeSubGroupId === "all") return true;
         return d.subGroupId === club.activeSubGroupId;
+      }).sort((a, b) => {
+        const dateA = a.paidDate || a.yearMonth || "";
+        const dateB = b.paidDate || b.yearMonth || "";
+        if (dateB !== dateA) {
+          return dateB.localeCompare(dateA);
+        }
+        return getMember(a.memberId).name.localeCompare(getMember(b.memberId).name, 'ko-KR');
       });
 
       const paidDues = filteredDues.filter(d => d.isPaid);
@@ -1421,11 +1428,11 @@
 
       // 지출 모달 - 결제자 선택
       const payerSelect = document.getElementById('input-expense-payer');
-      payerSelect.innerHTML = club.members.map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('');
+      payerSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('');
 
       // 회비 모달 - 회원 선택
       const dueMemberSelect = document.getElementById('input-due-member');
-      dueMemberSelect.innerHTML = club.members.map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('');
+      dueMemberSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${m.name} (${getSubGroup(m.subGroupId).name})</option>`).join('');
     }
 
     // --- 최상위 클럽 선택 바텀시트 렌더링 ---
