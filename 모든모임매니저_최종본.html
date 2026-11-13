@@ -453,7 +453,15 @@
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">명단 텍스트 붙여넣기</label>
-          <textarea id="textarea-batch-input" rows="6" placeholder="밴드나 카카오톡 단톡방에서 복사한 명단을 여기에 붙여넣으세요.&#10;&#10;[지원 형식 예시]&#10;1) 이름만 나열: 홍길동, 이순신, 강감찬&#10;2) 줄바꿈 목록:&#10;김철수 010-1234-5678&#10;이영희 010-9876-5432" class="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none text-xs leading-relaxed resize-none"></textarea>
+          <textarea id="textarea-batch-input" rows="5" placeholder="밴드·카톡·경조사 명단을 그대로 붙여넣으세요.&#10;&#10;[지원 형식]&#10;하주희 65골 150,000&#10;허기주 한체복교 200,000 화환&#10;홍길동 010-1234-5678 / 홍길동, 이순신" class="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none text-xs leading-relaxed resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <label class="flex items-center space-x-1.5 text-[11px] font-bold text-slate-700 cursor-pointer">
+            <input id="checkbox-batch-sync-dues" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
+            <span>금액 장부 동시 등록</span>
+          </label>
+          <input id="input-batch-dues-label" type="text" value="경조사/찬조" placeholder="구분 (예: 2026-11, 경조사)" class="border border-slate-300 rounded-lg px-2 py-1 text-[11px] bg-white outline-none focus:ring-1 focus:ring-indigo-500">
         </div>
 
         <!-- 인식 결과 실시간 프리뷰 -->
@@ -462,8 +470,8 @@
             <span>🔍 자동 파싱 결과</span>
             <span id="batch-parsed-count" class="text-indigo-600 font-extrabold">0명 인식됨</span>
           </div>
-          <div id="batch-parsed-samples" class="text-[11px] text-slate-500 max-h-20 overflow-y-auto no-scrollbar space-y-0.5">
-            텍스트를 붙여넣으면 인식된 회원 명단이 여기에 표시됩니다.
+          <div id="batch-parsed-samples" class="text-[11px] text-slate-500 max-h-24 overflow-y-auto no-scrollbar space-y-0.5">
+            텍스트를 붙여넣으면 인식된 회원·금액 명단이 여기에 표시됩니다.
           </div>
         </div>
       </div>
@@ -1319,7 +1327,7 @@
               <div>
                 <div class="flex items-center space-x-1.5">
                   <h4 class="font-bold text-slate-900 text-sm">${m.name}</h4>
-                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-slate-50 text-slate-600">${group.name}</span>
+                  <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-slate-50 text-slate-600">${group.name}</span>${m.affiliation ? `<span class="text-[10px] px-2 py-0.5 rounded-full font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">${m.affiliation}</span>` : ""}
                   <span class="text-[10px] px-2 py-0.5 rounded-full font-bold border ${badgeClass}">${roleIcon}${m.role}</span>
                 </div>
                 <p class="text-xs text-slate-400 mt-0.5">${m.phone || '연락처 미등록'}</p>
@@ -1374,7 +1382,7 @@
                 <span class="text-[10px] text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded">${g.name}</span>
                 <span class="text-sm font-bold text-slate-900">${m.name}</span>
               </div>
-              <p class="text-[11px] text-slate-400 mt-0.5">${d.isPaid ? `납부일: ${d.paidDate || '확인됨'}` : '납부 대기 중'}</p>
+              <p class="text-[11px] text-slate-400 mt-0.5">${d.isPaid ? `납부일: ${d.paidDate || '확인됨'}` : '납부 대기 중'}${d.note ? ` · <span class="text-amber-700 font-bold">${d.note}</span>` : ""}</p>
             </div>
             <div class="flex items-center space-x-2">
               <span class="font-extrabold text-sm text-slate-800">${d.amount.toLocaleString()}원</span>
@@ -1839,79 +1847,99 @@
     });
 
 
-    // --- 회원 일괄 가져오기 (밴드/카톡 스마트 파서) ---
+    // --- 회원 일괄 가져오기 (밴드/카톡/경조사 스마트 파서) ---
     function parseBatchText(rawText) {
       if (!rawText || !rawText.trim()) return [];
-      
+
       const phoneRegex = /(01[016789]-?\d{3,4}-?\d{4})/;
+      // 금액 패턴: 50,000 / 1,000,000 / 150000 (천 단위 쉼표 포함 또는 4자리 이상 숫자)
+      const amountRegex = /(?:^|[\s\u00A0])(\d{1,3}(?:,\d{3})+|\d{4,})(?=$|[\s\u00A0원])/;
       const results = [];
       const lines = rawText.split(/[\r\n]+/);
 
-      for (let line of lines) {
-        line = line.trim();
+      for (let rawLine of lines) {
+        let line = rawLine.replace(/\u00A0/g, ' ').trim();
         if (!line) continue;
-        
-        // 쉼표나 슬래시로 여러 이름이 한 줄에 나열된 경우 처리
-        if (line.includes(',') || line.includes('/')) {
+
+        // 순번/불릿 제거 ('1. ', '1) ', '• ')
+        line = line.replace(/^[0-9]+[.\)]\s*|^[-*•·]\s*/, '').trim();
+        if (!line) continue;
+
+        // 쉼표나 슬래시로 여러 이름이 나열된 경우 (단, 금액의 천 단위 쉼표는 제외!)
+        const lineWithoutMoneyCommas = line.replace(/\d{1,3}(?:,\d{3})+/g, 'AMOUNT');
+        if (lineWithoutMoneyCommas.includes(',') || lineWithoutMoneyCommas.includes('/')) {
           const parts = line.split(/[,/]+/);
           for (let p of parts) {
-            p = p.trim().replace(/^[0-9]+[.\)]\s*/, ''); // '1. 홍길동' 번호 제거
-            if (p) {
-              const matchedPhone = p.match(phoneRegex);
-              const phone = matchedPhone ? matchedPhone[0] : "";
-              const name = p.replace(phoneRegex, '').replace(/[()\[\]]/g, '').trim();
-              if (name && name.length >= 2 && name.length <= 10) {
-                results.push({ name, phone });
-              }
+            p = p.trim().replace(/^[0-9]+[.\)]\s*/, '');
+            if (!p) continue;
+            const matchedPhone = p.match(phoneRegex);
+            const phone = matchedPhone ? matchedPhone[0] : "";
+            const name = p.replace(phoneRegex, '').replace(/[()\[\]]/g, '').trim();
+            if (name && name.length >= 2 && name.length <= 15) {
+              results.push({ name, phone, affiliation: "", amount: 0, note: "" });
             }
           }
           continue;
         }
 
-        // 일반 줄바꿈 목록 (번호나 특수문자 제거: '1) 홍길동', '• 이순신')
-        line = line.replace(/^[0-9]+[.\)]\s*|^[-*•·]\s*/, '').trim();
+        // 전화번호 추출
         const matchedPhone = line.match(phoneRegex);
         const phone = matchedPhone ? matchedPhone[0] : "";
-        const cleanName = line.replace(phoneRegex, '').replace(/\b(회장|총무|부회장|총동문|대표|운영진|매니저|회원)\b/g, '').replace(/[()\[\]]/g, '').trim();
-        
-        // 유효한 이름 추출 (첫 번째 단어 또는 2~6글자 한글/영문)
-        const nameParts = cleanName.split(/\s+/).filter(Boolean);
-        const name = nameParts.length > 0 ? nameParts[0] : "";
-        
-        if (name && name.length >= 2 && name.length <= 10) {
-          results.push({ name, phone });
+        let work = line.replace(phoneRegex, ' ').trim();
+
+        // 금액 및 뒤쪽 비고(화환 등) 추출
+        let amount = 0;
+        let note = "";
+        const amtMatch = work.match(amountRegex);
+        if (amtMatch) {
+          amount = parseInt(amtMatch[1].replace(/,/g, ''), 10) || 0;
+          const idx = amtMatch.index;
+          const beforeAmt = work.slice(0, idx).trim();
+          const afterAmt = work.slice(idx + amtMatch[0].length).replace(/^원\s*/, '').trim();
+          work = beforeAmt;
+          note = afterAmt;
+        }
+
+        // 앞부분에서 이름과 소속/관계 추출 (예: "하주희 65골", "이동연 전일선형 형수", "실로inc")
+        const tokens = work.split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) continue;
+
+        const name = tokens[0].replace(/[()\[\]]/g, '').trim();
+        const affiliation = tokens.slice(1).join(' ').replace(/[()\[\]]/g, '').trim();
+
+        if (name && name.length >= 2 && name.length <= 20) {
+          results.push({ name, phone, affiliation, amount, note });
         }
       }
 
-      // 중복 이름 필터링 (동일 명단 내 중복 방지)
-      const unique = [];
-      const seen = new Set();
-      for (const item of results) {
-        if (!seen.has(item.name)) {
-          seen.add(item.name);
-          unique.push(item);
-        }
-      }
-      return unique;
+      return results;
     }
 
     function updateBatchPreview() {
       const textarea = document.getElementById('textarea-batch-input');
       const countEl = document.getElementById('batch-parsed-count');
       const samplesEl = document.getElementById('batch-parsed-samples');
-      
+
       const parsed = parseBatchText(textarea.value);
-      countEl.textContent = `${parsed.length}명 인식됨`;
+      const totalAmt = parsed.reduce((sum, item) => sum + (item.amount || 0), 0);
+      countEl.textContent = totalAmt > 0
+        ? `${parsed.length}명 · ${totalAmt.toLocaleString()}원`
+        : `${parsed.length}명 인식됨`;
 
       if (parsed.length === 0) {
-        samplesEl.innerHTML = `<span class="text-slate-400">텍스트를 붙여넣으면 인식된 회원 명단이 여기에 표시됩니다.</span>`;
+        samplesEl.innerHTML = `<span class="text-slate-400">텍스트를 붙여넣으면 인식된 회원·금액 명단이 여기에 표시됩니다.</span>`;
       } else {
-        samplesEl.innerHTML = parsed.map((m, idx) => `
-          <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50">
-            <span class="font-bold text-slate-800">${idx + 1}. ${m.name}</span>
-            <span class="text-slate-400 text-[10px]">${m.phone || '연락처 없음'}</span>
-          </div>
-        `).join('');
+        samplesEl.innerHTML = parsed.map((m, idx) => {
+          const affBadge = m.affiliation ? `<span class="text-[10px] px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 ml-1">${m.affiliation}</span>` : '';
+          const amtText = m.amount > 0 ? `<span class="font-bold text-emerald-700">${m.amount.toLocaleString()}원</span>` : `<span class="text-slate-400">${m.phone || '연락처 없음'}</span>`;
+          const noteBadge = m.note ? `<span class="text-[10px] text-amber-700 font-bold ml-1">[${m.note}]</span>` : '';
+          return `
+            <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50">
+              <span class="font-bold text-slate-800 truncate">${idx + 1}. ${m.name}${affBadge}${noteBadge}</span>
+              <span class="text-[10px] shrink-0 ml-2">${amtText}</span>
+            </div>
+          `;
+        }).join('');
       }
     }
 
@@ -1919,11 +1947,8 @@
       requireAdmin('회원 일괄 가져오기', () => {
       const club = getActiveClub();
       const select = document.getElementById('input-batch-subgroup');
-      const activeGroups = club.subGroups.filter(g => g.id !== "all");
-      select.innerHTML = activeGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
-      if (club.activeSubGroupId !== "all") {
-        select.value = club.activeSubGroupId;
-      }
+      select.innerHTML = club.subGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      select.value = club.activeSubGroupId || "all";
       document.getElementById('textarea-batch-input').value = '';
       updateBatchPreview();
       document.getElementById('modal-batch-import').classList.remove('hidden');
@@ -1943,6 +1968,8 @@
     document.getElementById('btn-submit-batch-import').addEventListener('click', () => {
       const club = getActiveClub();
       const subGroupId = document.getElementById('input-batch-subgroup').value;
+      const syncDues = document.getElementById('checkbox-batch-sync-dues').checked;
+      const duesLabel = document.getElementById('input-batch-dues-label').value.trim() || new Date().toISOString().slice(0, 7);
       const textarea = document.getElementById('textarea-batch-input');
       const parsed = parseBatchText(textarea.value);
 
@@ -1951,23 +1978,48 @@
         return;
       }
 
+      const today = new Date().toISOString().slice(0, 10);
       let addedCount = 0;
+      let duesAddedCount = 0;
+      let totalAmt = 0;
+
       parsed.forEach((item, i) => {
+        const memId = `m_${Date.now()}_${i}`;
         const newMember = {
-          id: `m_${Date.now()}_${i}`,
+          id: memId,
           subGroupId: subGroupId,
           name: item.name,
           phone: item.phone || "",
+          affiliation: item.affiliation || "",
           role: "일반회원"
         };
         club.members.push(newMember);
         addedCount++;
+
+        if (syncDues && item.amount > 0) {
+          club.monthlyDues.unshift({
+            id: `due_${Date.now()}_${i}`,
+            subGroupId: subGroupId,
+            yearMonth: duesLabel,
+            memberId: memId,
+            amount: item.amount,
+            note: item.note || (item.affiliation ? `${item.affiliation}` : ""),
+            isPaid: true,
+            paidDate: today
+          });
+          duesAddedCount++;
+          totalAmt += item.amount;
+        }
       });
 
       saveState();
       document.getElementById('modal-batch-import').classList.add('hidden');
       renderAll();
-      showToast(`🎉 밴드/카톡 명단에서 ${addedCount}명이 일괄 등록되었습니다!`);
+      if (duesAddedCount > 0) {
+        showToast(`🎉 ${addedCount}명 등록 & ${totalAmt.toLocaleString()}원(${duesAddedCount}건) 장부 반영 완료!`);
+      } else {
+        showToast(`🎉 ${addedCount}명이 일괄 등록되었습니다!`);
+      }
     });
 
     // 회원 추가 모달
