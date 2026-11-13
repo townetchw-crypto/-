@@ -38,7 +38,7 @@
     }
     @media print {
       body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
-      #app-header, #subgroup-bar, #active-group-banner, #admin-notice-bar, nav,
+      #app-header, #subgroup-bar, #active-group-banner, #admin-notice-bar, #calendar-bar, #calendar-grid-panel, nav,
       #report-action-bar, #report-filter-bar, .no-print, #toast-container,
       [id^="modal-"] { display: none !important; }
       main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
@@ -70,60 +70,71 @@
     </button>
 
     <div class="flex items-center space-x-1.5">
-      <button id="btn-open-backup" class="px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
+      <button id="btn-open-backup" class="whitespace-nowrap shrink-0 px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
         💾 백업
       </button>
-      <button id="btn-open-create-club" class="px-2 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition">
+      <button id="btn-open-create-club" class="whitespace-nowrap shrink-0 px-2 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition">
         + 모임 추가
       </button>
 
     </div>
   </header>
 
-  <!-- 년/월 캘린더 컨트롤 바 (삼성 캘린더 스타일) -->
+  <!-- 캘린더 컨트롤 바 (삼성 캘린더 스타일, 상단 고정) -->
   <div id="calendar-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
-    <div class="max-w-lg mx-auto space-y-2">
+    <div class="max-w-lg mx-auto space-y-1.5">
       <div class="flex items-center justify-between gap-1">
         <div class="flex items-center space-x-1">
-          <button id="btn-cal-prev-month" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
-          <span id="cal-current-label" class="px-1.5 text-sm font-extrabold text-slate-900 min-w-[84px] text-center">2026년 11월</span>
-          <button id="btn-cal-next-month" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
-          <button id="btn-cal-today" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 transition">오늘</button>
+          <button id="btn-cal-prev-month" aria-label="이전" class="shrink-0 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
+          <label class="relative px-1 text-center cursor-pointer whitespace-nowrap">
+            <span id="cal-current-label" class="text-sm font-extrabold text-slate-900">2026년 11월</span><span class="text-[10px] text-slate-400"> ▾</span>
+            <input id="cal-month-picker" type="month" aria-label="월 선택" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+          </label>
+          <button id="btn-cal-next-month" aria-label="다음" class="shrink-0 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
+          <button id="btn-cal-today" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 transition">오늘</button>
         </div>
-        <div class="flex items-center space-x-1">
-          <button id="btn-cal-scope-toggle" class="px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">
-            전체 보기
-          </button>
-          <button id="btn-cal-toggle-grid" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition">
-            📅 달력
-          </button>
-        </div>
+        <button id="btn-cal-toggle-grid" class="shrink-0 whitespace-nowrap px-2.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition">접기</button>
       </div>
-
-      <!-- 펼치는 삼성 캘린더급 월간 달력 패널 -->
-      <div id="calendar-grid-panel" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2">
-        <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 pb-0.5 border-b border-slate-200">
-          <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span>
+      <div class="flex items-center gap-1.5">
+        <div class="flex-1 grid grid-cols-3 bg-slate-100 rounded-lg p-0.5 text-xs font-bold">
+          <button id="btn-cal-view-month" class="py-1 rounded-md transition bg-white shadow-sm text-indigo-700">월</button>
+          <button id="btn-cal-view-week" class="py-1 rounded-md transition text-slate-500">주</button>
+          <button id="btn-cal-view-agenda" class="py-1 rounded-md transition text-slate-500">일정</button>
         </div>
-        <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
-          <!-- 동적 달력 날짜 + 일정 칩 -->
-        </div>
-        <div id="calendar-selected-bar" class="hidden bg-white border border-indigo-200 rounded-xl p-2.5 space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <div>
-              <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
-              <span id="cal-selected-holiday-text" class="text-[11px] font-bold text-rose-600 ml-1.5"></span>
-            </div>
-            <div class="flex items-center space-x-1.5 shrink-0">
-              <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">📅 정기</button>
-              <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
-            </div>
-          </div>
-          <div id="cal-selected-day-events" class="space-y-1 text-xs"></div>
-        </div>
+        <button id="btn-cal-scope-toggle" class="shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">📋 전체</button>
       </div>
     </div>
   </div>
+
+  <!-- 달력 본체 (월 / 주 / 일정 보기) -->
+  <section id="calendar-grid-panel" class="max-w-lg mx-auto w-full px-3 pt-2">
+    <div id="calendar-surface" class="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm" style="touch-action: pan-y;">
+      <div id="cal-weekday-head" class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 pb-1 border-b border-slate-100 mb-1">
+        <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span>
+      </div>
+      <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
+      <div id="calendar-week-view" class="hidden space-y-1"></div>
+      <div id="calendar-agenda-view" class="hidden space-y-3 p-1"></div>
+    </div>
+    <div id="calendar-selected-bar" class="hidden mt-2 bg-white border border-indigo-200 rounded-xl p-2.5 space-y-2">
+      <div class="flex items-center justify-between gap-2">
+        <div>
+          <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
+          <span id="cal-selected-holiday-text" class="text-[11px] font-bold text-rose-600 ml-1.5"></span>
+        </div>
+        <div class="flex items-center space-x-1.5 shrink-0">
+          <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">＋ 정기</button>
+          <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
+        </div>
+      </div>
+      <div id="cal-selected-day-events" class="space-y-1.5 text-xs"></div>
+    </div>
+    <div id="calendar-upcoming" class="mt-2"></div>
+    <div class="flex gap-1.5 mt-2">
+      <button onclick="exportMonthToICS()" class="flex-1 py-2 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-700">📲 이 달 일정 폰 캘린더로</button>
+      <button onclick="exportAllToICS()" class="flex-1 py-2 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-700">📲 전체 일정</button>
+    </div>
+  </section>
 
   <!-- 메인 뷰 컨테이너 (모바일 최적화 폭) -->
   <main class="flex-1 w-full max-w-lg mx-auto p-4 space-y-4">
@@ -133,6 +144,15 @@
       <div id="toast-msg" class="bg-slate-900/90 text-white text-xs sm:text-sm font-medium px-4 py-3 rounded-xl shadow-xl backdrop-blur flex items-center justify-center space-x-2 text-center">
         <!-- 알림 메시지 주입 -->
       </div>
+    </div>
+
+    <!-- 백업 알림 배너 -->
+    <div id="backup-banner" class="hidden bg-amber-50 border border-amber-300 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between gap-2 shadow-2xs">
+      <span id="backup-banner-text" class="font-semibold leading-snug"></span>
+      <span class="flex gap-1 shrink-0">
+        <button id="btn-backup-banner-open" class="px-2 py-1 bg-amber-300 hover:bg-amber-400 text-amber-950 font-extrabold rounded-lg">지금 백업</button>
+        <button id="btn-backup-banner-later" class="px-2 py-1 bg-white border border-amber-300 text-amber-800 font-bold rounded-lg">나중에</button>
+      </span>
     </div>
 
     <!-- 현재 선택된 모임 & 하위 컨텍스트 배너 -->
@@ -415,9 +435,9 @@
   <!-- [모달 1] 새 모임 일정 개설 모달 -->
   <!-- ============================================== -->
   <div id="modal-create-meeting" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-        <h3 class="font-bold text-slate-900 text-base">새 모임 일정 개설</h3>
+        <h3 id="meeting-modal-title" class="font-bold text-slate-900 text-base">새 모임 일정 개설</h3>
         <button id="btn-close-meeting-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
       </div>
       <div class="space-y-3 text-xs sm:text-sm">
@@ -428,15 +448,44 @@
             <button type="button" id="btn-type-flash" class="py-2 rounded-lg border border-slate-300 bg-white text-slate-600 font-bold text-xs transition">⚡ 번개 모임</button>
           </div>
           <input type="hidden" id="input-meeting-type" value="정기">
-          <select id="input-meeting-subgroup" class="hidden"><option value="all">전체</option></select>
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">모임명</label>
           <input id="input-meeting-title" type="text" placeholder="예: 11월 정기 월례 라운딩" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">일시</label>
-          <input id="input-meeting-date" type="text" placeholder="예: 2026-11-20 07:30" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <label class="block font-semibold text-slate-700 mb-1">소속 (어느 소모임 일정인가)</label>
+          <select id="input-meeting-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"><option value="all">전체</option></select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">날짜</label>
+          <div class="grid grid-cols-5 gap-2 items-center">
+            <input id="input-meeting-date" type="date" class="col-span-3 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+            <label class="col-span-2 flex items-center gap-1.5 text-xs font-semibold text-slate-600"><input id="input-meeting-allday" type="checkbox" class="w-4 h-4"> 종일</label>
+          </div>
+          <div id="meeting-time-row" class="grid grid-cols-2 gap-2 mt-2">
+            <div><span class="text-[11px] text-slate-500">시작</span><input id="input-meeting-start" type="time" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></div>
+            <div><span class="text-[11px] text-slate-500">종료 (비우면 2시간)</span><input id="input-meeting-end" type="time" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none bg-white"></div>
+          </div>
+          <p id="meeting-date-preview" class="text-[11px] text-indigo-600 font-semibold mt-1"></p>
+        </div>
+        <div id="meeting-repeat-block" class="space-y-1.5">
+          <label class="block font-semibold text-slate-700">반복</label>
+          <select id="input-meeting-repeat" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"><option value="none">반복 안 함</option></select>
+          <div id="meeting-repeat-count-wrap" class="hidden flex items-center gap-2 text-xs text-slate-600">
+            <span>총</span>
+            <input id="input-meeting-repeat-count" type="number" value="6" min="2" max="60" class="w-20 border border-slate-300 rounded-lg p-2 outline-none">
+            <span>회 만들기</span>
+          </div>
+          <p id="meeting-repeat-preview" class="text-[11px] text-indigo-600 font-semibold"></p>
+        </div>
+        <p id="meeting-series-note" class="hidden text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2">🔁 반복 일정의 일부입니다. 수정은 이 일정 하나에만 적용돼요.</p>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">폰 캘린더 알림</label>
+          <select id="input-meeting-remind" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
+            <option value="-1">알림 없음</option><option value="0">정시</option><option value="10">10분 전</option><option value="30">30분 전</option>
+            <option value="60" selected>1시간 전</option><option value="180">3시간 전</option><option value="1440">하루 전</option><option value="2880">이틀 전</option>
+          </select>
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">장소</label>
@@ -889,6 +938,8 @@
       </div>
       <p class="text-xs text-slate-600 leading-relaxed">자료는 <strong>이 폰의 브라우저 안에만</strong> 저장됩니다. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니 가끔 백업해 두세요.</p>
       <div id="backup-last" class="text-xs font-bold text-slate-500 bg-slate-50 rounded-lg p-2 text-center"></div>
+      <div id="backup-persist" class="text-[11px] text-slate-500 text-center"></div>
+      <button id="btn-backup-share" class="w-full py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs shadow-sm">📤 공유로 보내기 (구글드라이브 · 카톡 나와의 채팅)</button>
       <button id="btn-backup-download" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm">📥 백업 파일로 저장</button>
       <button id="btn-backup-copy" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs shadow-sm">📋 백업 내용 복사 (카톡 '나와의 채팅'에 붙여두기)</button>
       <div class="border-t border-slate-100 pt-3 space-y-2">
@@ -896,6 +947,10 @@
         <input id="input-backup-file" type="file" accept=".json,application/json" class="block w-full text-xs text-slate-600">
         <textarea id="textarea-backup-paste" placeholder="복사해 둔 백업 내용을 여기에 붙여넣기" class="w-full h-20 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-2 outline-none resize-none"></textarea>
         <button id="btn-backup-paste-restore" class="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50">붙여넣은 내용으로 복원</button>
+      </div>
+      <div class="border-t border-slate-100 pt-3 space-y-1.5">
+        <p class="text-xs font-bold text-slate-700">자동 보관본 (실수로 지웠을 때 되돌리기)</p>
+        <div id="backup-snapshots" class="space-y-1.5"></div>
       </div>
     </div>
   </div>
@@ -1110,6 +1165,172 @@
     // --- 저장 데이터 정리(깨진/구버전 데이터 방어, id 안전문자화) ---
     function sid(v) { return String(v == null ? '' : v).replace(/[^\w\-]/g, '_'); }
     function str(v, d) { return v == null ? (d || '') : String(v); }
+
+    // ===== [캘린더 공용 도우미 v2] 날짜 해석 / 공휴일 자동계산 / 색상 =====
+    const WEEKDAY_KO = ['일', '월', '화', '수', '목', '금', '토'];
+    function pad2(n) { return String(n).padStart(2, '0'); }
+    function ymdParts(ymd) { const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || ''); return m ? [+m[1], +m[2], +m[3]] : null; }
+    function ymdDow(ymd) { const p = ymdParts(ymd); return p ? new Date(Date.UTC(p[0], p[1] - 1, p[2])).getUTCDay() : 0; }
+    function ymdAdd(ymd, days) {
+      const p = ymdParts(ymd); const d = new Date(Date.UTC(p[0], p[1] - 1, p[2] + days));
+      return `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}-${pad2(d.getUTCDate())}`;
+    }
+    function ymdValid(y, m, d) {
+      if (m < 1 || m > 12 || d < 1 || d > 31) return false;
+      const dt = new Date(Date.UTC(y, m - 1, d)); return dt.getUTCMonth() === m - 1;
+    }
+    function daysInMonth(y, m) { return new Date(Date.UTC(y, m, 0)).getUTCDate(); }
+
+    // 어떤 형식으로 적혀 있어도 날짜/시간을 최대한 읽어냄
+    // 예) "2026-11-20 07:30", "2026-11-14 (토) 13:00", "2026.11.20 오후 7시 30분", "11/20 7시", "11월 20일"
+    function parseMeetingDate(raw) {
+      let s = String(raw == null ? '' : raw).replace(/\([^)]*\)/g, ' ').replace(/\s+/g, ' ').trim();
+      if (!s) return null;
+      const nowY = Number(todayStr().slice(0, 4));
+      let y = 0, mo = 0, d = 0, rest = s, m;
+      if ((m = /(\d{4})\s*[-./년]\s*(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?/.exec(s))) {
+        y = +m[1]; mo = +m[2]; d = +m[3]; rest = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length);
+      } else if ((m = /(\d{1,2})\s*[-./월]\s*(\d{1,2})\s*일?/.exec(s)) && !/\d{1,2}\s*:\s*\d{2}/.test(m[0])) {
+        y = nowY; mo = +m[1]; d = +m[2]; rest = s.slice(0, m.index) + ' ' + s.slice(m.index + m[0].length);
+      } else return null;
+      if (!ymdValid(y, mo, d)) return null;
+      let hh = null, mm = 0, ampm = '';
+      if (/오후|PM|pm/.test(rest)) ampm = 'pm'; else if (/오전|AM|am/.test(rest)) ampm = 'am';
+      if ((m = /(\d{1,2})\s*:\s*(\d{2})/.exec(rest))) { hh = +m[1]; mm = +m[2]; }
+      else if ((m = /(\d{1,2})\s*시\s*(?:(\d{1,2})\s*분)?/.exec(rest))) { hh = +m[1]; mm = m[2] ? +m[2] : 0; if (/반/.test(rest.slice(m.index, m.index + m[0].length + 2))) mm = 30; }
+      if (hh != null) {
+        if (ampm === 'pm' && hh < 12) hh += 12;
+        if (ampm === 'am' && hh === 12) hh = 0;
+        if (hh > 23 || mm > 59) hh = null;
+      }
+      return { ymd: `${y}-${pad2(mo)}-${pad2(d)}`, hh: hh, mm: mm, hasTime: hh != null };
+    }
+    // 저장용 표준 문자열: "YYYY-MM-DD HH:MM" (시간 없으면 "YYYY-MM-DD")
+    function canonDateStr(raw) {
+      const p = parseMeetingDate(raw);
+      if (!p) return String(raw == null ? '' : raw).trim();
+      return p.hasTime ? `${p.ymd} ${pad2(p.hh)}:${pad2(p.mm)}` : p.ymd;
+    }
+    function mtInfo(mt) { return parseMeetingDate(mt && mt.dateStr); }
+    function mtYmd(mt) { const p = mtInfo(mt); return p ? p.ymd : ''; }
+    function mtStartHM(mt) { const p = mtInfo(mt); return p && p.hasTime ? `${pad2(p.hh)}:${pad2(p.mm)}` : ''; }
+    function addMinutesHM(hm, add) {
+      const m = /^(\d{2}):(\d{2})$/.exec(hm || ''); if (!m) return '';
+      const t = Math.min(23 * 60 + 59, +m[1] * 60 + +m[2] + add);
+      return `${pad2(Math.floor(t / 60))}:${pad2(t % 60)}`;
+    }
+    function mtEndHM(mt) {
+      const s = mtStartHM(mt); if (!s) return '';
+      if (/^\d{2}:\d{2}$/.test(mt.endTime || '') && mt.endTime > s) return mt.endTime;
+      return addMinutesHM(s, 120);
+    }
+    function isAllDay(mt) { return !mtStartHM(mt); }
+    // 화면 표시용: "2026-11-14 (토) 13:00 ~ 15:00"
+    function fmtMeetingWhen(mt) {
+      const p = mtInfo(mt);
+      if (!p) return String(mt && mt.dateStr || '') || '일시 미정';
+      let s = `${p.ymd} (${WEEKDAY_KO[ymdDow(p.ymd)]})`;
+      if (p.hasTime) { s += ` ${pad2(p.hh)}:${pad2(p.mm)}`; if (/^\d{2}:\d{2}$/.test(mt.endTime || '') && mt.endTime > mtStartHM(mt)) s += ` ~ ${mt.endTime}`; }
+      else s += ' · 종일';
+      return s;
+    }
+    function ddayLabel(ymd) {
+      if (!ymd) return '';
+      const a = ymdParts(todayStr()), b = ymdParts(ymd);
+      const diff = Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000);
+      if (diff === 0) return '오늘'; if (diff > 0) return `D-${diff}`; return `D+${-diff}`;
+    }
+    function ddayDiff(ymd) {
+      const a = ymdParts(todayStr()), b = ymdParts(ymd);
+      return Math.round((Date.UTC(b[0], b[1] - 1, b[2]) - Date.UTC(a[0], a[1] - 1, a[2])) / 86400000);
+    }
+    // 시간순 정렬 키
+    function mtSortKey(mt) { const p = mtInfo(mt); return p ? `${p.ymd} ${p.hasTime ? pad2(p.hh) + ':' + pad2(p.mm) : '00:00'}` : '9999-99-99'; }
+
+    // ---- 공휴일 자동 계산 (양력 고정 + 음력 설날/추석/부처님오신날 + 대체공휴일) ----
+    const KR_FIXED_HOLIDAYS = {
+      '01-01': '신정', '03-01': '삼일절', '05-05': '어린이날', '06-06': '현충일',
+      '08-15': '광복절', '10-03': '개천절', '10-09': '한글날', '12-25': '성탄절'
+    };
+    // 선거일 등 별도 지정 공휴일 (필요하면 여기에 추가)
+    const KR_EXTRA_HOLIDAYS = { '2025-01-27': '임시공휴일', '2025-06-03': '대통령선거일', '2026-06-03': '지방선거일' };
+    const _holidayCache = {};
+    function lunarToSolarMap(year) {
+      // 해당 연도 1월~12월 각 날짜의 음력 월/일을 구해서 {음력키: 양력 ymd} 로 반환 (윤달 제외)
+      const out = {};
+      let fmt;
+      try { fmt = new Intl.DateTimeFormat('en-u-ca-chinese', { month: 'numeric', day: 'numeric', timeZone: 'UTC' }); } catch (e) { return out; }
+      let probe;
+      try { probe = fmt.formatToParts(new Date(Date.UTC(year, 0, 1))); } catch (e) { return out; }
+      if (!probe || !probe.some(p => p.type === 'day')) return out;
+      for (let i = 0; i < 366; i++) {
+        const dt = new Date(Date.UTC(year, 0, 1 + i));
+        if (dt.getUTCFullYear() !== year) break;
+        const parts = fmt.formatToParts(dt);
+        const mp = parts.find(p => p.type === 'month'), dp = parts.find(p => p.type === 'day');
+        if (!mp || !dp) continue;
+        if (/bis|윤/.test(mp.value)) continue; // 윤달 제외
+        const key = `${parseInt(mp.value, 10)}-${parseInt(dp.value, 10)}`;
+        if (!out[key]) out[key] = `${year}-${pad2(dt.getUTCMonth() + 1)}-${pad2(dt.getUTCDate())}`;
+      }
+      return out;
+    }
+    function getHolidayMap(year) {
+      if (_holidayCache[year]) return _holidayCache[year];
+      const h = {};
+      const put = (ymd, name) => { h[ymd] = h[ymd] ? (h[ymd].includes(name) ? h[ymd] : h[ymd] + '·' + name) : name; };
+      Object.keys(KR_FIXED_HOLIDAYS).forEach(k => put(`${year}-${k}`, KR_FIXED_HOLIDAYS[k]));
+      const lunar = lunarToSolarMap(year);
+      const seol = lunar['1-1'], chuseok = lunar['8-15'], buddha = lunar['4-8'];
+      // 설날/추석 연휴(전날, 당일, 다음날)
+      const blocks = [];
+      if (seol) { put(ymdAdd(seol, -1), '설날 연휴'); put(seol, '설날'); put(ymdAdd(seol, 1), '설날 연휴'); blocks.push([ymdAdd(seol, -1), ymdAdd(seol, 1)]); }
+      if (chuseok) { put(ymdAdd(chuseok, -1), '추석 연휴'); put(chuseok, '추석'); put(ymdAdd(chuseok, 1), '추석 연휴'); blocks.push([ymdAdd(chuseok, -1), ymdAdd(chuseok, 1)]); }
+      if (buddha) put(buddha, '부처님오신날');
+      Object.keys(KR_EXTRA_HOLIDAYS).forEach(k => { if (k.startsWith(year + '-')) put(k, KR_EXTRA_HOLIDAYS[k]); });
+      // 대체공휴일 계산
+      const isHol = ymd => !!h[ymd];
+      const nextFree = from => { let d = from; while (ymdDow(d) === 0 || isHol(d)) d = ymdAdd(d, 1); return d; };
+      const subs = [];
+      // 설날/추석: 연휴 중 일요일이 있거나 다른 공휴일과 겹치면 연휴 다음 첫 평일
+      blocks.forEach(b => {
+        const days = [b[0], ymdAdd(b[0], 1), b[1]];
+        const sunday = days.some(d => ymdDow(d) === 0);
+        const overlap = days.some(d => h[d] && !/설날|추석/.test(h[d]));
+        if (sunday || overlap) subs.push(nextFree(ymdAdd(b[1], 1)));
+      });
+      // 삼일절·광복절·개천절·한글날·어린이날: 토/일 또는 다른 공휴일과 겹치면
+      ['03-01', '08-15', '10-03', '10-09', '05-05'].forEach(k => {
+        const d = `${year}-${k}`; const dow = ymdDow(d);
+        const weekend = dow === 0 || dow === 6;
+        const overlap = h[d] && h[d].split('·').length > 1;
+        if (weekend || overlap) subs.push(nextFree(ymdAdd(d, 1)));
+      });
+      // 부처님오신날·성탄절: 일요일 또는 다른 공휴일과 겹치면
+      [buddha, `${year}-12-25`].forEach(d => {
+        if (!d) return;
+        const overlap = h[d] && h[d].split('·').length > 1;
+        if (ymdDow(d) === 0 || overlap) subs.push(nextFree(ymdAdd(d, 1)));
+      });
+      subs.forEach(d => { if (d.startsWith(year + '-')) put(d, '대체공휴일'); });
+      _holidayCache[year] = h;
+      return h;
+    }
+    function getHolidayName(dStr) {
+      const p = ymdParts(dStr); if (!p) return '';
+      return getHolidayMap(p[0])[dStr] || '';
+    }
+    function isHolidayOrSunday(dStr) { return ymdDow(dStr) === 0 || !!getHolidayName(dStr); }
+
+    // 소모임별 색상 (삼성 캘린더처럼 일정마다 색이 다름)
+    const GROUP_COLORS = ['#6366f1', '#0ea5e9', '#10b981', '#f97316', '#ec4899', '#8b5cf6', '#14b8a6', '#ef4444'];
+    function groupColor(club, subGroupId) {
+      if (!subGroupId || subGroupId === 'all') return GROUP_COLORS[0];
+      const idx = (club.subGroups || []).findIndex(g => g.id === subGroupId);
+      return GROUP_COLORS[(idx < 0 ? 0 : idx) % GROUP_COLORS.length];
+    }
+    function meetingColor(club, mt) { return mt.meetingType === '번개' ? '#f59e0b' : groupColor(club, mt.subGroupId); }
+
     const ROLES = ["회장", "부회장", "총무", "운영진", "일반회원"];
     function normalizeState(raw) {
       const s = (raw && typeof raw === 'object') ? raw : {};
@@ -1169,7 +1390,8 @@
               paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
           });
           club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
-            dateStr: str(mt.dateStr), location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps });
+            dateStr: canonDateStr(str(mt.dateStr)), endTime: /^\d{2}:\d{2}$/.test(str(mt.endTime)) ? str(mt.endTime) : '', location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps,
+            remind: (typeof mt.remind === 'number' && isFinite(mt.remind)) ? mt.remind : 60, seriesId: sid(str(mt.seriesId)), repeat: str(mt.repeat) });
         });
         (Array.isArray(c.monthlyDues) ? c.monthlyDues : []).forEach((d, di) => {
           if (!d || typeof d !== 'object') return;
@@ -1212,6 +1434,7 @@
 
     let saveWarned = false;
     function saveState() {
+      try { dailySnapshot(); } catch (e) {}
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
       } catch (e) {
@@ -1413,6 +1636,7 @@
       document.getElementById('club-subtitle-text').textContent = club.subtitle || "터치하여 다른 모임으로 전환";
 
       renderHeaderBanner();
+      renderBackupBanner();
       renderSubGroupChips();
       renderMeetings();
       renderSettlement();
@@ -1442,135 +1666,322 @@
       }
     }
 
-    // [년/월 캘린더 상태 & 렌더링]
+    // [년/월 캘린더 v2 - 삼성 캘린더 스타일: 월 / 주 / 일정 보기]
     let calYearMonth = todayStr().slice(0, 7);
-    let calScope = 'all';
-    let calSelectedDate = '';
+    let calScope = 'all';            // 'all' | 'month' : 아래 목록(모임일정·정산)을 달력의 월에 맞출지
+    let calSelectedDate = todayStr();
+    let calView = 'month';           // 'month' | 'week' | 'agenda'
+    let calPanelOpen = true;
     let activeBatchRsvpMeetingId = null;
+    try {
+      const u = JSON.parse(localStorage.getItem('mm_cal_ui_v1') || '{}');
+      if (['month', 'week', 'agenda'].includes(u.view)) calView = u.view;
+      if (typeof u.open === 'boolean') calPanelOpen = u.open;
+    } catch (e) {}
+    function saveCalUI() { try { localStorage.setItem('mm_cal_ui_v1', JSON.stringify({ view: calView, open: calPanelOpen })); } catch (e) {} }
 
-    function shiftMonth(delta) {
-      const [y, m] = calYearMonth.split('-').map(Number);
-      const d = new Date(y, m - 1 + delta, 1);
-      calYearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      calScope = 'month';
+    // 달력에 보여줄 일정 = 모임일정 목록과 같은 소모임 필터
+    function meetingsForCalendar() {
+      const club = getActiveClub();
+      const sub = club.activeSubGroupId || 'all';
+      return (club.meetings || []).filter(mt => sub === 'all' || mt.subGroupId === sub || mt.subGroupId === 'all');
+    }
+    function byMeetingTime(a, b) { const ka = mtSortKey(a), kb = mtSortKey(b); return ka < kb ? -1 : ka > kb ? 1 : 0; }
+    function meetingsOn(ymd) { return meetingsForCalendar().filter(mt => mtYmd(mt) === ymd).sort(byMeetingTime); }
+    function attendCount(mt) { return Object.keys(mt.attendees || {}).filter(id => mt.attendees[id] === '참석').length; }
+    function chipTextColor(mt) { return mt.meetingType === '번개' ? '#451a03' : '#ffffff'; }
+
+    function syncReportPeriod() {
       const repSel = document.getElementById('report-period-select');
-      if (repSel) repSel.value = calYearMonth;
+      if (!repSel) return;
+      if (calScope === 'month') repSel.value = [...repSel.options].some(o => o.value === calYearMonth) ? calYearMonth : 'ALL';
+    }
+
+    function calNav(delta) {
+      if (calView === 'week') {
+        const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
+        calSelectedDate = ymdAdd(anchor, 7 * delta);
+        calYearMonth = calSelectedDate.slice(0, 7);
+      } else {
+        const [y, m] = calYearMonth.split('-').map(Number);
+        const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+        calYearMonth = `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`;
+        if (calSelectedDate && !calSelectedDate.startsWith(calYearMonth)) calSelectedDate = '';
+      }
+      syncReportPeriod();
       renderAll();
     }
-
-    // 한국 주요 법정 공휴일 (양력 고정 + 2026~2027 음력/대체공휴일)
-    const KR_FIXED_HOLIDAYS = {
-      '01-01': '신정', '03-01': '삼일절', '05-05': '어린이날', '06-06': '현충일',
-      '08-15': '광복절', '10-03': '개천절', '10-09': '한글날', '12-25': '성탄절'
-    };
-    const KR_YEAR_HOLIDAYS = {
-      '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
-      '2026-03-02': '대체공휴일', '2026-05-24': '부처님오신날', '2026-05-25': '대체공휴일',
-      '2026-08-17': '대체공휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴',
-      '2026-10-05': '대체공휴일',
-      '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-02-09': '대체공휴일',
-      '2027-05-13': '부처님오신날', '2027-08-16': '대체공휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
-      '2027-10-04': '대체공휴일', '2027-10-11': '대체공휴일'
-    };
-    function getHolidayName(dStr) {
-      return KR_YEAR_HOLIDAYS[dStr] || KR_FIXED_HOLIDAYS[dStr.slice(5)] || '';
-    }
-
-    function renderSubGroupChips() {
-      const labelEl = document.getElementById('cal-current-label');
-      const scopeBtn = document.getElementById('btn-cal-scope-toggle');
-      const daysGrid = document.getElementById('calendar-days-grid');
-      if (!labelEl || !scopeBtn || !daysGrid) return;
-
-      const [y, m] = calYearMonth.split('-').map(Number);
-      labelEl.textContent = `${y}년 ${m}월`;
-
-      if (calScope === 'month') {
-        scopeBtn.textContent = `${m}월만 보기`;
-        scopeBtn.className = "px-2 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
-      } else {
-        scopeBtn.textContent = "전체 보기";
-        scopeBtn.className = "px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
-      }
-
-      const club = getActiveClub();
-      const firstDay = new Date(y, m - 1, 1).getDay();
-      const lastDate = new Date(y, m, 0).getDate();
-      const today = todayStr();
-
-      const dayMeetingsMap = {};
-      (club.meetings || []).forEach(mt => {
-        const dStr = (mt.dateStr || '').slice(0, 10);
-        if (dStr.startsWith(calYearMonth)) {
-          if (!dayMeetingsMap[dStr]) dayMeetingsMap[dStr] = [];
-          dayMeetingsMap[dStr].push(mt);
-        }
-      });
-
-      let html = '';
-      for (let i = 0; i < firstDay; i++) html += '<div></div>';
-      for (let day = 1; day <= lastDate; day++) {
-        const dStr = `${calYearMonth}-${String(day).padStart(2, '0')}`;
-        const dow = new Date(y, m - 1, day).getDay();
-        const holiday = getHolidayName(dStr);
-        const items = dayMeetingsMap[dStr] || [];
-        const isToday = dStr === today;
-        const isSel = dStr === calSelectedDate;
-
-        const dayColorClass = isSel
-          ? 'text-white'
-          : (dow === 0 || holiday ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800'));
-
-        const pills = items.slice(0, 2).map(mt => {
-          const isFlash = mt.meetingType === '번개';
-          return `<div class="w-full truncate text-[9px] leading-tight px-1 py-0.5 rounded font-bold ${
-            isFlash ? 'bg-amber-300 text-amber-950' : 'bg-indigo-600 text-white'
-          }">${isFlash ? '⚡' : ''}${esc(mt.title)}</div>`;
-        }).join('');
-        const extraBadge = items.length > 2 ? `<div class="text-[9px] font-bold ${isSel ? 'text-indigo-100' : 'text-slate-500'}">+${items.length - 2}</div>` : '';
-
-        html += `
-          <button onclick="selectCalendarDate('${dStr}')" class="min-h-[54px] p-1 rounded-xl flex flex-col items-center justify-start gap-0.5 transition border ${
-            isSel ? 'bg-indigo-700 border-indigo-700 shadow-sm' : (isToday ? 'bg-indigo-50 border-indigo-400' : 'bg-white hover:bg-slate-100 border-slate-200/70')
-          }">
-            <span class="text-[11px] font-extrabold ${dayColorClass}">${day}</span>
-            ${holiday ? `<span class="w-full truncate text-[8px] leading-none font-bold ${isSel ? 'text-rose-200' : 'text-rose-500'}">${esc(holiday)}</span>` : ''}
-            ${pills}
-            ${extraBadge}
-          </button>
-        `;
-      }
-      daysGrid.innerHTML = html;
-    }
-
     window.selectCalendarDate = function(dStr) {
       calSelectedDate = dStr;
+      if (!dStr.startsWith(calYearMonth)) calYearMonth = dStr.slice(0, 7);
+      renderCalendar();
+    };
+    window.calJumpTo = function(dStr) {
+      calSelectedDate = dStr; calYearMonth = dStr.slice(0, 7);
+      if (calView === 'agenda') calView = 'month';
+      syncReportPeriod(); renderAll();
+    };
+    window.setCalView = function(v) {
+      calView = v;
+      if (v === 'week' && !ymdParts(calSelectedDate)) calSelectedDate = calYearMonth === todayStr().slice(0, 7) ? todayStr() : calYearMonth + '-01';
+      if (v === 'week' && !calSelectedDate.startsWith(calYearMonth)) calYearMonth = calSelectedDate.slice(0, 7);
+      saveCalUI(); renderCalendar();
+    };
+
+    // 일정 카드 (일 상세 / 주 보기 / 일정 보기 공용)
+    function eventCardHtml(mt, showDate) {
+      const club = getActiveClub();
+      const color = meetingColor(club, mt);
+      const start = mtStartHM(mt);
+      const explicitEnd = /^\d{2}:\d{2}$/.test(mt.endTime || '') && mt.endTime > start;
+      const timeTxt = start ? (explicitEnd ? `${start} – ${mt.endTime}` : start) : '종일';
+      const ymd = mtYmd(mt);
+      const att = attendCount(mt);
+      return `
+        <div class="flex items-stretch bg-white rounded-xl border border-slate-200 overflow-hidden">
+          <div style="background:${color}" class="w-1.5 shrink-0"></div>
+          <div class="flex-1 min-w-0 p-2.5 space-y-1">
+            <div class="flex items-start justify-between gap-2">
+              <div class="min-w-0">
+                <p class="text-[11px] font-bold text-slate-500">${showDate ? esc(ymd + ' (' + WEEKDAY_KO[ymdDow(ymd)] + ') ') : ''}${esc(timeTxt)}${mt.meetingType === '번개' ? ' · ⚡번개' : ''}${mt.seriesId ? ' · 🔁반복' : ''}</p>
+                <p class="font-bold text-slate-900 text-sm leading-snug break-words">${esc(mt.title)}</p>
+              </div>
+              <span class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${ddayDiff(ymd) < 0 ? 'bg-slate-100 text-slate-500' : 'bg-rose-50 text-rose-600'}">${ddayLabel(ymd)}</span>
+            </div>
+            <p class="text-[11px] text-slate-500 break-words">📍 ${esc(mt.location)} · 👥 ${att}/${mt.maxCapacity}명</p>
+            <div class="flex flex-wrap gap-1 pt-0.5">
+              <button onclick="exportMeetingToICS('${mt.id}')" class="px-2 py-1 bg-indigo-50 border border-indigo-200 rounded-md text-[11px] font-bold text-indigo-700">📲 폰 캘린더</button>
+              <button onclick="openGoogleCalendar('${mt.id}')" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-bold text-slate-700">구글캘린더</button>
+              <button onclick="openMeetingModal({mode:'edit',meetingId:'${mt.id}'})" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-bold text-slate-700">✏️ 수정</button>
+              <button onclick="handleDeleteMeeting('${mt.id}')" class="px-2 py-1 bg-rose-50 border border-rose-200 rounded-md text-[11px] font-bold text-rose-600">삭제</button>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function renderMonthView(gridEl) {
+      const [y, m] = calYearMonth.split('-').map(Number);
+      const first = `${calYearMonth}-01`;
+      const offset = ymdDow(first);
+      const total = Math.ceil((offset + daysInMonth(y, m)) / 7) * 7;
+      const club = getActiveClub();
+      const map = {};
+      meetingsForCalendar().forEach(mt => { const k = mtYmd(mt); if (k) (map[k] = map[k] || []).push(mt); });
+      const today = todayStr();
+      let html = '';
+      for (let i = 0; i < total; i++) {
+        const dStr = ymdAdd(first, i - offset);
+        const inMonth = dStr.startsWith(calYearMonth);
+        const dow = ymdDow(dStr);
+        const day = Number(dStr.slice(8));
+        const holiday = getHolidayName(dStr);
+        const items = (map[dStr] || []).slice().sort(byMeetingTime);
+        const isToday = dStr === today, isSel = dStr === calSelectedDate;
+        const numColor = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
+        const numCls = isToday ? 'bg-indigo-600 text-white' : numColor;
+        const chips = items.slice(0, 3).map(mt => `<div style="background:${meetingColor(club, mt)};color:${chipTextColor(mt)}" class="w-full px-1 py-0.5 rounded"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all" class="text-[9px] leading-[11px] font-bold text-left">${mt.meetingType === '번개' ? '⚡' : ''}${esc(mt.title)}</div></div>`).join('');
+        const more = items.length > 3 ? `<div class="text-[9px] font-bold text-slate-500 text-left">+${items.length - 3}</div>` : '';
+        html += `
+          <button onclick="calCellClick('${dStr}')" class="min-h-[76px] p-0.5 rounded-lg flex flex-col items-stretch justify-start gap-0.5 transition border ${isSel ? 'border-indigo-500 ring-1 ring-indigo-400 bg-indigo-50' : 'border-slate-200/70 bg-white hover:bg-slate-50'} ${inMonth ? '' : 'opacity-40'}">
+            <span class="self-center w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-extrabold ${numCls}">${day}</span>
+            ${holiday ? `<span class="w-full truncate text-[8px] leading-none font-bold text-rose-500 text-center">${esc(holiday)}</span>` : ''}
+            ${chips}${more}
+          </button>`;
+      }
+      gridEl.innerHTML = html;
+    }
+    window.calCellClick = function(dStr) {
+      if (!dStr.startsWith(calYearMonth)) { calYearMonth = dStr.slice(0, 7); calSelectedDate = dStr; syncReportPeriod(); renderAll(); }
+      else window.selectCalendarDate(dStr);
+    };
+
+    function weekRangeOf(anchor) {
+      const start = ymdAdd(anchor, -ymdDow(anchor));
+      return [start, ymdAdd(start, 6)];
+    }
+    function renderWeekView(el) {
+      const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
+      const [start] = weekRangeOf(anchor);
+      const today = todayStr();
+      let html = '';
+      for (let i = 0; i < 7; i++) {
+        const d = ymdAdd(start, i);
+        const dow = ymdDow(d), holiday = getHolidayName(d);
+        const items = meetingsOn(d);
+        const color = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
+        const isSel = d === calSelectedDate, isToday = d === today;
+        html += `
+          <div class="flex gap-2 p-1.5 rounded-xl ${isSel ? 'bg-indigo-50 border border-indigo-200' : 'border border-transparent'}">
+            <button onclick="selectCalendarDate('${d}')" class="w-11 shrink-0 flex flex-col items-center pt-0.5">
+              <span class="text-[11px] font-bold ${color}">${WEEKDAY_KO[dow]}</span>
+              <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-extrabold ${isToday ? 'bg-indigo-600 text-white' : color}">${Number(d.slice(8))}</span>
+              ${holiday ? `<span class="text-[8px] font-bold text-rose-500 leading-tight text-center">${esc(holiday)}</span>` : ''}
+            </button>
+            <div class="flex-1 min-w-0 space-y-1.5">
+              ${items.length ? items.map(mt => eventCardHtml(mt, false)).join('') : `<p class="text-[11px] text-slate-400 py-2">일정 없음</p>`}
+            </div>
+            <button onclick="openMeetingModal({type:'정기',date:'${d}'})" class="shrink-0 self-start w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-sm" aria-label="일정 추가">＋</button>
+          </div>`;
+      }
+      el.innerHTML = html;
+    }
+    function renderAgendaView(el) {
+      const list = meetingsForCalendar().filter(mt => mtYmd(mt).startsWith(calYearMonth)).sort(byMeetingTime);
+      const bad = meetingsForCalendar().filter(mt => !mtYmd(mt));
+      if (!list.length && !bad.length) {
+        el.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">이 달에 등록된 일정이 없습니다.</p>`;
+        return;
+      }
+      const groups = {};
+      list.forEach(mt => { const k = mtYmd(mt); (groups[k] = groups[k] || []).push(mt); });
+      const today = todayStr();
+      let html = Object.keys(groups).sort().map(d => {
+        const dow = ymdDow(d), holiday = getHolidayName(d);
+        const color = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
+        return `
+          <div class="space-y-1.5">
+            <div class="flex items-center gap-1.5">
+              <span class="text-sm font-extrabold ${color}">${Number(d.slice(8))}일 ${WEEKDAY_KO[dow]}</span>
+              ${holiday ? `<span class="text-[10px] font-bold text-rose-500">${esc(holiday)}</span>` : ''}
+              ${d === today ? '<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-600 text-white">오늘</span>' : ''}
+            </div>
+            ${groups[d].map(mt => eventCardHtml(mt, false)).join('')}
+          </div>`;
+      }).join('');
+      if (bad.length) {
+        html += `<div class="space-y-1.5"><p class="text-xs font-extrabold text-rose-600">⚠️ 날짜 확인 필요 (${bad.length})</p>${bad.map(mt => `
+          <div class="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-xl p-2.5">
+            <span class="text-xs font-bold text-slate-800 truncate">${esc(mt.title)} <span class="text-slate-400 font-normal">(${esc(mt.dateStr || '일시 없음')})</span></span>
+            <button onclick="openMeetingModal({mode:'edit',meetingId:'${mt.id}'})" class="shrink-0 ml-2 px-2 py-1 bg-white border border-rose-300 rounded-md text-[11px] font-bold text-rose-700">✏️ 날짜 고치기</button>
+          </div>`).join('')}</div>`;
+      }
+      el.innerHTML = html;
+    }
+    function renderSelectedDayPanel() {
       const bar = document.getElementById('calendar-selected-bar');
+      if (!bar) return;
+      if (calView !== 'month' || !ymdParts(calSelectedDate)) { bar.classList.add('hidden'); return; }
       const txt = document.getElementById('cal-selected-date-text');
       const holEl = document.getElementById('cal-selected-holiday-text');
       const evEl = document.getElementById('cal-selected-day-events');
-      if (bar && txt) {
-        txt.textContent = `📅 ${dStr}`;
-        if (holEl) holEl.textContent = getHolidayName(dStr);
-        if (evEl) {
-          const club = getActiveClub();
-          const dayMeetings = (club.meetings || []).filter(mt => (mt.dateStr || '').startsWith(dStr));
-          if (dayMeetings.length === 0) {
-            evEl.innerHTML = `<p class="text-[11px] text-slate-400">이 날 등록된 모임이 없습니다. 오른쪽 버튼으로 바로 여세요.</p>`;
-          } else {
-            evEl.innerHTML = dayMeetings.map(mt => `
-              <div class="flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
-                <span class="font-bold text-slate-800 truncate">${mt.meetingType === '번개' ? '⚡' : '📅'} ${esc(mt.title)} <span class="text-slate-400 font-normal">(${esc((mt.dateStr || '').slice(11) || '시간미정')})</span></span>
-                <button onclick="exportMeetingToICS('${mt.id}')" class="shrink-0 ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-bold text-slate-700">📲 폰 캘린더</button>
-              </div>
-            `).join('');
-          }
-        }
-        bar.classList.remove('hidden');
+      txt.textContent = `📅 ${calSelectedDate} (${WEEKDAY_KO[ymdDow(calSelectedDate)]})`;
+      if (holEl) holEl.textContent = getHolidayName(calSelectedDate);
+      const items = meetingsOn(calSelectedDate);
+      evEl.innerHTML = items.length
+        ? items.map(mt => eventCardHtml(mt, false)).join('')
+        : `<p class="text-[11px] text-slate-400">이 날 등록된 일정이 없습니다. 오른쪽 버튼으로 바로 만드세요.</p>`;
+      bar.classList.remove('hidden');
+    }
+    function renderUpcoming() {
+      const el = document.getElementById('calendar-upcoming');
+      if (!el) return;
+      const today = todayStr();
+      const list = meetingsForCalendar().filter(mt => { const k = mtYmd(mt); return k && k >= today; }).sort(byMeetingTime).slice(0, 3);
+      if (calView !== 'month' || !list.length) { el.innerHTML = ''; return; }
+      const club = getActiveClub();
+      el.innerHTML = `
+        <div class="bg-white border border-slate-200 rounded-xl p-2.5 space-y-1.5">
+          <p class="text-[11px] font-extrabold text-slate-500">⏰ 다가오는 일정</p>
+          ${list.map(mt => `
+            <button onclick="calJumpTo('${mtYmd(mt)}')" class="w-full flex items-center gap-2 text-left">
+              <span style="background:${meetingColor(club, mt)}" class="w-2 h-2 rounded-full shrink-0"></span>
+              <span class="text-[11px] font-extrabold text-rose-600 w-9 shrink-0">${ddayLabel(mtYmd(mt))}</span>
+              <span class="flex-1 min-w-0 truncate text-xs font-bold text-slate-800">${esc(mt.title)}</span>
+              <span class="text-[11px] text-slate-400 shrink-0">${esc(mtYmd(mt).slice(5).replace('-', '/'))} ${esc(mtStartHM(mt))}</span>
+            </button>`).join('')}
+        </div>`;
+    }
+
+    // renderAll()에서 호출되는 달력 전체 그리기
+    function renderCalendar() {
+      const labelEl = document.getElementById('cal-current-label');
+      if (!labelEl) return;
+      const [y, m] = calYearMonth.split('-').map(Number);
+      if (calView === 'week') {
+        const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
+        const [ws, we] = weekRangeOf(anchor);
+        const ap = ymdParts(anchor);
+        const firstDow = ymdDow(`${anchor.slice(0, 7)}-01`);
+        labelEl.textContent = `${ap[0]}년 ${ap[1]}월 ${Math.ceil((ap[2] + firstDow) / 7)}주`;
+        labelEl.title = `${ws} ~ ${we}`;
+      } else {
+        labelEl.textContent = `${y}년 ${m}월`;
+        labelEl.title = '';
       }
-      renderSubGroupChips();
+      const picker = document.getElementById('cal-month-picker');
+      if (picker) picker.value = calYearMonth;
+
+      const scopeBtn = document.getElementById('btn-cal-scope-toggle');
+      if (calScope === 'month') {
+        scopeBtn.textContent = `📋 ${m}월만`;
+        scopeBtn.className = "shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
+      } else {
+        scopeBtn.textContent = "📋 전체";
+        scopeBtn.className = "shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
+      }
+      const gridBtn = document.getElementById('btn-cal-toggle-grid');
+      gridBtn.textContent = calPanelOpen ? '접기' : '펴기';
+      ['month', 'week', 'agenda'].forEach(v => {
+        const b = document.getElementById('btn-cal-view-' + v);
+        if (b) b.className = 'py-1 rounded-md transition ' + (calView === v ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500');
+      });
+
+      const panel = document.getElementById('calendar-grid-panel');
+      panel.classList.toggle('hidden', !calPanelOpen);
+
+      const head = document.getElementById('cal-weekday-head');
+      const gridEl = document.getElementById('calendar-days-grid');
+      const weekEl = document.getElementById('calendar-week-view');
+      const agendaEl = document.getElementById('calendar-agenda-view');
+      head.classList.toggle('hidden', calView !== 'month');
+      gridEl.classList.toggle('hidden', calView !== 'month');
+      weekEl.classList.toggle('hidden', calView !== 'week');
+      agendaEl.classList.toggle('hidden', calView !== 'agenda');
+      if (calPanelOpen) {
+        if (calView === 'month') renderMonthView(gridEl);
+        else if (calView === 'week') renderWeekView(weekEl);
+        else renderAgendaView(agendaEl);
+        renderSelectedDayPanel();
+        renderUpcoming();
+      }
       fitStickyBars();
-    };
+    }
+    function renderSubGroupChips() { renderCalendar(); }   // renderAll()과의 호환용 이름
+
+    // [달력 컨트롤 연결]
+    document.getElementById('btn-cal-prev-month').addEventListener('click', () => calNav(-1));
+    document.getElementById('btn-cal-next-month').addEventListener('click', () => calNav(1));
+    document.getElementById('btn-cal-today').addEventListener('click', () => {
+      const t = todayStr();
+      calYearMonth = t.slice(0, 7); calSelectedDate = t;
+      syncReportPeriod(); renderAll();
+    });
+    document.getElementById('btn-cal-scope-toggle').addEventListener('click', () => {
+      calScope = calScope === 'month' ? 'all' : 'month';
+      const repSel = document.getElementById('report-period-select');
+      if (calScope === 'all' && repSel) repSel.value = 'ALL'; else syncReportPeriod();
+      renderAll();
+    });
+    document.getElementById('btn-cal-toggle-grid').addEventListener('click', () => { calPanelOpen = !calPanelOpen; saveCalUI(); renderCalendar(); });
+    ['month', 'week', 'agenda'].forEach(v => document.getElementById('btn-cal-view-' + v).addEventListener('click', () => setCalView(v)));
+    document.getElementById('cal-month-picker').addEventListener('change', (ev) => {
+      const v = ev.target.value;
+      if (/^\d{4}-\d{2}$/.test(v)) {
+        calYearMonth = v;
+        if (calView === 'week' || !calSelectedDate.startsWith(v)) calSelectedDate = (v === todayStr().slice(0, 7)) ? todayStr() : v + '-01';
+        syncReportPeriod(); renderAll();
+      }
+    });
+    // 좌우로 밀어서 이동 (스와이프)
+    (function() {
+      const surf = document.getElementById('calendar-surface');
+      let sx = 0, sy = 0, t0 = 0;
+      surf.addEventListener('touchstart', e => { const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true });
+      surf.addEventListener('touchend', e => {
+        const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - t0 < 800) calNav(dx < 0 ? 1 : -1);
+      }, { passive: true });
+    })();
 
     // [모임 일정 렌더링]
     function renderMeetings() {
@@ -1584,10 +1995,18 @@
 
       const filteredMeetings = club.meetings.filter(mt => {
         if (club.activeSubGroupId !== "all" && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== "all") return false;
-        if (calScope === 'month' && mt.dateStr && !mt.dateStr.startsWith(calYearMonth)) return false;
+        if (calScope === 'month' && mtYmd(mt) && !mtYmd(mt).startsWith(calYearMonth)) return false;
         return true;
       });
 
+      // 가까운 일정부터(지난 일정은 뒤로)
+      const _today = todayStr();
+      filteredMeetings.sort((a, b) => {
+        const ka = mtSortKey(a), kb = mtSortKey(b);
+        const ua = ka.slice(0, 10) >= _today, ub = kb.slice(0, 10) >= _today;
+        if (ua !== ub) return ua ? -1 : 1;
+        return ua ? (ka < kb ? -1 : ka > kb ? 1 : 0) : (ka < kb ? 1 : ka > kb ? -1 : 0);
+      });
       badge.textContent = filteredMeetings.length;
 
       if (!club.id) {
@@ -1638,6 +2057,7 @@
               </div>
               <div class="flex items-center space-x-1 shrink-0">
                 <button onclick="exportMeetingToICS('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">📲 캘린더</button>
+                <button onclick="openMeetingModal({mode:'edit',meetingId:'${meeting.id}'})" class="px-2 py-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 transition">✏️</button>
                 <button onclick="handleDeleteMeeting('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
               </div>
             </div>
@@ -1645,7 +2065,9 @@
             <div class="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
               <div class="flex items-center space-x-1.5">
                 <span class="text-slate-400">📅 일시:</span>
-                <span class="font-semibold text-slate-800">${esc(meeting.dateStr)}</span>
+                <span class="font-semibold text-slate-800">${esc(fmtMeetingWhen(meeting))}</span>
+                ${mtYmd(meeting) ? `<span class="ml-1 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${ddayDiff(mtYmd(meeting)) < 0 ? 'bg-slate-200 text-slate-500' : 'bg-rose-100 text-rose-700'}">${ddayLabel(mtYmd(meeting))}</span>` : `<span class="ml-1 text-[11px] font-bold text-rose-600">⚠️ 날짜 형식 확인 필요</span>`}
+                ${meeting.seriesId ? '<span class="ml-1 text-[11px] font-bold text-slate-500">🔁 반복</span>' : ''}
               </div>
               <div class="flex items-center space-x-1.5">
                 <span class="text-slate-400">📍 장소:</span>
@@ -1706,7 +2128,7 @@
 
       const filteredMeetings = club.meetings.filter(mt => {
         if (club.activeSubGroupId !== "all" && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== "all") return false;
-        if (calScope === 'month' && mt.dateStr && !mt.dateStr.startsWith(calYearMonth)) return false;
+        if (calScope === 'month' && mtYmd(mt) && !mtYmd(mt).startsWith(calYearMonth)) return false;
         return true;
       });
 
@@ -2193,14 +2615,18 @@
       const club = getActiveClub();
       const meeting = club.meetings.find(m => m.id === meetingId);
       const title = meeting ? meeting.title : "이 모임";
+      const seriesCnt = meeting && meeting.seriesId ? club.meetings.filter(m => m.seriesId === meeting.seriesId).length : 0;
+      const seriesOpt = seriesCnt > 1 ? `<label class="flex items-center gap-2 mt-3 text-slate-700 font-semibold"><input type="checkbox" id="chk-delete-series" class="w-4 h-4"> 이 반복 일정 ${seriesCnt}개 모두 삭제</label>` : '';
       showDeleteConfirm(
         "모임 삭제 확인",
-        `'<strong>${esc(title)}</strong>' 모임을 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">참석 명단 및 정산 내역이 함께 삭제됩니다.</span>`,
+        `'<strong>${esc(title)}</strong>' 모임을 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">참석 명단 및 정산 내역이 함께 삭제됩니다.</span>${seriesOpt}`,
         () => {
-          club.meetings = club.meetings.filter(m => m.id !== meetingId);
+          const chk = document.getElementById('chk-delete-series');
+          const all = !!(chk && chk.checked && meeting && meeting.seriesId);
+          club.meetings = club.meetings.filter(m => all ? m.seriesId !== meeting.seriesId : m.id !== meetingId);
           saveState();
           renderAll();
-          showToast("모임 일정이 안전하게 삭제되었습니다.");
+          showToast(all ? "반복 일정이 모두 삭제되었습니다." : "모임 일정이 안전하게 삭제되었습니다.");
         }
       );
       });
@@ -2244,7 +2670,7 @@
       const totalSpent = meeting.expenses.reduce((sum, e) => sum + e.amount, 0);
 
       let text = `📢 [${club.name} - ${group.name}] ${meeting.title} 정산 안내\n`;
-      text += `• 일시: ${meeting.dateStr}\n`;
+      text += `• 일시: ${fmtMeetingWhen(meeting)}\n`;
       text += `• 장소: ${meeting.location}\n`;
       text += `• 참석: ${attendingIds.length}명 (${attendingIds.map(id => getMember(id).name).join(', ')})\n`;
       text += `------------------------------------\n`;
@@ -2375,57 +2801,6 @@
       document.getElementById('input-subgroup-name').value = '';
       renderAll();
       showToast(`'${name}' 소그룹이 추가되었습니다!`);
-    });
-
-    // 새 모임 일정 모달
-    document.getElementById('btn-open-create-meeting').addEventListener('click', () => {
-      requireAdminClub('모임 개설', () => {
-      document.getElementById('modal-create-meeting').classList.remove('hidden');
-      });
-    });
-    document.getElementById('btn-close-meeting-modal').addEventListener('click', () => {
-      document.getElementById('modal-create-meeting').classList.add('hidden');
-    });
-    document.getElementById('btn-cancel-create-meeting').addEventListener('click', () => {
-      document.getElementById('modal-create-meeting').classList.add('hidden');
-    });
-    document.getElementById('btn-submit-create-meeting').addEventListener('click', () => {
-      const club = getActiveClub();
-      const subGroupId = document.getElementById('input-meeting-subgroup').value;
-      const title = document.getElementById('input-meeting-title').value.trim();
-      const dateStr = document.getElementById('input-meeting-date').value.trim();
-      const location = document.getElementById('input-meeting-loc').value.trim();
-      const cap = Math.max(1, toInt(document.getElementById('input-meeting-cap').value) || 8);
-
-      if (!title || !dateStr) {
-        showToast("모임명과 일시를 입력해주세요.");
-        return;
-      }
-
-      if (club.meetings.some(mt => mt.title.trim().toLowerCase() === title.toLowerCase())) {
-        showToast(`⚠️ 이미 '${title}' 모임 일정이 존재합니다.`);
-        return;
-      }
-
-      const newMeeting = {
-        id: uid('meet'),
-        subGroupId,
-        title,
-        dateStr,
-        location: location || "장소 미정",
-        maxCapacity: cap,
-        attendees: {},
-        expenses: []
-      };
-
-      club.meetings.unshift(newMeeting);
-      saveState();
-      document.getElementById('modal-create-meeting').classList.add('hidden');
-      document.getElementById('input-meeting-title').value = '';
-      document.getElementById('input-meeting-date').value = '';
-      document.getElementById('input-meeting-loc').value = '';
-      renderAll();
-      showToast("새 모임 일정이 등록되었습니다!");
     });
 
     // 지출 추가 모달
@@ -2825,11 +3200,13 @@
     function refreshBackupInfo() {
       const el = document.getElementById('backup-last');
       el.textContent = appState.lastBackup ? `마지막 백업: ${appState.lastBackup}` : '아직 백업한 적이 없습니다.';
+      renderSnapshotList(); refreshPersistInfo();
     }
     function markBackedUp() {
       appState.lastBackup = todayStr();
       saveState();
       refreshBackupInfo();
+      renderBackupBanner();
     }
     document.getElementById('btn-open-backup').addEventListener('click', () => {
       refreshBackupInfo();
@@ -2900,6 +3277,80 @@
       restoreFromText(v);
     });
 
+    // --- [자료 안전장치: 자동 보관본 / 백업 알림 / 공유로 백업 / 저장 보호] ---
+    function readSnaps() { try { const a = JSON.parse(localStorage.getItem('all_meetings_multi_club_v3_snaps') || '[]'); return Array.isArray(a) ? a : []; } catch (e) { return []; } }
+    function writeSnaps(list) {
+      const key = 'all_meetings_multi_club_v3_snaps';
+      let l = list.slice(0, 7);
+      for (let i = 0; i < 7; i++) {
+        try { localStorage.setItem(key, JSON.stringify(l)); return; } catch (e) { if (l.length <= 1) return; l = l.slice(0, l.length - 1); }
+      }
+    }
+    // 하루에 한 번, 그날 첫 저장 직전의 자료를 따로 보관 (최근 7개). 실수로 지웠을 때 어제 상태로 되돌리는 용도
+    function dailySnapshot() {
+      const prev = localStorage.getItem(STORAGE_KEY);
+      if (!prev) return;
+      let obj; try { obj = JSON.parse(prev); } catch (e) { return; }
+      if (!obj || !Array.isArray(obj.clubs) || !obj.clubs.length) return;
+      const snaps = readSnaps(); const today = todayStr();
+      if (snaps.length && snaps[0].d === today) return;
+      snaps.unshift({ d: today, n: obj.clubs.length, s: prev });
+      writeSnaps(snaps);
+    }
+    function renderSnapshotList() {
+      const box = document.getElementById('backup-snapshots'); if (!box) return;
+      const snaps = readSnaps();
+      if (!snaps.length) { box.innerHTML = '<p class="text-xs text-slate-400">자동 보관본이 아직 없습니다. (하루 한 번 자동으로 쌓여요)</p>'; return; }
+      box.innerHTML = snaps.map((x, i) => `
+        <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-lg px-2.5 py-1.5">
+          <span class="text-xs font-semibold text-slate-700">${esc(x.d)} 아침 상태 · 모임 ${x.n}개</span>
+          <button onclick="restoreSnapshot(${i})" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-bold text-slate-700">이 상태로 복원</button>
+        </div>`).join('');
+    }
+    window.restoreSnapshot = function(i) { const s = readSnaps()[i]; if (s) restoreFromText(s.s); };
+
+    async function refreshPersistInfo() {
+      const el = document.getElementById('backup-persist'); if (!el) return;
+      try {
+        if (!navigator.storage || !navigator.storage.persisted) { el.textContent = ''; return; }
+        const p = await navigator.storage.persisted();
+        el.textContent = p ? '🔒 브라우저 저장 보호: 켜짐 (저장 공간 부족해도 자동 삭제 안 됨)' : '🔓 브라우저 저장 보호: 꺼짐 — 백업을 꼭 해두세요';
+      } catch (e) { el.textContent = ''; }
+    }
+    try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
+
+    // 백업 알림 배너: 자료가 있는데 백업한 지 7일 이상(또는 한 번도 안 함)이면 표시
+    function hasAnyData() { return (appState.clubs || []).some(c => (c.meetings || []).length || (c.members || []).length || (c.monthlyDues || []).length); }
+    function renderBackupBanner() {
+      const el = document.getElementById('backup-banner'); if (!el) return;
+      let show = false, msg = '';
+      if (hasAnyData()) {
+        if (!appState.lastBackup) { show = true; msg = '💾 아직 백업을 한 번도 안 하셨어요. 폰을 바꾸거나 브라우저 기록을 지우면 자료가 사라집니다.'; }
+        else {
+          const days = -ddayDiff(appState.lastBackup);
+          if (days >= 7) { show = true; msg = `💾 마지막 백업이 ${days}일 전입니다. 지금 백업해 두세요.`; }
+        }
+      }
+      let snooze = ''; try { snooze = localStorage.getItem('mm_backup_snooze') || ''; } catch (e) {}
+      if (snooze === todayStr()) show = false;
+      el.classList.toggle('hidden', !show);
+      if (show) document.getElementById('backup-banner-text').textContent = msg;
+    }
+    document.getElementById('btn-backup-banner-open').addEventListener('click', () => document.getElementById('btn-open-backup').click());
+    document.getElementById('btn-backup-banner-later').addEventListener('click', () => { try { localStorage.setItem('mm_backup_snooze', todayStr()); } catch (e) {} renderBackupBanner(); });
+
+    // 공유 버튼: 폰 공유창에서 구글드라이브/카톡 '나와의 채팅' 등으로 바로 보냄
+    document.getElementById('btn-backup-share').addEventListener('click', async () => {
+      const text = buildBackupText();
+      const name = `모임매니저_백업_${todayStr()}.json`;
+      try {
+        const file = new File([text], name, { type: 'application/json' });
+        if (navigator.canShare && navigator.canShare({ files: [file] })) { await navigator.share({ files: [file], title: '모임매니저 백업' }); markBackedUp(); showToast("📤 백업을 보냈습니다."); return; }
+        if (navigator.share) { await navigator.share({ title: '모임매니저 백업', text }); markBackedUp(); showToast("📤 백업을 보냈습니다."); return; }
+        showToast("이 브라우저는 공유를 지원하지 않아요. '백업 파일로 저장'을 눌러주세요.");
+      } catch (e) { /* 공유창을 닫은 경우 */ }
+    });
+
     // 헤더 높이가 글씨 크기에 따라 달라지므로 하위 탭 바 위치를 맞춤
     function fitStickyBars() {
       const h = document.getElementById('app-header'), b = document.getElementById('calendar-bar');
@@ -2948,10 +3399,10 @@
       const meetingExpenses = [];
       (club.meetings || []).forEach(mt => {
         if (!matchSub(mt.subGroupId)) return;
-        if (selectedPeriod !== 'ALL' && mt.dateStr && !mt.dateStr.startsWith(selectedPeriod)) return;
+        if (selectedPeriod !== 'ALL' && mtYmd(mt) && !mtYmd(mt).startsWith(selectedPeriod)) return;
         (mt.expenses || []).forEach(e => {
           meetingExpenses.push({
-            date: (mt.dateStr || '').slice(0, 10) || '-',
+            date: mtYmd(mt) || '-',
             title: `[${mt.title}] ${e.title}`,
             amount: e.amount,
             note: `결제: ${getMember(e.payerId).name}`
@@ -3021,6 +3472,7 @@
       const periods = new Set();
       (club.monthlyDues || []).forEach(d => { if (d.yearMonth) periods.add(d.yearMonth); });
       (club.extraLedger || []).forEach(x => { if (x.date && x.date.length >= 7) periods.add(x.date.slice(0, 7)); });
+      (club.meetings || []).forEach(mt => { const k = mtYmd(mt); if (k) periods.add(k.slice(0, 7)); });
       const sortedPeriods = Array.from(periods).sort().reverse();
       periodSel.innerHTML = `<option value="ALL">전체 기간 통합</option>` +
         sortedPeriods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
@@ -3364,71 +3816,108 @@
 
 
 
-    // --- [달력 컨트롤 + 번개 개설 + 참석자 일괄 체크박스] ---
+    // --- [일정 만들기/수정 창 · 반복 일정 · 폰 캘린더(.ics) 내보내기] ---
+    let editingMeetingId = null;
+    let meetingEndTouched = false;
 
-    document.getElementById('btn-cal-today').addEventListener('click', () => {
-      const t = todayStr();
-      calYearMonth = t.slice(0, 7);
-      calSelectedDate = t;
-      renderAll();
-      if (!document.getElementById('calendar-grid-panel').classList.contains('hidden')) {
-        selectCalendarDate(t);
+    const REPEAT_LABELS = { none: '반복 안 함', weekly: '매주', biweekly: '2주마다', 'monthly-date': '매월 같은 날짜', 'monthly-nth': '매월 같은 요일' };
+    const NTH_KO = ['', '첫째', '둘째', '셋째', '넷째', '다섯째'];
+
+    // 반복 일정의 날짜 목록 만들기
+    function genRepeatDates(startYmd, kind, count) {
+      const out = [startYmd];
+      const p = ymdParts(startYmd);
+      if (!p || kind === 'none') return out;
+      const n = Math.max(1, Math.min(60, count | 0));
+      if (kind === 'weekly' || kind === 'biweekly') {
+        const step = kind === 'weekly' ? 7 : 14;
+        for (let i = 1; i < n; i++) out.push(ymdAdd(startYmd, step * i));
+        return out;
       }
-      showToast(`📅 오늘(${t})로 이동했습니다.`);
-    });
+      const dow = ymdDow(startYmd);
+      const nth = Math.ceil(p[2] / 7);
+      const isLast = p[2] + 7 > daysInMonth(p[0], p[1]);
+      for (let i = 1; i < n; i++) {
+        const dt = new Date(Date.UTC(p[0], p[1] - 1 + i, 1));
+        const yy = dt.getUTCFullYear(), mm = dt.getUTCMonth() + 1, dim = daysInMonth(yy, mm);
+        let day;
+        if (kind === 'monthly-date') day = Math.min(p[2], dim);
+        else {
+          const firstDow = dt.getUTCDay();
+          day = 1 + ((dow - firstDow + 7) % 7) + (Math.min(nth, 4) - 1) * 7;
+          if (isLast) { while (day + 7 <= dim) day += 7; }
+        }
+        out.push(`${yy}-${pad2(mm)}-${pad2(day)}`);
+      }
+      return out;
+    }
+    function monthlyNthLabel(ymd) {
+      const p = ymdParts(ymd); if (!p) return '매월 같은 요일';
+      const isLast = p[2] + 7 > daysInMonth(p[0], p[1]);
+      return `매월 ${isLast ? '마지막' : NTH_KO[Math.ceil(p[2] / 7)]} ${WEEKDAY_KO[ymdDow(ymd)]}요일`;
+    }
+    function refreshRepeatOptions() {
+      const sel = document.getElementById('input-meeting-repeat');
+      const ymd = document.getElementById('input-meeting-date').value;
+      const cur = sel.value || 'none';
+      sel.innerHTML = Object.keys(REPEAT_LABELS).map(k => `<option value="${k}">${k === 'monthly-nth' ? monthlyNthLabel(ymd) : REPEAT_LABELS[k]}</option>`).join('');
+      sel.value = cur;
+    }
+    function updateMeetingFormPreview() {
+      const ymd = document.getElementById('input-meeting-date').value;
+      const pv = document.getElementById('meeting-date-preview');
+      const rpv = document.getElementById('meeting-repeat-preview');
+      const kind = document.getElementById('input-meeting-repeat').value;
+      const cntWrap = document.getElementById('meeting-repeat-count-wrap');
+      cntWrap.classList.toggle('hidden', kind === 'none' || !!editingMeetingId);
+      if (!ymdParts(ymd)) { pv.textContent = '날짜를 선택해 주세요.'; rpv.textContent = ''; return; }
+      const hol = getHolidayName(ymd);
+      pv.textContent = `${ymd} (${WEEKDAY_KO[ymdDow(ymd)]})${hol ? ' · ' + hol : ''}`;
+      if (kind !== 'none' && !editingMeetingId) {
+        const cnt = Math.max(2, Math.min(60, parseInt(document.getElementById('input-meeting-repeat-count').value, 10) || 6));
+        const ds = genRepeatDates(ymd, kind, cnt);
+        const show = ds.slice(0, 4).map(d => d.slice(5).replace('-', '/')).join(', ');
+        rpv.textContent = `총 ${ds.length}회: ${show}${ds.length > 4 ? ' … ' + ds[ds.length - 1].slice(5).replace('-', '/') : ''}`;
+      } else rpv.textContent = '';
+    }
+    function syncAllDayUI() {
+      const all = document.getElementById('input-meeting-allday').checked;
+      document.getElementById('meeting-time-row').classList.toggle('hidden', all);
+    }
 
-    window.exportMeetingToICS = function(meetingId) {
+    window.openMeetingModal = function(opts) {
+      opts = opts || {};
       const club = getActiveClub();
-      const mt = (club.meetings || []).find(x => x.id === meetingId);
-      if (!mt) return;
-      const dMatch = (mt.dateStr || '').match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
-      const now = new Date();
-      const y = dMatch ? dMatch[1] : String(now.getFullYear());
-      const m = dMatch ? dMatch[2] : String(now.getMonth() + 1).padStart(2, '0');
-      const d = dMatch ? dMatch[3] : String(now.getDate()).padStart(2, '0');
-      const hh = (dMatch && dMatch[4]) ? dMatch[4] : '18';
-      const mm = (dMatch && dMatch[5]) ? dMatch[5] : '00';
-      const endHh = String(Math.min(23, parseInt(hh, 10) + 2)).padStart(2, '0');
-
-      const dtStart = `${y}${m}${d}T${hh}${mm}00`;
-      const dtEnd = `${y}${m}${d}T${endHh}${mm}00`;
-      const ics = [
-        'BEGIN:VCALENDAR',
-        'VERSION:2.0',
-        'PRODID:-//MOMO//Meeting Manager//KO',
-        'BEGIN:VEVENT',
-        `UID:${mt.id}@momo`,
-        `DTSTART;TZID=Asia/Seoul:${dtStart}`,
-        `DTEND;TZID=Asia/Seoul:${dtEnd}`,
-        `SUMMARY:[${club.name}] ${mt.title}`,
-        `LOCATION:${mt.location || ''}`,
-        `DESCRIPTION:${mt.meetingType === '번개' ? '번개 모임' : '정기 모임'} (모모에서 등록)`,
-        'END:VEVENT',
-        'END:VCALENDAR'
-      ].join('\r\n');
-
-      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
-      const a = document.createElement('a');
-      a.href = URL.createObjectURL(blob);
-      a.download = `${mt.title.replace(/[\\/:*?"<>|]/g, '_')}.ics`;
-      a.click();
-      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
-      showToast("📲 캘린더 파일(.ics)이 저장되었습니다. 파일을 누르면 삼성 캘린더에 바로 추가됩니다!");
+      if (!club.id) { showToast("먼저 상단 '+ 모임 추가'를 눌러 모임을 만들어 주세요."); document.getElementById('modal-create-club').classList.remove('hidden'); return; }
+      populateDropdowns();
+      editingMeetingId = null;
+      let mt = null;
+      if (opts.mode === 'edit') { mt = club.meetings.find(x => x.id === opts.meetingId); if (!mt) return; editingMeetingId = mt.id; }
+      const type = mt ? mt.meetingType : (opts.type === '번개' ? '번개' : '정기');
+      setMeetingTypeUI(type);
+      document.getElementById('meeting-modal-title').textContent = mt ? '모임 일정 수정' : (type === '번개' ? '⚡ 번개 모임 만들기' : '새 모임 일정 개설');
+      document.getElementById('btn-submit-create-meeting').textContent = mt ? '저장하기' : '개설하기';
+      document.getElementById('input-meeting-title').value = mt ? mt.title : '';
+      document.getElementById('input-meeting-loc').value = mt ? (mt.location === '장소 미정' ? '' : mt.location) : '';
+      document.getElementById('input-meeting-cap').value = mt ? mt.maxCapacity : 8;
+      const sg = document.getElementById('input-meeting-subgroup');
+      if (mt) sg.value = mt.subGroupId;
+      const p = mt ? mtInfo(mt) : null;
+      const defDate = (opts.date && ymdParts(opts.date)) ? opts.date : (ymdParts(calSelectedDate) ? calSelectedDate : todayStr());
+      document.getElementById('input-meeting-date').value = p ? p.ymd : (mt ? '' : defDate);
+      const allDay = mt ? (p ? !p.hasTime : false) : false;
+      document.getElementById('input-meeting-allday').checked = allDay;
+      document.getElementById('input-meeting-start').value = mt ? mtStartHM(mt) : (type === '번개' ? '19:00' : '18:00');
+      document.getElementById('input-meeting-end').value = (mt && /^\d{2}:\d{2}$/.test(mt.endTime || '')) ? mt.endTime : '';
+      meetingEndTouched = !!(mt && mt.endTime);
+      document.getElementById('input-meeting-remind').value = mt ? String(typeof mt.remind === 'number' ? mt.remind : 60) : '60';
+      document.getElementById('input-meeting-repeat').value = 'none';
+      document.getElementById('input-meeting-repeat-count').value = 6;
+      document.getElementById('meeting-repeat-block').classList.toggle('hidden', !!mt);
+      document.getElementById('meeting-series-note').classList.toggle('hidden', !(mt && mt.seriesId));
+      refreshRepeatOptions(); syncAllDayUI(); updateMeetingFormPreview();
+      document.getElementById('modal-create-meeting').classList.remove('hidden');
     };
-
-    document.getElementById('btn-cal-prev-month').addEventListener('click', () => shiftMonth(-1));
-    document.getElementById('btn-cal-next-month').addEventListener('click', () => shiftMonth(1));
-    document.getElementById('btn-cal-scope-toggle').addEventListener('click', () => {
-      calScope = calScope === 'month' ? 'all' : 'month';
-      const repSel = document.getElementById('report-period-select');
-      if (repSel) repSel.value = calScope === 'month' ? calYearMonth : 'ALL';
-      renderAll();
-    });
-    document.getElementById('btn-cal-toggle-grid').addEventListener('click', () => {
-      document.getElementById('calendar-grid-panel').classList.toggle('hidden');
-      fitStickyBars();
-    });
-
     function setMeetingTypeUI(type) {
       document.getElementById('input-meeting-type').value = type;
       const btnReg = document.getElementById('btn-type-regular');
@@ -3443,32 +3932,172 @@
     }
     document.getElementById('btn-type-regular').addEventListener('click', () => setMeetingTypeUI('정기'));
     document.getElementById('btn-type-flash').addEventListener('click', () => setMeetingTypeUI('번개'));
-
-    function openMeetingModalWithPreset(type, datePrefix) {
-      const club = getActiveClub();
-      if (!club.id) { showToast("먼저 상단 '+ 모임 추가'를 눌러 모임을 만들어 주세요."); return; }
-      setMeetingTypeUI(type);
-      const d = datePrefix || todayStr();
-      document.getElementById('input-meeting-date').value = `${d} ${type === '번개' ? '19:00' : '18:00'}`;
-      document.getElementById('input-meeting-title').value = '';
-      document.getElementById('input-meeting-loc').value = '';
-      document.getElementById('modal-create-meeting').classList.remove('hidden');
-    }
-
-    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => openMeetingModalWithPreset('번개', calSelectedDate || todayStr()));
-    document.getElementById('btn-cal-quick-regular').addEventListener('click', () => openMeetingModalWithPreset('정기', calSelectedDate || todayStr()));
-    document.getElementById('btn-cal-quick-flash').addEventListener('click', () => openMeetingModalWithPreset('번개', calSelectedDate || todayStr()));
+    document.getElementById('btn-open-create-meeting').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기' })));
+    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개' })));
+    document.getElementById('btn-cal-quick-regular').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: calSelectedDate })));
+    document.getElementById('btn-cal-quick-flash').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개', date: calSelectedDate })));
+    ['btn-close-meeting-modal', 'btn-cancel-create-meeting'].forEach(id => document.getElementById(id).addEventListener('click', () => document.getElementById('modal-create-meeting').classList.add('hidden')));
+    document.getElementById('input-meeting-date').addEventListener('change', () => { refreshRepeatOptions(); updateMeetingFormPreview(); });
+    document.getElementById('input-meeting-allday').addEventListener('change', syncAllDayUI);
+    document.getElementById('input-meeting-repeat').addEventListener('change', updateMeetingFormPreview);
+    document.getElementById('input-meeting-repeat-count').addEventListener('input', updateMeetingFormPreview);
+    document.getElementById('input-meeting-end').addEventListener('input', () => { meetingEndTouched = true; });
+    document.getElementById('input-meeting-start').addEventListener('change', () => {
+      // 종료 시간을 직접 만지지 않았다면 시작 + 2시간으로 자동 맞춤
+      if (!meetingEndTouched) document.getElementById('input-meeting-end').value = '';
+    });
 
     document.getElementById('btn-submit-create-meeting').addEventListener('click', () => {
       const club = getActiveClub();
-      const latest = club.meetings && club.meetings[0];
-      const chosenType = document.getElementById('input-meeting-type').value === '번개' ? '번개' : '정기';
-      if (latest && !latest.meetingType) {
-        latest.meetingType = chosenType;
+      if (!club.id) return;
+      const type = document.getElementById('input-meeting-type').value === '번개' ? '번개' : '정기';
+      const subGroupId = document.getElementById('input-meeting-subgroup').value || 'all';
+      const title = document.getElementById('input-meeting-title').value.trim();
+      const ymd = document.getElementById('input-meeting-date').value;
+      const allDay = document.getElementById('input-meeting-allday').checked;
+      const start = document.getElementById('input-meeting-start').value;
+      let end = document.getElementById('input-meeting-end').value;
+      const location = document.getElementById('input-meeting-loc').value.trim();
+      const cap = Math.max(1, toInt(document.getElementById('input-meeting-cap').value) || 8);
+      const remind = parseInt(document.getElementById('input-meeting-remind').value, 10);
+      const kind = document.getElementById('input-meeting-repeat').value;
+
+      if (!title) { showToast("모임명을 입력해주세요."); return; }
+      if (!ymdParts(ymd)) { showToast("날짜를 선택해주세요."); return; }
+      if (!allDay && !start) { showToast("시작 시간을 선택하거나 '종일'을 켜주세요."); return; }
+      if (!allDay && end && end <= start) { showToast("종료 시간은 시작 시간보다 늦어야 합니다."); return; }
+      if (allDay) end = '';
+      const dateStr = allDay ? ymd : `${ymd} ${start}`;
+      const remindVal = isNaN(remind) ? 60 : remind;
+
+      if (editingMeetingId) {
+        const mt = club.meetings.find(x => x.id === editingMeetingId);
+        if (!mt) return;
+        mt.title = title; mt.meetingType = type; mt.subGroupId = subGroupId; mt.dateStr = dateStr; mt.endTime = end;
+        mt.location = location || '장소 미정'; mt.maxCapacity = cap; mt.remind = remindVal;
         saveState();
-        renderMeetings();
+        document.getElementById('modal-create-meeting').classList.add('hidden');
+        calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7); syncReportPeriod();
+        renderAll();
+        showToast("일정이 수정되었습니다.");
+        return;
       }
+
+      const count = Math.max(2, Math.min(60, parseInt(document.getElementById('input-meeting-repeat-count').value, 10) || 6));
+      const dates = kind === 'none' ? [ymd] : genRepeatDates(ymd, kind, count);
+      const seriesId = dates.length > 1 ? uid('ser') : '';
+      let made = 0, skipped = 0;
+      dates.forEach(d => {
+        const ds = allDay ? d : `${d} ${start}`;
+        // 똑같은 모임(이름+날짜+소모임)을 두 번 만드는 실수만 막음 (같은 이름의 월례회는 매달 OK)
+        const dup = club.meetings.some(x => x.title.trim().toLowerCase() === title.toLowerCase() && mtYmd(x) === d && x.subGroupId === subGroupId);
+        if (dup) { skipped++; return; }
+        club.meetings.push({
+          id: uid('meet'), subGroupId, meetingType: type, title, dateStr: ds, endTime: end, location: location || '장소 미정',
+          maxCapacity: cap, attendees: {}, expenses: [], remind: remindVal, seriesId: seriesId, repeat: kind === 'none' ? '' : kind
+        });
+        made++;
+      });
+      if (!made) { showToast("⚠️ 같은 이름·같은 날짜의 일정이 이미 있습니다."); return; }
+      saveState();
+      document.getElementById('modal-create-meeting').classList.add('hidden');
+      calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7); syncReportPeriod();
+      renderAll();
+      showToast(made > 1 ? `🔁 반복 일정 ${made}개가 등록되었습니다.${skipped ? ` (중복 ${skipped}개 제외)` : ''}` : "새 모임 일정이 등록되었습니다!");
     });
+
+    // ---------- 폰 캘린더(.ics) 내보내기 ----------
+    function icsEscape(s) { return String(s == null ? '' : s).replace(/\\/g, '\\\\').replace(/;/g, '\\;').replace(/,/g, '\\,').replace(/\r?\n/g, '\\n'); }
+    function icsFold(line) {
+      // RFC5545: 한 줄은 75바이트 이하 -> 한글(3바이트)을 깨뜨리지 않게 문자 단위로 접음
+      const enc = new TextEncoder(); let out = '', cur = '', bytes = 0, limit = 73;
+      for (const ch of line) {
+        const b = enc.encode(ch).length;
+        if (bytes + b > limit) { out += cur + '\r\n '; cur = ''; bytes = 0; limit = 72; }
+        cur += ch; bytes += b;
+      }
+      return out + cur;
+    }
+    function icsUtcStamp(d) { return `${d.getUTCFullYear()}${pad2(d.getUTCMonth() + 1)}${pad2(d.getUTCDate())}T${pad2(d.getUTCHours())}${pad2(d.getUTCMinutes())}${pad2(d.getUTCSeconds())}Z`; }
+    function mtDescription(club, mt) {
+      const names = Object.keys(mt.attendees || {}).filter(id => mt.attendees[id] === '참석').map(id => getMember(id).name);
+      let d = `${mt.meetingType === '번개' ? '번개 모임' : '정기 모임'} · ${club.name}`;
+      d += `\n참석 확정 ${names.length}/${mt.maxCapacity}명`;
+      if (names.length) d += ` (${names.slice(0, 15).join(', ')}${names.length > 15 ? ' 외' : ''})`;
+      return d;
+    }
+    function buildICS(list, club) {
+      const lines = ['BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//MOMO//Meeting Manager//KO', 'CALSCALE:GREGORIAN', 'METHOD:PUBLISH',
+        `X-WR-CALNAME:${icsEscape(club.name)}`, 'X-WR-TIMEZONE:Asia/Seoul',
+        'BEGIN:VTIMEZONE', 'TZID:Asia/Seoul', 'BEGIN:STANDARD', 'DTSTART:19700101T000000', 'TZOFFSETFROM:+0900', 'TZOFFSETTO:+0900', 'TZNAME:KST', 'END:STANDARD', 'END:VTIMEZONE'];
+      const stamp = icsUtcStamp(new Date());
+      list.forEach(mt => {
+        const p = mtInfo(mt); if (!p) return;
+        const ymd8 = p.ymd.replace(/-/g, '');
+        lines.push('BEGIN:VEVENT', `UID:${mt.id}@momo`, `DTSTAMP:${stamp}`);
+        if (p.hasTime) {
+          const s = mtStartHM(mt).replace(':', ''), e = mtEndHM(mt).replace(':', '');
+          lines.push(`DTSTART;TZID=Asia/Seoul:${ymd8}T${s}00`, `DTEND;TZID=Asia/Seoul:${ymd8}T${e}00`);
+        } else {
+          lines.push(`DTSTART;VALUE=DATE:${ymd8}`, `DTEND;VALUE=DATE:${ymdAdd(p.ymd, 1).replace(/-/g, '')}`);
+        }
+        lines.push(`SUMMARY:${icsEscape('[' + club.name + '] ' + mt.title)}`);
+        if (mt.location && mt.location !== '장소 미정') lines.push(`LOCATION:${icsEscape(mt.location)}`);
+        lines.push(`DESCRIPTION:${icsEscape(mtDescription(club, mt))}`);
+        const r = typeof mt.remind === 'number' ? mt.remind : 60;
+        if (r >= 0) lines.push('BEGIN:VALARM', 'ACTION:DISPLAY', `DESCRIPTION:${icsEscape(mt.title)}`, r === 0 ? 'TRIGGER:PT0S' : `TRIGGER:-PT${r}M`, 'END:VALARM');
+        lines.push('END:VEVENT');
+      });
+      lines.push('END:VCALENDAR');
+      return lines.map(icsFold).join('\r\n') + '\r\n';
+    }
+    function downloadICS(list, fileBase, doneMsg) {
+      const club = getActiveClub();
+      const ok = list.filter(mt => mtInfo(mt));
+      if (!ok.length) { showToast("내보낼 일정이 없습니다. (날짜 확인 필요한 일정은 제외됩니다)"); return; }
+      const blob = new Blob([buildICS(ok, club)], { type: 'text/calendar;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${String(fileBase).replace(/[\\/:*?"<>|]/g, '_')}.ics`;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+      showToast(doneMsg || `📲 일정 ${ok.length}개 파일(.ics)을 저장했습니다. 파일을 누르면 삼성 캘린더에 들어갑니다.`);
+    }
+    window.exportMeetingToICS = function(meetingId) {
+      const club = getActiveClub();
+      const mt = (club.meetings || []).find(x => x.id === meetingId);
+      if (!mt) return;
+      if (!mtInfo(mt)) { showToast("날짜 형식을 먼저 고쳐주세요. (✏️ 수정)"); return; }
+      downloadICS([mt], mt.title);
+    };
+    window.exportMonthToICS = function() {
+      const club = getActiveClub();
+      downloadICS(meetingsForCalendar().filter(mt => mtYmd(mt).startsWith(calYearMonth)).sort(byMeetingTime), `${club.name}_${calYearMonth}`);
+    };
+    window.exportAllToICS = function() {
+      const club = getActiveClub();
+      downloadICS(meetingsForCalendar().slice().sort(byMeetingTime), `${club.name}_전체일정`);
+    };
+    window.openGoogleCalendar = function(meetingId) {
+      const club = getActiveClub();
+      const mt = (club.meetings || []).find(x => x.id === meetingId);
+      if (!mt || !mtInfo(mt)) { showToast("날짜 형식을 먼저 고쳐주세요. (✏️ 수정)"); return; }
+      const p = mtInfo(mt); const d8 = p.ymd.replace(/-/g, '');
+      const dates = p.hasTime ? `${d8}T${mtStartHM(mt).replace(':', '')}00/${d8}T${mtEndHM(mt).replace(':', '')}00` : `${d8}/${ymdAdd(p.ymd, 1).replace(/-/g, '')}`;
+      const q = new URLSearchParams({ action: 'TEMPLATE', text: `[${club.name}] ${mt.title}`, dates, details: mtDescription(club, mt), location: mt.location === '장소 미정' ? '' : mt.location, ctz: 'Asia/Seoul' });
+      window.open('https://calendar.google.com/calendar/render?' + q.toString(), '_blank');
+    };
+
+    // 앱을 열었을 때 오늘/내일 일정 알려주기
+    function startupReminder() {
+      try {
+        const club = getActiveClub(); if (!club.id) return;
+        const today = todayStr(), tomorrow = ymdAdd(today, 1);
+        const t = (club.meetings || []).filter(mt => mtYmd(mt) === today), n = (club.meetings || []).filter(mt => mtYmd(mt) === tomorrow);
+        if (t.length) showToast(`🔔 오늘 일정 ${t.length}건: ${t[0].title}${t.length > 1 ? ' 외' : ''}`);
+        else if (n.length) showToast(`🔔 내일 일정 ${n.length}건: ${n[0].title}${n.length > 1 ? ' 외' : ''}`);
+      } catch (e) {}
+    }
 
     window.openBatchRsvpModal = function(meetingId) {
       const club = getActiveClub();
@@ -3532,6 +4161,7 @@
     // 초기 구동
     renderAll();
     fitStickyBars();
+    startupReminder();
   </script>
 </body>
 </html>
