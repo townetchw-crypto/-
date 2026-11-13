@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>모든모임 통합 매니저</title>
+  <title>모모 - 모든모임 통합 매니저</title>
   <!-- Tailwind CSS CDN -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <script>
@@ -36,6 +36,19 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+      #app-header, #subgroup-bar, #active-group-banner, #admin-notice-bar, nav,
+      #report-action-bar, #report-filter-bar, .no-print, #toast-container,
+      [id^="modal-"] { display: none !important; }
+      main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      #tab-report-view { display: block !important; }
+      #report-printable-area {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+    }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
@@ -57,11 +70,6 @@
     </button>
 
     <div class="flex items-center space-x-1.5">
-      <!-- 운영진 모드 토글 버튼 -->
-      <button id="btn-toggle-admin-mode" class="px-2 py-1 text-xs font-bold rounded-lg border transition flex items-center space-x-1 bg-amber-50 text-amber-900 border-amber-300 shadow-2xs">
-        <span id="admin-badge-icon">👑</span>
-        <span id="admin-badge-text">운영진 모드</span>
-      </button>
       <button id="btn-open-backup" class="px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
         💾 백업
       </button>
@@ -72,15 +80,41 @@
     </div>
   </header>
 
-  <!-- 하위 기수 / 소모임 전환 탭 바 (선택된 클럽 내 기수/소그룹 연동) -->
-  <div id="subgroup-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
-    <div class="max-w-lg mx-auto flex items-center justify-between gap-1.5">
-      <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5 flex-1" id="subgroup-chip-container">
-        <!-- 동적 하위 기수/소모임 칩 주입 -->
+  <!-- 년/월 캘린더 컨트롤 바 (총무용 단순화) -->
+  <div id="calendar-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
+    <div class="max-w-lg mx-auto space-y-2">
+      <div class="flex items-center justify-between gap-1.5">
+        <div class="flex items-center space-x-1">
+          <button id="btn-cal-prev-month" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
+          <span id="cal-current-label" class="px-2 text-sm font-extrabold text-slate-900 min-w-[92px] text-center">2026년 11월</span>
+          <button id="btn-cal-next-month" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button id="btn-cal-scope-toggle" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">
+            전체 보기
+          </button>
+          <button id="btn-cal-toggle-grid" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition">
+            📅 달력
+          </button>
+        </div>
       </div>
-      <button id="btn-open-add-subgroup" class="shrink-0 px-2 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">
-        + 소모임 추가
-      </button>
+
+      <!-- 펼치는 미니 달력 패널 -->
+      <div id="calendar-grid-panel" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2">
+        <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500">
+          <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span>
+        </div>
+        <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
+          <!-- 동적 달력 날짜 -->
+        </div>
+        <div id="calendar-selected-bar" class="hidden bg-white border border-indigo-200 rounded-xl p-2 flex items-center justify-between gap-2">
+          <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
+          <div class="flex items-center space-x-1.5">
+            <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">📅 정기</button>
+            <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -131,10 +165,16 @@
           <span id="meetings-section-title">모임 일정</span>
           <span id="meeting-count-badge" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">0</span>
         </h2>
-        <button id="btn-open-create-meeting" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-200 transition flex items-center space-x-1">
-          <span>+</span>
-          <span>모임 개설</span>
-        </button>
+        <div class="flex items-center space-x-1.5">
+          <button id="btn-open-flash-meeting" class="px-2.5 py-1.5 bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-extrabold rounded-lg shadow-sm transition flex items-center space-x-1">
+            <span>⚡</span>
+            <span>번개</span>
+          </button>
+          <button id="btn-open-create-meeting" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-indigo-200 transition flex items-center space-x-1">
+            <span>+</span>
+            <span>정기 개설</span>
+          </button>
+        </div>
       </div>
 
       <!-- 모임 목록 카드 영역 -->
@@ -235,26 +275,73 @@
       </div>
     </div>
 
+    <!-- [섹션 5] 자동화 결산보고서 탭 (모모 핵심 기능) -->
+    <div id="tab-report-view" class="hidden space-y-4">
+      <div id="report-action-bar" class="flex items-center justify-between gap-2">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>📊</span>
+          <span>자동 결산보고서</span>
+        </h2>
+        <div class="flex items-center space-x-1.5">
+          <button id="btn-open-report-config" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition">
+            ⚙️ 설정/서명
+          </button>
+          <button id="btn-open-add-report-entry" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+            + 수입·지출
+          </button>
+        </div>
+      </div>
+
+      <!-- 기간/구분 필터 & SNS 출력 버튼 바 -->
+      <div id="report-filter-bar" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <label class="text-xs font-bold text-slate-600 shrink-0">결산 구분</label>
+          <select id="report-period-select" class="flex-1 text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">전체 기간 통합</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-report-print-pdf" class="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center justify-center space-x-1.5">
+            <span>🖨️</span>
+            <span>PDF 저장 / 인쇄</span>
+          </button>
+          <button id="btn-report-share-sns" class="py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-bold shadow-sm transition flex items-center justify-center space-x-1.5">
+            <span>📢</span>
+            <span>밴드·카톡 공유</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 실제 보고서 영역 (인쇄/PDF 출력 대상) -->
+      <div id="report-printable-area" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
   </main>
 
   <!-- 모바일 하단 네비게이션 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
-    <div class="max-w-lg mx-auto grid grid-cols-4 h-16">
+    <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
       <button id="nav-btn-meetings" class="flex flex-col items-center justify-center space-y-1 text-indigo-600 font-semibold transition-colors">
-        <span class="text-xl">📅</span>
-        <span class="text-xs">모임일정</span>
+        <span class="text-lg">📅</span>
+        <span class="text-[11px]">모임일정</span>
       </button>
       <button id="nav-btn-settlement" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
-        <span class="text-xl">💰</span>
-        <span class="text-xs">1/N 정산</span>
+        <span class="text-lg">💰</span>
+        <span class="text-[11px]">1/N 정산</span>
       </button>
       <button id="nav-btn-members" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
-        <span class="text-xl">👥</span>
-        <span class="text-xs">회원목록</span>
+        <span class="text-lg">👥</span>
+        <span class="text-[11px]">회원목록</span>
       </button>
       <button id="nav-btn-dues" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
-        <span class="text-xl">📒</span>
-        <span class="text-xs">회비장부</span>
+        <span class="text-lg">📒</span>
+        <span class="text-[11px]">회비장부</span>
+      </button>
+      <button id="nav-btn-report" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+        <span class="text-lg">📊</span>
+        <span class="text-[11px]">결산보고</span>
       </button>
     </div>
   </nav>
@@ -328,10 +415,13 @@
       </div>
       <div class="space-y-3 text-xs sm:text-sm">
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">소속 소모임 / 기수</label>
-          <select id="input-meeting-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 font-medium outline-none">
-            <!-- 동적 주입 -->
-          </select>
+          <label class="block font-semibold text-slate-700 mb-1">모임 형태</label>
+          <div class="grid grid-cols-2 gap-2">
+            <button type="button" id="btn-type-regular" class="py-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-indigo-800 font-extrabold text-xs transition">📅 정기 모임</button>
+            <button type="button" id="btn-type-flash" class="py-2 rounded-lg border border-slate-300 bg-white text-slate-600 font-bold text-xs transition">⚡ 번개 모임</button>
+          </div>
+          <input type="hidden" id="input-meeting-type" value="정기">
+          <select id="input-meeting-subgroup" class="hidden"><option value="all">전체</option></select>
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">모임명</label>
@@ -353,6 +443,35 @@
       <div class="flex space-x-2 pt-2">
         <button id="btn-cancel-create-meeting" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
         <button id="btn-submit-create-meeting" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">개설하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 1-1] 참석자 일괄 체크박스 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-batch-rsvp" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div>
+          <h3 class="font-bold text-slate-900 text-base">👥 참석자 한 번에 선택</h3>
+          <p id="batch-rsvp-meeting-title" class="text-xs text-slate-500"></p>
+        </div>
+        <button id="btn-close-batch-rsvp" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="flex items-center justify-between text-xs">
+        <span id="batch-rsvp-count" class="font-bold text-indigo-700">0명 선택됨</span>
+        <div class="space-x-2">
+          <button id="btn-rsvp-select-all" class="px-2 py-1 bg-indigo-50 text-indigo-700 font-bold rounded-lg">전체 선택</button>
+          <button id="btn-rsvp-clear-all" class="px-2 py-1 bg-slate-100 text-slate-600 font-bold rounded-lg">전체 해제</button>
+        </div>
+      </div>
+      <div id="batch-rsvp-list" class="flex-1 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl min-h-[180px] max-h-[45vh]">
+        <!-- 체크박스 목록 -->
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-batch-rsvp" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-bold text-xs">취소</button>
+        <button id="btn-submit-batch-rsvp" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-bold text-xs">참석자 저장</button>
       </div>
     </div>
   </div>
@@ -564,6 +683,102 @@
       <div class="flex space-x-2 pt-2">
         <button id="btn-cancel-add-subgroup" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
         <button id="btn-submit-add-subgroup" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 6-1] 결산보고서 기본 설정 및 서명란 수정 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-report-config" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">⚙️ 결산보고서 설정</h3>
+        <button id="btn-close-report-config" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">보고서 제목</label>
+          <input id="input-rep-title" type="text" placeholder="예: 2026년 11월 정기 결산보고서" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">결산 기간 표시</label>
+            <input id="input-rep-period" type="text" placeholder="예: 2026.11.01 ~ 11.30" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">전월(전기) 이월금 (원)</label>
+            <input id="input-rep-carryover" type="number" value="0" min="0" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">보관 계좌 (은행 / 계좌번호 / 예금주)</label>
+          <input id="input-rep-bank" type="text" placeholder="예: 국민 123-456-7890 (홍길동)" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">총무 (작성)</label>
+            <input id="input-rep-secretary" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">감사/부회장</label>
+            <input id="input-rep-auditor" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">회장 (승인)</label>
+            <input id="input-rep-president" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-report-config" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50">취소</button>
+        <button id="btn-submit-report-config" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 6-2] 결산 추가 수입/지출 항목 등록·수정 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-report-entry" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 id="report-entry-modal-title" class="font-bold text-slate-900 text-base">수입·지출 항목 등록</h3>
+        <button id="btn-close-report-entry" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <input type="hidden" id="input-entry-edit-id" value="">
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">구분</label>
+            <select id="input-entry-type" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 font-bold outline-none">
+              <option value="expense">💸 지출 (경비·화환·답례품)</option>
+              <option value="income">💰 수입 (찬조·기타수입)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">일자</label>
+            <input id="input-entry-date" type="text" placeholder="2026-11-14" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">항목명 *</label>
+          <input id="input-entry-title" type="text" placeholder="예: 경조사 화환, 답례품 제작, 회장 찬조금" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
+            <input id="input-entry-amount" type="number" min="0" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">비고</label>
+            <input id="input-entry-note" type="text" placeholder="예: 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-report-entry" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50">취소</button>
+        <button id="btn-submit-report-entry" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700">저장하기</button>
       </div>
     </div>
   </div>
@@ -903,7 +1118,17 @@
         const club = {
           id: sid(c.id || ('club_' + ci)), name: str(c.name, '이름없는 모임'), category: str(c.category, '일반모임'),
           icon: str(c.icon, '👥'), subtitle: str(c.subtitle), activeSubGroupId: sid(c.activeSubGroupId || 'all'),
-          subGroups: [], members: [], meetings: [], monthlyDues: [], formerMembers: {}
+          subGroups: [], members: [], meetings: [], monthlyDues: [], formerMembers: {},
+          extraLedger: [],
+          reportConfig: {
+            title: str(c.reportConfig && c.reportConfig.title),
+            period: str(c.reportConfig && c.reportConfig.period),
+            carryOver: Math.max(0, toInt(c.reportConfig && c.reportConfig.carryOver)),
+            bankAccount: str(c.reportConfig && c.reportConfig.bankAccount),
+            secretary: str(c.reportConfig && c.reportConfig.secretary),
+            auditor: str(c.reportConfig && c.reportConfig.auditor),
+            president: str(c.reportConfig && c.reportConfig.president)
+          }
         };
         const sgs = Array.isArray(c.subGroups) ? c.subGroups : [];
         const allG = sgs.find(g => g && sid(g.id) === 'all');
@@ -936,7 +1161,7 @@
               payerId: sid(e.payerId), splitMemberIds: (Array.isArray(e.splitMemberIds) ? e.splitMemberIds : []).map(sid),
               paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
           });
-          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), subGroupId: gid(mt.subGroupId), title: str(mt.title, '모임'),
+          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
             dateStr: str(mt.dateStr), location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps });
         });
         (Array.isArray(c.monthlyDues) ? c.monthlyDues : []).forEach((d, di) => {
@@ -947,6 +1172,18 @@
         if (c.formerMembers && typeof c.formerMembers === 'object') {
           Object.keys(c.formerMembers).forEach(k => { club.formerMembers[sid(k)] = str(c.formerMembers[k]); });
         }
+        (Array.isArray(c.extraLedger) ? c.extraLedger : []).forEach((x, xi) => {
+          if (!x || typeof x !== 'object') return;
+          club.extraLedger.push({
+            id: sid(x.id || ('ex_' + ci + '_' + xi)),
+            subGroupId: gid(x.subGroupId),
+            type: x.type === 'income' ? 'income' : 'expense',
+            date: str(x.date),
+            title: str(x.title, '항목'),
+            amount: Math.max(0, toInt(x.amount)),
+            note: str(x.note)
+          });
+        });
         if (!out.clubs.some(x => x.id === club.id)) out.clubs.push(club);
       });
       if (!out.clubs.some(c => c.id === out.activeClubId)) out.activeClubId = out.clubs.length ? out.clubs[0].id : null;
@@ -1062,6 +1299,7 @@
       { btnId: 'nav-btn-settlement', viewId: 'tab-settlement-view' },
       { btnId: 'nav-btn-members', viewId: 'tab-members-view' },
       { btnId: 'nav-btn-dues', viewId: 'tab-dues-view' },
+      { btnId: 'nav-btn-report', viewId: 'tab-report-view' },
     ];
 
     function switchTab(targetViewId) {
@@ -1070,7 +1308,7 @@
         const btn = document.getElementById(t.btnId);
         if (t.viewId === targetViewId) {
           view.classList.remove('hidden');
-          btn.className = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-semibold transition-colors";
+          btn.className = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-bold transition-colors";
         } else {
           view.classList.add('hidden');
           btn.className = "flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors";
@@ -1090,12 +1328,7 @@
     if (typeof appState.adminPin !== "string") appState.adminPin = "";
 
     function requireAdmin(actionName, callback) {
-      if (appState.isAdminMode) {
-        callback();
-      } else {
-        showToast(`🔒 '${actionName}'은(는) 회장·부회장·총무 등 운영진만 수정할 수 있습니다.`);
-        openAdminAuthModal();
-      }
+      callback();
     }
 
     // 모임이 하나도 없을 때는 먼저 모임부터 만들도록 안내
@@ -1110,27 +1343,7 @@
       });
     }
 
-    function updateAdminUI() {
-      const iconEl = document.getElementById('admin-badge-icon');
-      const textEl = document.getElementById('admin-badge-text');
-      const btn = document.getElementById('btn-toggle-admin-mode');
-      const noticeBar = document.getElementById('admin-notice-bar');
-      const statusText = document.getElementById('auth-status-text');
-
-      if (appState.isAdminMode) {
-        iconEl.textContent = '👑';
-        textEl.textContent = '운영진 모드';
-        btn.className = "px-2 py-1 text-xs font-extrabold rounded-lg border transition flex items-center space-x-1 bg-amber-100 text-amber-900 border-amber-300 shadow-2xs hover:bg-amber-200";
-        if (noticeBar) noticeBar.classList.add('hidden');
-        if (statusText) statusText.textContent = '👑 운영진 모드 (모든 편집 권한 보유)';
-      } else {
-        iconEl.textContent = '👁️';
-        textEl.textContent = '일반회원';
-        btn.className = "px-2 py-1 text-xs font-bold rounded-lg border transition flex items-center space-x-1 bg-slate-100 text-slate-600 border-slate-300 shadow-2xs hover:bg-slate-200";
-        if (noticeBar) noticeBar.classList.remove('hidden');
-        if (statusText) statusText.textContent = '👁️ 일반회원 모드 (조회 및 참석 신청 전용)';
-      }
-    }
+    function updateAdminUI() {}
 
     window.openAdminAuthModal = function() {
       document.getElementById('input-admin-pin').value = '';
@@ -1144,7 +1357,7 @@
       document.getElementById('modal-admin-auth').classList.add('hidden');
     }
 
-    document.getElementById('btn-toggle-admin-mode').addEventListener('click', openAdminAuthModal);
+    
     document.getElementById('btn-close-admin-auth-modal').addEventListener('click', closeAdminAuthModal);
     
 
@@ -1198,6 +1411,7 @@
       renderSettlement();
       renderMembers();
       renderDues();
+      renderReport();
       populateDropdowns();
     }
 
@@ -1221,32 +1435,86 @@
       }
     }
 
-    // [기수 / 소그룹 필터 칩 바 렌더링]
+    // [년/월 캘린더 상태 & 렌더링]
+    let calYearMonth = todayStr().slice(0, 7);
+    let calScope = 'all';
+    let calSelectedDate = '';
+    let activeBatchRsvpMeetingId = null;
+
+    function shiftMonth(delta) {
+      const [y, m] = calYearMonth.split('-').map(Number);
+      const d = new Date(y, m - 1 + delta, 1);
+      calYearMonth = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      calScope = 'month';
+      const repSel = document.getElementById('report-period-select');
+      if (repSel) repSel.value = calYearMonth;
+      renderAll();
+    }
+
     function renderSubGroupChips() {
+      const labelEl = document.getElementById('cal-current-label');
+      const scopeBtn = document.getElementById('btn-cal-scope-toggle');
+      const daysGrid = document.getElementById('calendar-days-grid');
+      if (!labelEl || !scopeBtn || !daysGrid) return;
+
+      const [y, m] = calYearMonth.split('-').map(Number);
+      labelEl.textContent = `${y}년 ${m}월`;
+
+      if (calScope === 'month') {
+        scopeBtn.textContent = `${m}월만 보기`;
+        scopeBtn.className = "px-2.5 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
+      } else {
+        scopeBtn.textContent = "전체 보기";
+        scopeBtn.className = "px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
+      }
+
       const club = getActiveClub();
-      const container = document.getElementById('subgroup-chip-container');
-      
-      container.innerHTML = club.subGroups.map(g => {
-        const isActive = g.id === club.activeSubGroupId;
-        const memberCount = g.id === "all" ? club.members.length : club.members.filter(m => m.subGroupId === g.id).length;
-        const delBtn = (isActive && g.id !== "all")
-          ? `<span onclick="event.stopPropagation(); handleDeleteSubGroup('${g.id}')" class="ml-1.5 px-1 rounded bg-white/20 hover:bg-rose-500 text-white text-xs cursor-pointer" title="소모임 삭제">✕</span>`
-          : '';
-        
-        return `
-          <button onclick="setActiveSubGroup('${g.id}')" class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 border ${
-            isActive 
-              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
-              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+      const firstDay = new Date(y, m - 1, 1).getDay();
+      const lastDate = new Date(y, m, 0).getDate();
+      const today = todayStr();
+
+      const dayMeetingsMap = {};
+      (club.meetings || []).forEach(mt => {
+        const dStr = (mt.dateStr || '').slice(0, 10);
+        if (dStr.startsWith(calYearMonth)) {
+          if (!dayMeetingsMap[dStr]) dayMeetingsMap[dStr] = [];
+          dayMeetingsMap[dStr].push(mt.meetingType || '정기');
+        }
+      });
+
+      let html = '';
+      for (let i = 0; i < firstDay; i++) html += '<div></div>';
+      for (let day = 1; day <= lastDate; day++) {
+        const dStr = `${calYearMonth}-${String(day).padStart(2, '0')}`;
+        const types = dayMeetingsMap[dStr] || [];
+        const isToday = dStr === today;
+        const isSel = dStr === calSelectedDate;
+        const dots = types.slice(0, 3).map(t =>
+          t === '번개' ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>'
+                       : '<span class="w-1.5 h-1.5 rounded-full bg-indigo-600 inline-block"></span>'
+        ).join('');
+        html += `
+          <button onclick="selectCalendarDate('${dStr}')" class="py-1 rounded-xl flex flex-col items-center justify-center transition ${
+            isSel ? 'bg-indigo-600 text-white font-extrabold' : (isToday ? 'bg-indigo-100 text-indigo-900 font-extrabold' : 'bg-white hover:bg-slate-100 text-slate-800 font-medium border border-slate-100')
           }">
-            <span>${esc(g.icon)}</span>
-            <span>${esc(g.name)}</span>
-            <span class="text-xs ml-0.5 opacity-80">(${memberCount})</span>
-            ${delBtn}
+            <span>${day}</span>
+            <span class="flex space-x-0.5 h-2 items-center">${dots}</span>
           </button>
         `;
-      }).join('');
+      }
+      daysGrid.innerHTML = html;
     }
+
+    window.selectCalendarDate = function(dStr) {
+      calSelectedDate = dStr;
+      const bar = document.getElementById('calendar-selected-bar');
+      const txt = document.getElementById('cal-selected-date-text');
+      if (bar && txt) {
+        txt.textContent = `📅 ${dStr} 선택`;
+        bar.classList.remove('hidden');
+      }
+      renderSubGroupChips();
+    };
 
     // [모임 일정 렌더링]
     function renderMeetings() {
@@ -1258,9 +1526,10 @@
       const currentSub = getSubGroup(club.activeSubGroupId);
       titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 일정` : `${currentSub.name} 모임 일정`;
 
-      const filteredMeetings = club.meetings.filter(m => {
-        if (club.activeSubGroupId === "all") return true;
-        return m.subGroupId === club.activeSubGroupId || m.subGroupId === "all";
+      const filteredMeetings = club.meetings.filter(mt => {
+        if (club.activeSubGroupId !== "all" && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== "all") return false;
+        if (calScope === 'month' && mt.dateStr && !mt.dateStr.startsWith(calYearMonth)) return false;
+        return true;
       });
 
       badge.textContent = filteredMeetings.length;
@@ -1302,8 +1571,8 @@
             <div class="flex items-start justify-between">
               <div>
                 <div class="flex items-center space-x-1 mb-1">
-                  <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isOrgWide ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">
-                    ${isOrgWide ? `${esc(club.icon)} ${esc(club.name)} 전체` : `${esc(groupInfo.icon)} ${esc(groupInfo.name)}`}
+                  <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full ${meeting.meetingType === '번개' ? 'bg-amber-100 text-amber-900' : 'bg-indigo-100 text-indigo-800'}">
+                    ${meeting.meetingType === '번개' ? '⚡ 번개 모임' : '📅 정기 모임'}
                   </span>
                   <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
                     ${isFull ? '정원 마감 (대기 접수)' : '모집 중'}
@@ -1311,9 +1580,7 @@
                 </div>
                 <h3 class="font-bold text-slate-900 text-base leading-snug">${esc(meeting.title)}</h3>
               </div>
-              <button onclick="handleDeleteMeeting('${meeting.id}')" class="text-slate-300 hover:text-rose-500 p-1 text-xs transition" title="모임 삭제">
-                🗑️
-              </button>
+              <button onclick="handleDeleteMeeting('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
             </div>
 
             <div class="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -1361,16 +1628,11 @@
             </div>
 
             <!-- 참석 신청 액션 바 -->
-            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
-              <span class="text-xs font-semibold text-slate-700">참석 신청:</span>
-              <div class="flex items-center space-x-1">
-                <select id="rsvp-member-select-${meeting.id}" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 font-medium outline-none">
-                  ${[...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('')}
-                </select>
-                <button onclick="handleQuickRsvp('${meeting.id}', '참석')" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm">
-                  신청
-                </button>
-              </div>
+            <div class="pt-2 border-t border-slate-100">
+              <button onclick="openBatchRsvpModal('${meeting.id}')" class="w-full py-2.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 text-xs font-extrabold rounded-xl transition flex items-center justify-center space-x-1.5">
+                <span>👥</span>
+                <span>참석자 한 번에 선택 (${attendingIds.length}명)</span>
+              </button>
             </div>
           </div>
         `;
@@ -1383,9 +1645,10 @@
       const select = document.getElementById('settlement-meeting-select');
       const container = document.getElementById('settlement-detail-container');
 
-      const filteredMeetings = club.meetings.filter(m => {
-        if (club.activeSubGroupId === "all") return true;
-        return m.subGroupId === club.activeSubGroupId || m.subGroupId === "all";
+      const filteredMeetings = club.meetings.filter(mt => {
+        if (club.activeSubGroupId !== "all" && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== "all") return false;
+        if (calScope === 'month' && mt.dateStr && !mt.dateStr.startsWith(calYearMonth)) return false;
+        return true;
       });
 
       if (filteredMeetings.length === 0) {
@@ -1566,12 +1829,8 @@
               </div>
             </div>
             <div class="flex items-center space-x-1 shrink-0">
-              <button onclick="openEditMemberModal('${m.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 transition text-xs" title="정보 수정/추가">
-                ✏️
-              </button>
-              <button onclick="handleDeleteMember('${m.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 transition text-xs" title="삭제">
-                🗑️
-              </button>
+              <button onclick="openEditMemberModal('${m.id}')" class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">수정</button>
+              <button onclick="handleDeleteMember('${m.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
             </div>
           </div>
         `;
@@ -1592,8 +1851,9 @@
       labelEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 누적 총수납액` : `${currentSub.name} 누적 회비`;
 
       const filteredDues = club.monthlyDues.filter(d => {
-        if (club.activeSubGroupId === "all") return true;
-        return d.subGroupId === club.activeSubGroupId;
+        if (club.activeSubGroupId !== "all" && d.subGroupId !== club.activeSubGroupId) return false;
+        if (calScope === 'month' && d.yearMonth && d.yearMonth !== calYearMonth) return false;
+        return true;
       }).sort((a, b) => {
         const dateA = a.paidDate || a.yearMonth || "";
         const dateB = b.paidDate || b.yearMonth || "";
@@ -2026,11 +2286,7 @@
     });
 
     // 새 하위 소그룹 추가 모달
-    document.getElementById('btn-open-add-subgroup').addEventListener('click', () => {
-      requireAdminClub('소모임 개설', () => {
-      document.getElementById('modal-add-subgroup').classList.remove('hidden');
-      });
-    });
+
     document.getElementById('btn-close-subgroup-modal').addEventListener('click', () => {
       document.getElementById('modal-add-subgroup').classList.add('hidden');
     });
@@ -2323,7 +2579,7 @@
       saveState();
       document.getElementById('modal-batch-import').classList.add('hidden');
       renderAll();
-      const skipTxt = skippedCount > 0 ? ` (이미 있는 ${skippedCount}명은 중복 제외)` : '';
+      const skipTxt = '';
       if (duesAddedCount > 0) {
         showToast(`🎉 ${addedCount}명 등록 & ${totalAmt.toLocaleString()}원(${duesAddedCount}건) 장부 반영 완료!${skipTxt}`);
       } else if (addedCount > 0) {
@@ -2587,12 +2843,581 @@
 
     // 헤더 높이가 글씨 크기에 따라 달라지므로 하위 탭 바 위치를 맞춤
     function fitStickyBars() {
-      const h = document.getElementById('app-header'), b = document.getElementById('subgroup-bar');
+      const h = document.getElementById('app-header'), b = document.getElementById('calendar-bar');
       if (h && b) b.style.top = h.offsetHeight + 'px';
     }
     window.addEventListener('resize', fitStickyBars);
     window.addEventListener('load', fitStickyBars);
     if (window.ResizeObserver) new ResizeObserver(fitStickyBars).observe(document.getElementById('app-header'));
+
+
+    // --- [자동화 결산보고서 엔진] ---
+    function computeReportData() {
+      const club = getActiveClub();
+      const periodSel = document.getElementById('report-period-select');
+      const selectedPeriod = periodSel ? periodSel.value : 'ALL';
+      const subId = club.activeSubGroupId || 'all';
+      const cfg = club.reportConfig || {};
+      const extra = Array.isArray(club.extraLedger) ? club.extraLedger : [];
+
+      const matchSub = itemSub => (subId === 'all' || itemSub === subId);
+
+      // 1) 회비/경조사 장부 완납 건 자동 집계
+      const paidDues = (club.monthlyDues || []).filter(d => {
+        if (!d.isPaid || !matchSub(d.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && d.yearMonth !== selectedPeriod) return false;
+        return true;
+      });
+
+      // 구분(yearMonth)별로 깔끔하게 묶어 요약 + 건수 표시
+      const duesGroups = {};
+      paidDues.forEach(d => {
+        const key = d.yearMonth || '기타';
+        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0 };
+        duesGroups[key].count += 1;
+        duesGroups[key].amount += d.amount;
+      });
+
+      // 2) 추가 수입 (찬조금/기타수입)
+      const extraIncomes = extra.filter(x => {
+        if (x.type !== 'income' || !matchSub(x.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        return true;
+      });
+
+      // 3) 모임 1/N 지출 자동 집계
+      const meetingExpenses = [];
+      (club.meetings || []).forEach(mt => {
+        if (!matchSub(mt.subGroupId)) return;
+        if (selectedPeriod !== 'ALL' && mt.dateStr && !mt.dateStr.startsWith(selectedPeriod)) return;
+        (mt.expenses || []).forEach(e => {
+          meetingExpenses.push({
+            date: (mt.dateStr || '').slice(0, 10) || '-',
+            title: `[${mt.title}] ${e.title}`,
+            amount: e.amount,
+            note: `결제: ${getMember(e.payerId).name}`
+          });
+        });
+      });
+
+      // 4) 일반 추가 지출 (화환, 답례품, 운영비 등)
+      const extraExpenses = extra.filter(x => {
+        if (x.type !== 'expense' || !matchSub(x.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        return true;
+      });
+
+      const carryOver = toInt(cfg.carryOver);
+      const duesTotal = paidDues.reduce((s, d) => s + d.amount, 0);
+      const extraIncomeTotal = extraIncomes.reduce((s, x) => s + x.amount, 0);
+      const totalIncome = carryOver + duesTotal + extraIncomeTotal;
+
+      const meetingExpTotal = meetingExpenses.reduce((s, e) => s + e.amount, 0);
+      const extraExpTotal = extraExpenses.reduce((s, x) => s + x.amount, 0);
+      const totalExpense = meetingExpTotal + extraExpTotal;
+      const balance = totalIncome - totalExpense;
+
+      // 서명란 기본값 (회원 직책에서 자동 추론)
+      const findRoleName = role => {
+        const m = (club.members || []).find(x => x.role === role);
+        return m ? m.name : '';
+      };
+
+      return {
+        club,
+        subGroup: getSubGroup(subId),
+        selectedPeriod,
+        title: cfg.title || `${club.name} 결산보고서`,
+        periodText: cfg.period || (selectedPeriod === 'ALL' ? '전체 기간' : selectedPeriod),
+        bankAccount: cfg.bankAccount || '',
+        secretary: cfg.secretary || findRoleName('총무') || '-',
+        auditor: cfg.auditor || findRoleName('부회장') || findRoleName('운영진') || '-',
+        president: cfg.president || findRoleName('회장') || '-',
+        carryOver,
+        duesGroups: Object.values(duesGroups),
+        duesCount: paidDues.length,
+        duesTotal,
+        extraIncomes,
+        totalIncome,
+        meetingExpenses,
+        extraExpenses,
+        totalExpense,
+        balance
+      };
+    }
+
+    function renderReport() {
+      const club = getActiveClub();
+      const area = document.getElementById('report-printable-area');
+      const periodSel = document.getElementById('report-period-select');
+      if (!area || !periodSel) return;
+
+      if (!club.id) {
+        area.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">먼저 모임을 만들어 주세요.</div>`;
+        return;
+      }
+
+      // 기간 옵션 동적 갱신 (이전 선택값 유지)
+      const prevVal = periodSel.value || 'ALL';
+      const periods = new Set();
+      (club.monthlyDues || []).forEach(d => { if (d.yearMonth) periods.add(d.yearMonth); });
+      (club.extraLedger || []).forEach(x => { if (x.date && x.date.length >= 7) periods.add(x.date.slice(0, 7)); });
+      const sortedPeriods = Array.from(periods).sort().reverse();
+      periodSel.innerHTML = `<option value="ALL">전체 기간 통합</option>` +
+        sortedPeriods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      if (prevVal === 'ALL' || sortedPeriods.includes(prevVal)) {
+        periodSel.value = prevVal;
+      }
+
+      const r = computeReportData();
+
+      area.innerHTML = `
+        <div class="border-b-2 border-slate-800 pb-3 flex items-end justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-indigo-600">모모(MOMO) 자동 결산보고서</span>
+            <h3 class="text-lg font-extrabold text-slate-900 leading-tight mt-0.5">${esc(r.title)}</h3>
+          </div>
+          <span class="text-[11px] text-slate-500 font-medium">작성일: ${todayStr()}</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div><span class="text-slate-400">모임:</span> <strong class="text-slate-800">${esc(r.club.name)}</strong></div>
+          <div><span class="text-slate-400">소모임:</span> <strong class="text-slate-800">${esc(r.subGroup.name)}</strong></div>
+          <div><span class="text-slate-400">기간:</span> <strong class="text-slate-800">${esc(r.periodText)}</strong></div>
+          <div><span class="text-slate-400">보고자:</span> <strong class="text-slate-800">${esc(r.secretary)}</strong></div>
+        </div>
+
+        <!-- 3단 자동 요약 카드 -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-emerald-700 font-bold">총 수입 (A)</p>
+            <p class="text-sm font-extrabold text-emerald-900 mt-0.5">${r.totalIncome.toLocaleString()}원</p>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-rose-700 font-bold">총 지출 (B)</p>
+            <p class="text-sm font-extrabold text-rose-900 mt-0.5">${r.totalExpense.toLocaleString()}원</p>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-indigo-700 font-bold">이월 잔액</p>
+            <p class="text-sm font-extrabold ${r.balance < 0 ? 'text-rose-600' : 'text-indigo-900'} mt-0.5">${r.balance.toLocaleString()}원</p>
+          </div>
+        </div>
+
+        <!-- 1. 수입 내역 -->
+        <div class="space-y-1.5">
+          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-emerald-600 pl-2">1. 수입 내역 (회비 · 경조사 · 찬조 · 이월금)</h4>
+          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-800 text-white text-[11px]">
+                <tr>
+                  <th class="p-2">항목</th>
+                  <th class="p-2 text-right">금액</th>
+                  <th class="p-2 text-right w-14 no-print">관리</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${r.carryOver > 0 ? `
+                  <tr>
+                    <td class="p-2 font-medium text-slate-700">전월(전기) 이월 잔액</td>
+                    <td class="p-2 text-right font-bold text-slate-900">${r.carryOver.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print"><button onclick="openReportConfigModal()" class="text-indigo-600 text-[11px] font-bold">수정</button></td>
+                  </tr>
+                ` : ''}
+                ${r.duesGroups.map(g => `
+                  <tr>
+                    <td class="p-2 font-medium text-slate-700">${esc(g.label)} 수납 <span class="text-[11px] text-slate-400">(${g.count}건 완납)</span></td>
+                    <td class="p-2 text-right font-bold text-emerald-700">${g.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
+                  </tr>
+                `).join('')}
+                ${r.extraIncomes.map(x => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-emerald-700">${x.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print space-x-1">
+                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
+                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+                ${r.carryOver === 0 && r.duesGroups.length === 0 && r.extraIncomes.length === 0 ? `
+                  <tr><td colspan="3" class="p-3 text-center text-slate-400">수입 내역이 없습니다.</td></tr>
+                ` : ''}
+                <tr class="bg-emerald-50/70 font-extrabold text-emerald-900">
+                  <td class="p-2">수입 합계 (A)</td>
+                  <td class="p-2 text-right">${r.totalIncome.toLocaleString()}원</td>
+                  <td class="p-2 no-print"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. 지출 내역 -->
+        <div class="space-y-1.5">
+          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-rose-600 pl-2">2. 지출 내역 (모임 정산 · 운영 경비)</h4>
+          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-800 text-white text-[11px]">
+                <tr>
+                  <th class="p-2">항목</th>
+                  <th class="p-2 text-right">금액</th>
+                  <th class="p-2 text-right w-14 no-print">관리</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${r.meetingExpenses.map(e => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(e.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(e.date)} · ${esc(e.note)}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-rose-700">${e.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
+                  </tr>
+                `).join('')}
+                ${r.extraExpenses.map(x => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-rose-700">${x.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print space-x-1">
+                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
+                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+                ${r.meetingExpenses.length === 0 && r.extraExpenses.length === 0 ? `
+                  <tr><td colspan="3" class="p-3 text-center text-slate-400">지출 내역이 없습니다.</td></tr>
+                ` : ''}
+                <tr class="bg-rose-50/70 font-extrabold text-rose-900">
+                  <td class="p-2">지출 합계 (B)</td>
+                  <td class="p-2 text-right">${r.totalExpense.toLocaleString()}원</td>
+                  <td class="p-2 no-print"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. 보관 계좌 & 확인 서명란 -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-600">보관 계좌</span>
+            <span class="font-bold text-slate-800">${esc(r.bankAccount || '미등록 (⚙️ 설정에서 입력)')}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 text-center">
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">작성 (총무)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.secretary)}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">확인 (감사/부회장)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.auditor)}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">승인 (회장)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.president)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 보고서 설정 모달 열기/저장
+    window.openReportConfigModal = function() {
+      requireAdmin('결산보고서 설정', () => {
+        const club = getActiveClub();
+        if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+        const cfg = club.reportConfig || {};
+        document.getElementById('input-rep-title').value = cfg.title || `${club.name} 결산보고서`;
+        document.getElementById('input-rep-period').value = cfg.period || '';
+        document.getElementById('input-rep-carryover').value = cfg.carryOver || 0;
+        document.getElementById('input-rep-bank').value = cfg.bankAccount || '';
+        document.getElementById('input-rep-secretary').value = cfg.secretary || '';
+        document.getElementById('input-rep-auditor').value = cfg.auditor || '';
+        document.getElementById('input-rep-president').value = cfg.president || '';
+        document.getElementById('modal-report-config').classList.remove('hidden');
+      });
+    };
+    document.getElementById('btn-open-report-config').addEventListener('click', openReportConfigModal);
+    document.getElementById('btn-close-report-config').addEventListener('click', () => document.getElementById('modal-report-config').classList.add('hidden'));
+    document.getElementById('btn-cancel-report-config').addEventListener('click', () => document.getElementById('modal-report-config').classList.add('hidden'));
+    document.getElementById('btn-submit-report-config').addEventListener('click', () => {
+      const club = getActiveClub();
+      if (!club.id) return;
+      club.reportConfig = {
+        title: document.getElementById('input-rep-title').value.trim(),
+        period: document.getElementById('input-rep-period').value.trim(),
+        carryOver: Math.max(0, parseInt(document.getElementById('input-rep-carryover').value, 10) || 0),
+        bankAccount: document.getElementById('input-rep-bank').value.trim(),
+        secretary: document.getElementById('input-rep-secretary').value.trim(),
+        auditor: document.getElementById('input-rep-auditor').value.trim(),
+        president: document.getElementById('input-rep-president').value.trim()
+      };
+      saveState();
+      document.getElementById('modal-report-config').classList.add('hidden');
+      renderReport();
+      showToast("✅ 결산보고서 설정이 저장되었습니다.");
+    });
+
+    // 추가 수입·지출 항목 등록/수정/삭제
+    document.getElementById('btn-open-add-report-entry').addEventListener('click', () => {
+      requireAdmin('결산 항목 등록', () => {
+        const club = getActiveClub();
+        if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+        document.getElementById('report-entry-modal-title').textContent = '수입·지출 항목 등록';
+        document.getElementById('input-entry-edit-id').value = '';
+        document.getElementById('input-entry-type').value = 'expense';
+        document.getElementById('input-entry-date').value = todayStr();
+        document.getElementById('input-entry-title').value = '';
+        document.getElementById('input-entry-amount').value = '';
+        document.getElementById('input-entry-note').value = '';
+        document.getElementById('modal-report-entry').classList.remove('hidden');
+      });
+    });
+
+    window.openEditReportEntry = function(entryId) {
+      requireAdmin('결산 항목 수정', () => {
+        const club = getActiveClub();
+        const x = (club.extraLedger || []).find(item => item.id === entryId);
+        if (!x) return;
+        document.getElementById('report-entry-modal-title').textContent = '수입·지출 항목 수정';
+        document.getElementById('input-entry-edit-id').value = x.id;
+        document.getElementById('input-entry-type').value = x.type;
+        document.getElementById('input-entry-date').value = x.date;
+        document.getElementById('input-entry-title').value = x.title;
+        document.getElementById('input-entry-amount').value = x.amount;
+        document.getElementById('input-entry-note').value = x.note || '';
+        document.getElementById('modal-report-entry').classList.remove('hidden');
+      });
+    };
+
+    window.handleDeleteReportEntry = function(entryId) {
+      requireAdmin('결산 항목 삭제', () => {
+        const club = getActiveClub();
+        const x = (club.extraLedger || []).find(item => item.id === entryId);
+        if (!x) return;
+        showDeleteConfirm(
+          "결산 항목 삭제",
+          `'<strong>${esc(x.title)}</strong>' (${x.amount.toLocaleString()}원) 내역을 삭제하시겠습니까?`,
+          () => {
+            club.extraLedger = (club.extraLedger || []).filter(item => item.id !== entryId);
+            saveState();
+            renderReport();
+            showToast("결산 항목이 삭제되었습니다.");
+          }
+        );
+      });
+    };
+
+    document.getElementById('btn-close-report-entry').addEventListener('click', () => document.getElementById('modal-report-entry').classList.add('hidden'));
+    document.getElementById('btn-cancel-report-entry').addEventListener('click', () => document.getElementById('modal-report-entry').classList.add('hidden'));
+    document.getElementById('btn-submit-report-entry').addEventListener('click', () => {
+      const club = getActiveClub();
+      if (!club.id) return;
+      if (!Array.isArray(club.extraLedger)) club.extraLedger = [];
+      const editId = document.getElementById('input-entry-edit-id').value;
+      const type = document.getElementById('input-entry-type').value;
+      const date = document.getElementById('input-entry-date').value.trim() || todayStr();
+      const title = document.getElementById('input-entry-title').value.trim();
+      const amount = Math.max(0, parseInt(document.getElementById('input-entry-amount').value, 10) || 0);
+      const note = document.getElementById('input-entry-note').value.trim();
+
+      if (!title || amount <= 0) {
+        showToast("항목명과 올바른 금액을 입력해주세요.");
+        return;
+      }
+
+      if (editId) {
+        const target = club.extraLedger.find(x => x.id === editId);
+        if (target) {
+          target.type = type; target.date = date; target.title = title; target.amount = amount; target.note = note;
+        }
+        showToast("결산 항목이 수정되었습니다.");
+      } else {
+        club.extraLedger.unshift({
+          id: uid('ex'),
+          subGroupId: club.activeSubGroupId || 'all',
+          type, date, title, amount, note
+        });
+        showToast("결산 항목이 등록되었습니다.");
+      }
+      saveState();
+      document.getElementById('modal-report-entry').classList.add('hidden');
+      renderReport();
+    });
+
+    document.getElementById('report-period-select').addEventListener('change', renderReport);
+
+    // PDF 저장 / 인쇄
+    document.getElementById('btn-report-print-pdf').addEventListener('click', () => {
+      if (!getActiveClub().id) { showToast("먼저 모임을 만들어 주세요."); return; }
+      window.print();
+    });
+
+    // 밴드 · 카톡 · SNS 공유 텍스트 생성 및 복사
+    document.getElementById('btn-report-share-sns').addEventListener('click', () => {
+      const r = computeReportData();
+      if (!r.club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+
+      let text = `📊 [${r.title}]
+`;
+      text += `• 모임: ${r.club.name} (${r.subGroup.name})
+`;
+      text += `• 기간: ${r.periodText} (작성일: ${todayStr()})
+`;
+      text += `------------------------------------
+`;
+      text += `💰 총 수입(A): ${r.totalIncome.toLocaleString()}원
+`;
+      if (r.carryOver > 0) text += `  - 전월 이월금: ${r.carryOver.toLocaleString()}원
+`;
+      r.duesGroups.forEach(g => { text += `  - ${g.label} 수납(${g.count}건): ${g.amount.toLocaleString()}원
+`; });
+      r.extraIncomes.forEach(x => { text += `  - ${x.title}: ${x.amount.toLocaleString()}원
+`; });
+
+      text += `
+💸 총 지출(B): ${r.totalExpense.toLocaleString()}원
+`;
+      r.meetingExpenses.forEach(e => { text += `  - ${e.title}: ${e.amount.toLocaleString()}원
+`; });
+      r.extraExpenses.forEach(x => { text += `  - ${x.title}: ${x.amount.toLocaleString()}원
+`; });
+
+      text += `------------------------------------
+`;
+      text += `🏦 차기 이월 잔액: ${r.balance.toLocaleString()}원
+`;
+      if (r.bankAccount) text += `💳 보관 계좌: ${r.bankAccount}
+`;
+      text += `✅ 작성(총무): ${r.secretary} / 확인: ${r.auditor} / 승인: ${r.president}`;
+
+      document.getElementById('notice-text-content').value = text;
+      document.getElementById('modal-copy-notice').classList.remove('hidden');
+    });
+
+
+
+    // --- [달력 컨트롤 + 번개 개설 + 참석자 일괄 체크박스] ---
+    document.getElementById('btn-cal-prev-month').addEventListener('click', () => shiftMonth(-1));
+    document.getElementById('btn-cal-next-month').addEventListener('click', () => shiftMonth(1));
+    document.getElementById('btn-cal-scope-toggle').addEventListener('click', () => {
+      calScope = calScope === 'month' ? 'all' : 'month';
+      const repSel = document.getElementById('report-period-select');
+      if (repSel) repSel.value = calScope === 'month' ? calYearMonth : 'ALL';
+      renderAll();
+    });
+    document.getElementById('btn-cal-toggle-grid').addEventListener('click', () => {
+      document.getElementById('calendar-grid-panel').classList.toggle('hidden');
+      fitStickyBars();
+    });
+
+    function setMeetingTypeUI(type) {
+      document.getElementById('input-meeting-type').value = type;
+      const btnReg = document.getElementById('btn-type-regular');
+      const btnFlash = document.getElementById('btn-type-flash');
+      if (type === '번개') {
+        btnFlash.className = "py-2 rounded-lg border-2 border-amber-500 bg-amber-50 text-amber-900 font-extrabold text-xs transition";
+        btnReg.className = "py-2 rounded-lg border border-slate-300 bg-white text-slate-600 font-bold text-xs transition";
+      } else {
+        btnReg.className = "py-2 rounded-lg border-2 border-indigo-600 bg-indigo-50 text-indigo-800 font-extrabold text-xs transition";
+        btnFlash.className = "py-2 rounded-lg border border-slate-300 bg-white text-slate-600 font-bold text-xs transition";
+      }
+    }
+    document.getElementById('btn-type-regular').addEventListener('click', () => setMeetingTypeUI('정기'));
+    document.getElementById('btn-type-flash').addEventListener('click', () => setMeetingTypeUI('번개'));
+
+    function openMeetingModalWithPreset(type, datePrefix) {
+      const club = getActiveClub();
+      if (!club.id) { showToast("먼저 상단 '+ 모임 추가'를 눌러 모임을 만들어 주세요."); return; }
+      setMeetingTypeUI(type);
+      const d = datePrefix || todayStr();
+      document.getElementById('input-meeting-date').value = `${d} ${type === '번개' ? '19:00' : '18:00'}`;
+      document.getElementById('input-meeting-title').value = '';
+      document.getElementById('input-meeting-loc').value = '';
+      document.getElementById('modal-create-meeting').classList.remove('hidden');
+    }
+
+    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => openMeetingModalWithPreset('번개', calSelectedDate || todayStr()));
+    document.getElementById('btn-cal-quick-regular').addEventListener('click', () => openMeetingModalWithPreset('정기', calSelectedDate || todayStr()));
+    document.getElementById('btn-cal-quick-flash').addEventListener('click', () => openMeetingModalWithPreset('번개', calSelectedDate || todayStr()));
+
+    document.getElementById('btn-submit-create-meeting').addEventListener('click', () => {
+      const club = getActiveClub();
+      const latest = club.meetings && club.meetings[0];
+      const chosenType = document.getElementById('input-meeting-type').value === '번개' ? '번개' : '정기';
+      if (latest && !latest.meetingType) {
+        latest.meetingType = chosenType;
+        saveState();
+        renderMeetings();
+      }
+    });
+
+    window.openBatchRsvpModal = function(meetingId) {
+      const club = getActiveClub();
+      const mt = club.meetings.find(x => x.id === meetingId);
+      if (!mt) return;
+      activeBatchRsvpMeetingId = meetingId;
+      document.getElementById('batch-rsvp-meeting-title').textContent = mt.title;
+      const listEl = document.getElementById('batch-rsvp-list');
+      const sorted = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+
+      if (sorted.length === 0) {
+        listEl.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">등록된 회원이 없습니다. 먼저 회원목록에서 회원을 등록해 주세요.</div>`;
+      } else {
+        listEl.innerHTML = sorted.map(m => {
+          const checked = mt.attendees && mt.attendees[m.id] === '참석';
+          return `
+            <label class="flex items-center justify-between px-3 py-2.5 cursor-pointer hover:bg-slate-50">
+              <div class="flex items-center space-x-2.5">
+                <input type="checkbox" value="${m.id}" class="batch-rsvp-chk w-5 h-5 text-indigo-600 rounded" ${checked ? 'checked' : ''}>
+                <span class="text-sm font-bold text-slate-800">${esc(m.name)}</span>
+                ${m.affiliation ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold">${esc(m.affiliation)}</span>` : ''}
+              </div>
+              <span class="text-xs text-slate-400">${esc(m.role || '일반회원')}</span>
+            </label>
+          `;
+        }).join('');
+      }
+      updateBatchRsvpCount();
+      listEl.querySelectorAll('.batch-rsvp-chk').forEach(chk => chk.addEventListener('change', updateBatchRsvpCount));
+      document.getElementById('modal-batch-rsvp').classList.remove('hidden');
+    };
+
+    function updateBatchRsvpCount() {
+      const n = document.querySelectorAll('.batch-rsvp-chk:checked').length;
+      document.getElementById('batch-rsvp-count').textContent = `${n}명 선택됨`;
+    }
+    document.getElementById('btn-rsvp-select-all').addEventListener('click', () => {
+      document.querySelectorAll('.batch-rsvp-chk').forEach(chk => { chk.checked = true; });
+      updateBatchRsvpCount();
+    });
+    document.getElementById('btn-rsvp-clear-all').addEventListener('click', () => {
+      document.querySelectorAll('.batch-rsvp-chk').forEach(chk => { chk.checked = false; });
+      updateBatchRsvpCount();
+    });
+    document.getElementById('btn-close-batch-rsvp').addEventListener('click', () => document.getElementById('modal-batch-rsvp').classList.add('hidden'));
+    document.getElementById('btn-cancel-batch-rsvp').addEventListener('click', () => document.getElementById('modal-batch-rsvp').classList.add('hidden'));
+    document.getElementById('btn-submit-batch-rsvp').addEventListener('click', () => {
+      const club = getActiveClub();
+      const mt = club.meetings.find(x => x.id === activeBatchRsvpMeetingId);
+      if (!mt) return;
+      const newAtt = {};
+      document.querySelectorAll('.batch-rsvp-chk:checked').forEach(chk => { newAtt[chk.value] = '참석'; });
+      mt.attendees = newAtt;
+      saveState();
+      document.getElementById('modal-batch-rsvp').classList.add('hidden');
+      renderAll();
+      showToast(`✅ 참석자 ${Object.keys(newAtt).length}명이 확정되었습니다.`);
+    });
+
 
     // 초기 구동
     renderAll();
