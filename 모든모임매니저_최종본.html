@@ -80,17 +80,18 @@
     </div>
   </header>
 
-  <!-- 년/월 캘린더 컨트롤 바 (총무용 단순화) -->
+  <!-- 년/월 캘린더 컨트롤 바 (삼성 캘린더 스타일) -->
   <div id="calendar-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
     <div class="max-w-lg mx-auto space-y-2">
-      <div class="flex items-center justify-between gap-1.5">
+      <div class="flex items-center justify-between gap-1">
         <div class="flex items-center space-x-1">
-          <button id="btn-cal-prev-month" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
-          <span id="cal-current-label" class="px-2 text-sm font-extrabold text-slate-900 min-w-[92px] text-center">2026년 11월</span>
-          <button id="btn-cal-next-month" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
+          <button id="btn-cal-prev-month" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
+          <span id="cal-current-label" class="px-1.5 text-sm font-extrabold text-slate-900 min-w-[84px] text-center">2026년 11월</span>
+          <button id="btn-cal-next-month" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
+          <button id="btn-cal-today" class="px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 transition">오늘</button>
         </div>
-        <div class="flex items-center space-x-1.5">
-          <button id="btn-cal-scope-toggle" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">
+        <div class="flex items-center space-x-1">
+          <button id="btn-cal-scope-toggle" class="px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">
             전체 보기
           </button>
           <button id="btn-cal-toggle-grid" class="px-2.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition">
@@ -99,20 +100,26 @@
         </div>
       </div>
 
-      <!-- 펼치는 미니 달력 패널 -->
-      <div id="calendar-grid-panel" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-2.5 space-y-2">
-        <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500">
+      <!-- 펼치는 삼성 캘린더급 월간 달력 패널 -->
+      <div id="calendar-grid-panel" class="hidden bg-slate-50 border border-slate-200 rounded-2xl p-2 space-y-2">
+        <div class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 pb-0.5 border-b border-slate-200">
           <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span>
         </div>
         <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs">
-          <!-- 동적 달력 날짜 -->
+          <!-- 동적 달력 날짜 + 일정 칩 -->
         </div>
-        <div id="calendar-selected-bar" class="hidden bg-white border border-indigo-200 rounded-xl p-2 flex items-center justify-between gap-2">
-          <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
-          <div class="flex items-center space-x-1.5">
-            <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">📅 정기</button>
-            <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
+        <div id="calendar-selected-bar" class="hidden bg-white border border-indigo-200 rounded-xl p-2.5 space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <div>
+              <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
+              <span id="cal-selected-holiday-text" class="text-[11px] font-bold text-rose-600 ml-1.5"></span>
+            </div>
+            <div class="flex items-center space-x-1.5 shrink-0">
+              <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">📅 정기</button>
+              <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
+            </div>
           </div>
+          <div id="cal-selected-day-events" class="space-y-1 text-xs"></div>
         </div>
       </div>
     </div>
@@ -1451,6 +1458,24 @@
       renderAll();
     }
 
+    // 한국 주요 법정 공휴일 (양력 고정 + 2026~2027 음력/대체공휴일)
+    const KR_FIXED_HOLIDAYS = {
+      '01-01': '신정', '03-01': '삼일절', '05-05': '어린이날', '06-06': '현충일',
+      '08-15': '광복절', '10-03': '개천절', '10-09': '한글날', '12-25': '성탄절'
+    };
+    const KR_YEAR_HOLIDAYS = {
+      '2026-02-16': '설날 연휴', '2026-02-17': '설날', '2026-02-18': '설날 연휴',
+      '2026-03-02': '대체공휴일', '2026-05-24': '부처님오신날', '2026-05-25': '대체공휴일',
+      '2026-08-17': '대체공휴일', '2026-09-24': '추석 연휴', '2026-09-25': '추석', '2026-09-26': '추석 연휴',
+      '2026-10-05': '대체공휴일',
+      '2027-02-06': '설날 연휴', '2027-02-07': '설날', '2027-02-08': '설날 연휴', '2027-02-09': '대체공휴일',
+      '2027-05-13': '부처님오신날', '2027-08-16': '대체공휴일', '2027-09-14': '추석 연휴', '2027-09-15': '추석', '2027-09-16': '추석 연휴',
+      '2027-10-04': '대체공휴일', '2027-10-11': '대체공휴일'
+    };
+    function getHolidayName(dStr) {
+      return KR_YEAR_HOLIDAYS[dStr] || KR_FIXED_HOLIDAYS[dStr.slice(5)] || '';
+    }
+
     function renderSubGroupChips() {
       const labelEl = document.getElementById('cal-current-label');
       const scopeBtn = document.getElementById('btn-cal-scope-toggle');
@@ -1462,10 +1487,10 @@
 
       if (calScope === 'month') {
         scopeBtn.textContent = `${m}월만 보기`;
-        scopeBtn.className = "px-2.5 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
+        scopeBtn.className = "px-2 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
       } else {
         scopeBtn.textContent = "전체 보기";
-        scopeBtn.className = "px-2.5 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
+        scopeBtn.className = "px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
       }
 
       const club = getActiveClub();
@@ -1478,7 +1503,7 @@
         const dStr = (mt.dateStr || '').slice(0, 10);
         if (dStr.startsWith(calYearMonth)) {
           if (!dayMeetingsMap[dStr]) dayMeetingsMap[dStr] = [];
-          dayMeetingsMap[dStr].push(mt.meetingType || '정기');
+          dayMeetingsMap[dStr].push(mt);
         }
       });
 
@@ -1486,19 +1511,32 @@
       for (let i = 0; i < firstDay; i++) html += '<div></div>';
       for (let day = 1; day <= lastDate; day++) {
         const dStr = `${calYearMonth}-${String(day).padStart(2, '0')}`;
-        const types = dayMeetingsMap[dStr] || [];
+        const dow = new Date(y, m - 1, day).getDay();
+        const holiday = getHolidayName(dStr);
+        const items = dayMeetingsMap[dStr] || [];
         const isToday = dStr === today;
         const isSel = dStr === calSelectedDate;
-        const dots = types.slice(0, 3).map(t =>
-          t === '번개' ? '<span class="w-1.5 h-1.5 rounded-full bg-amber-500 inline-block"></span>'
-                       : '<span class="w-1.5 h-1.5 rounded-full bg-indigo-600 inline-block"></span>'
-        ).join('');
+
+        const dayColorClass = isSel
+          ? 'text-white'
+          : (dow === 0 || holiday ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800'));
+
+        const pills = items.slice(0, 2).map(mt => {
+          const isFlash = mt.meetingType === '번개';
+          return `<div class="w-full truncate text-[9px] leading-tight px-1 py-0.5 rounded font-bold ${
+            isFlash ? 'bg-amber-300 text-amber-950' : 'bg-indigo-600 text-white'
+          }">${isFlash ? '⚡' : ''}${esc(mt.title)}</div>`;
+        }).join('');
+        const extraBadge = items.length > 2 ? `<div class="text-[9px] font-bold ${isSel ? 'text-indigo-100' : 'text-slate-500'}">+${items.length - 2}</div>` : '';
+
         html += `
-          <button onclick="selectCalendarDate('${dStr}')" class="py-1 rounded-xl flex flex-col items-center justify-center transition ${
-            isSel ? 'bg-indigo-600 text-white font-extrabold' : (isToday ? 'bg-indigo-100 text-indigo-900 font-extrabold' : 'bg-white hover:bg-slate-100 text-slate-800 font-medium border border-slate-100')
+          <button onclick="selectCalendarDate('${dStr}')" class="min-h-[54px] p-1 rounded-xl flex flex-col items-center justify-start gap-0.5 transition border ${
+            isSel ? 'bg-indigo-700 border-indigo-700 shadow-sm' : (isToday ? 'bg-indigo-50 border-indigo-400' : 'bg-white hover:bg-slate-100 border-slate-200/70')
           }">
-            <span>${day}</span>
-            <span class="flex space-x-0.5 h-2 items-center">${dots}</span>
+            <span class="text-[11px] font-extrabold ${dayColorClass}">${day}</span>
+            ${holiday ? `<span class="w-full truncate text-[8px] leading-none font-bold ${isSel ? 'text-rose-200' : 'text-rose-500'}">${esc(holiday)}</span>` : ''}
+            ${pills}
+            ${extraBadge}
           </button>
         `;
       }
@@ -1509,11 +1547,29 @@
       calSelectedDate = dStr;
       const bar = document.getElementById('calendar-selected-bar');
       const txt = document.getElementById('cal-selected-date-text');
+      const holEl = document.getElementById('cal-selected-holiday-text');
+      const evEl = document.getElementById('cal-selected-day-events');
       if (bar && txt) {
-        txt.textContent = `📅 ${dStr} 선택`;
+        txt.textContent = `📅 ${dStr}`;
+        if (holEl) holEl.textContent = getHolidayName(dStr);
+        if (evEl) {
+          const club = getActiveClub();
+          const dayMeetings = (club.meetings || []).filter(mt => (mt.dateStr || '').startsWith(dStr));
+          if (dayMeetings.length === 0) {
+            evEl.innerHTML = `<p class="text-[11px] text-slate-400">이 날 등록된 모임이 없습니다. 오른쪽 버튼으로 바로 여세요.</p>`;
+          } else {
+            evEl.innerHTML = dayMeetings.map(mt => `
+              <div class="flex items-center justify-between bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200">
+                <span class="font-bold text-slate-800 truncate">${mt.meetingType === '번개' ? '⚡' : '📅'} ${esc(mt.title)} <span class="text-slate-400 font-normal">(${esc((mt.dateStr || '').slice(11) || '시간미정')})</span></span>
+                <button onclick="exportMeetingToICS('${mt.id}')" class="shrink-0 ml-2 px-2 py-0.5 bg-white border border-slate-300 rounded text-[10px] font-bold text-slate-700">📲 폰 캘린더</button>
+              </div>
+            `).join('');
+          }
+        }
         bar.classList.remove('hidden');
       }
       renderSubGroupChips();
+      fitStickyBars();
     };
 
     // [모임 일정 렌더링]
@@ -1580,7 +1636,10 @@
                 </div>
                 <h3 class="font-bold text-slate-900 text-base leading-snug">${esc(meeting.title)}</h3>
               </div>
-              <button onclick="handleDeleteMeeting('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
+              <div class="flex items-center space-x-1 shrink-0">
+                <button onclick="exportMeetingToICS('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">📲 캘린더</button>
+                <button onclick="handleDeleteMeeting('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
+              </div>
             </div>
 
             <div class="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
@@ -3306,6 +3365,57 @@
 
 
     // --- [달력 컨트롤 + 번개 개설 + 참석자 일괄 체크박스] ---
+
+    document.getElementById('btn-cal-today').addEventListener('click', () => {
+      const t = todayStr();
+      calYearMonth = t.slice(0, 7);
+      calSelectedDate = t;
+      renderAll();
+      if (!document.getElementById('calendar-grid-panel').classList.contains('hidden')) {
+        selectCalendarDate(t);
+      }
+      showToast(`📅 오늘(${t})로 이동했습니다.`);
+    });
+
+    window.exportMeetingToICS = function(meetingId) {
+      const club = getActiveClub();
+      const mt = (club.meetings || []).find(x => x.id === meetingId);
+      if (!mt) return;
+      const dMatch = (mt.dateStr || '').match(/(\d{4})-(\d{2})-(\d{2})(?:\s+(\d{2}):(\d{2}))?/);
+      const now = new Date();
+      const y = dMatch ? dMatch[1] : String(now.getFullYear());
+      const m = dMatch ? dMatch[2] : String(now.getMonth() + 1).padStart(2, '0');
+      const d = dMatch ? dMatch[3] : String(now.getDate()).padStart(2, '0');
+      const hh = (dMatch && dMatch[4]) ? dMatch[4] : '18';
+      const mm = (dMatch && dMatch[5]) ? dMatch[5] : '00';
+      const endHh = String(Math.min(23, parseInt(hh, 10) + 2)).padStart(2, '0');
+
+      const dtStart = `${y}${m}${d}T${hh}${mm}00`;
+      const dtEnd = `${y}${m}${d}T${endHh}${mm}00`;
+      const ics = [
+        'BEGIN:VCALENDAR',
+        'VERSION:2.0',
+        'PRODID:-//MOMO//Meeting Manager//KO',
+        'BEGIN:VEVENT',
+        `UID:${mt.id}@momo`,
+        `DTSTART;TZID=Asia/Seoul:${dtStart}`,
+        `DTEND;TZID=Asia/Seoul:${dtEnd}`,
+        `SUMMARY:[${club.name}] ${mt.title}`,
+        `LOCATION:${mt.location || ''}`,
+        `DESCRIPTION:${mt.meetingType === '번개' ? '번개 모임' : '정기 모임'} (모모에서 등록)`,
+        'END:VEVENT',
+        'END:VCALENDAR'
+      ].join('\r\n');
+
+      const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
+      const a = document.createElement('a');
+      a.href = URL.createObjectURL(blob);
+      a.download = `${mt.title.replace(/[\\/:*?"<>|]/g, '_')}.ics`;
+      a.click();
+      setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      showToast("📲 캘린더 파일(.ics)이 저장되었습니다. 파일을 누르면 삼성 캘린더에 바로 추가됩니다!");
+    };
+
     document.getElementById('btn-cal-prev-month').addEventListener('click', () => shiftMonth(-1));
     document.getElementById('btn-cal-next-month').addEventListener('click', () => shiftMonth(1));
     document.getElementById('btn-cal-scope-toggle').addEventListener('click', () => {
