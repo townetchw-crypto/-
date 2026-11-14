@@ -209,7 +209,6 @@
           <span id="year-title" class="text-sm font-extrabold text-slate-900 px-1">2026년</span>
           <button id="btn-year-next" aria-label="다음 해" class="px-2.5 py-1.5 text-slate-800 font-extrabold text-xs rounded-lg hover:bg-slate-100">▶</button>
         </div>
-        <button onclick="exportAllToICS()" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-white border border-slate-300 text-slate-700 text-[11px] font-bold rounded-lg">📲 전체 폰캘린더</button>
       </div>
       <p id="year-summary" class="text-xs text-slate-500 font-semibold"></p>
       <div id="year-list" class="space-y-2"></div>
@@ -473,11 +472,6 @@
           <label class="block font-semibold text-slate-700 mb-1">한 줄 설명</label>
           <input id="input-newclub-subtitle" type="text" placeholder="예: 주말 정기 라운딩 및 스크린 모임" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
-        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
-          <label class="block font-semibold text-amber-900 mb-1">💰 이월금 (처음 시작할 때 모임 통장에 있는 돈)</label>
-          <input id="input-newclub-carry" type="text" inputmode="numeric" placeholder="없으면 비워두세요. 예: 25000000" class="w-full border border-amber-300 rounded-lg p-2.5 focus:ring-2 focus:ring-amber-400 outline-none bg-white">
-          <p class="text-[10px] text-amber-800 mt-1">나중에 정산 화면에서도 고칠 수 있어요.</p>
-        </div>
       </div>
       <div class="flex space-x-2 pt-2">
         <button id="btn-cancel-create-club" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
@@ -535,7 +529,7 @@
           <p id="meeting-repeat-preview" class="text-[11px] text-indigo-600 font-semibold"></p>
         </div>
         <p id="meeting-series-note" class="hidden text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2">🔁 반복 일정의 일부입니다. 수정은 이 일정 하나에만 적용돼요.</p>
-        <div>
+        <div class="hidden">
           <label class="block font-semibold text-slate-700 mb-1">폰 캘린더 알림</label>
           <select id="input-meeting-remind" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 outline-none">
             <option value="-1">알림 없음</option><option value="0">정시</option><option value="10">10분 전</option><option value="30">30분 전</option>
@@ -878,7 +872,7 @@
             <label class="block font-semibold text-slate-700 mb-1">결산 기간 표시</label>
             <input id="input-rep-period" type="text" placeholder="예: 2026.11.01 ~ 11.30" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
-          <div>
+          <div class="hidden">
             <label class="block font-semibold text-slate-700 mb-1">전월(전기) 이월금 (원)</label>
             <input id="input-rep-carryover" type="number" value="0" min="0" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
@@ -2344,7 +2338,6 @@
                 <h3 class="font-bold text-slate-900 text-base leading-snug">${esc(meeting.title)}</h3>
               </div>
               <div class="flex items-center space-x-1 shrink-0">
-                <button onclick="exportMeetingToICS('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">📲 캘린더</button>
                 <button onclick="openMeetingModal({mode:'edit',meetingId:'${meeting.id}'})" class="px-2 py-1 text-xs font-bold text-slate-700 bg-white hover:bg-slate-50 rounded-lg border border-slate-300 transition">✏️</button>
                 <button onclick="handleDeleteMeeting('${meeting.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200 transition">삭제</button>
               </div>
@@ -2539,11 +2532,11 @@
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
-              <tr class="h-8" onclick="editSettleCarry()" style="cursor:pointer"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${carry < 0 ? '- ' + fm(-carry) : fm(carry)}</td></tr>
+              <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${carry < 0 ? '- ' + fm(-carry) : fm(carry)}</td></tr>
               <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${grand < 0 ? 'text-rose-600' : ''}">${grand < 0 ? '- ' + fm(-grand) : fm(grand)}</td></tr>
             </tfoot>
           </table>
-          <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 처음 시작 금액에 앞선 모임 결과가 자동으로 이어져요.</p>
+          <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 앞선 모임들의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈이 있으면 수입란에 적어 주세요.</p>
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
             <div class="flex items-center justify-between">
               <span class="font-bold text-slate-600">보관 계좌</span>
@@ -2559,36 +2552,10 @@
       `;
     }
 
-    function carryBarHtml() {
-      const club = getActiveClub();
-      const cfg = club.reportConfig || {};
-      const v = Math.max(0, toInt(cfg.carryOver));
-      if (!cfg.carryAsked && v === 0) {
-        return `<div class="no-print bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 space-y-2">
-          <p class="text-xs font-extrabold text-amber-900">💡 이월금을 먼저 넣어 주세요</p>
-          <p class="text-[11px] text-amber-800 leading-relaxed">모임을 시작할 때 통장에 남아 있던 돈(이월금)이 있으면 여기에 넣어야 결산이 맞아요. 없으면 '없음'을 눌러 주세요.</p>
-          <div class="flex gap-2">
-            <button type="button" onclick="openReportConfigModal()" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold">이월금 입력하기</button>
-            <button type="button" onclick="carryNone()" class="flex-1 py-2 rounded-lg bg-white border border-amber-300 text-amber-800 text-xs font-bold">없음 (0원)</button>
-          </div>
-        </div>`;
-      }
-      return `<button type="button" onclick="openReportConfigModal()" class="no-print w-full flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs">
-        <span class="font-bold text-amber-900">💰 이월금 (처음 시작 금액)</span>
-        <span class="font-extrabold text-amber-950">${v.toLocaleString()}원 <span class="text-amber-700 font-semibold">고치기 ✏️</span></span>
-      </button>`;
-    }
-    window.carryNone = function() {
-      requireAdmin('이월금 설정', () => {
-        const club = getActiveClub();
-        if (!club.id) return;
-        club.reportConfig = Object.assign({}, club.reportConfig || {}, { carryOver: 0, carryAsked: true });
-        saveState(); renderAll();
-      });
-    };
+    function carryBarHtml() { return ''; }
     function settleCarryFor(mt) {
       const club = getActiveClub();
-      const start = Math.max(0, toInt((club.reportConfig || {}).carryOver));
+      const start = 0;
       const keyOf = m => (mtYmd(m) || '9999-99-99') + ' ' + (mtStartHM(m) || '00:00');
       const idx = m => club.meetings.indexOf(m);
       let sum = start;
@@ -3240,7 +3207,7 @@
         members: [],
         meetings: [],
         monthlyDues: [],
-        reportConfig: { carryOver: Math.max(0, toInt(String(document.getElementById('input-newclub-carry').value || '').replace(/,/g, ''))), carryAsked: true }
+        reportConfig: { carryOver: 0, carryAsked: true }
       };
 
       appState.clubs.push(newClub);
@@ -3250,7 +3217,6 @@
       document.getElementById('input-newclub-name').value = '';
       document.getElementById('input-newclub-category').value = '';
       document.getElementById('input-newclub-subtitle').value = '';
-      document.getElementById('input-newclub-carry').value = '';
       renderAll();
       showToast(`🎉 새로운 모임 '${name}'이(가) 개설되었습니다!`);
     });
@@ -4214,7 +4180,20 @@
         if (selectedPeriod !== 'ALL' && mtYmd(mt) && !mtYmd(mt).startsWith(selectedPeriod)) return;
         (mt.incomes || []).forEach(x => meetingIncomes.push({ date: mtYmd(mt) || '-', title: x.name || x.memo, note: x.name ? x.memo : mt.title, amount: x.amount }));
       });
-      const carryOver = toInt(cfg.carryOver);
+      let carryOver = 0;
+      if (selectedPeriod !== 'ALL') {
+        const before = ym => !!ym && ym < selectedPeriod;
+        (club.monthlyDues || []).forEach(d => { if (d.isPaid && matchSub(d.subGroupId) && before(d.yearMonth)) carryOver += d.amount; });
+        extra.forEach(x => {
+          if (!matchSub(x.subGroupId) || !x.date || !before(x.date.slice(0, 7))) return;
+          carryOver += x.type === 'income' ? x.amount : (x.type === 'expense' ? -x.amount : 0);
+        });
+        (club.meetings || []).forEach(mt => {
+          const k = mtYmd(mt); if (!k || !before(k.slice(0, 7))) return;
+          carryOver += (mt.incomes || []).reduce((s, x) => s + x.amount, 0);
+          if (matchSub(mt.subGroupId)) carryOver -= (mt.expenses || []).reduce((s, e) => s + e.amount, 0);
+        });
+      }
       const duesTotal = paidDues.reduce((s, d) => s + d.amount, 0);
       const extraIncomeTotal = extraIncomes.reduce((s, x) => s + x.amount, 0) + meetingIncomes.reduce((s, x) => s + x.amount, 0);
       const totalIncome = carryOver + duesTotal + extraIncomeTotal;
@@ -4326,7 +4305,7 @@
             <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${r.balance < 0 ? 'text-rose-600' : ''}">${r.balance < 0 ? '- ' + fm(-r.balance) : fm(r.balance)}</td></tr>
           </tfoot>
         </table>
-        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 위의 이월금 칸에서 고칠 수 있어요.</p>
+        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
 
         <!-- 3. 보관 계좌 & 확인 서명란 -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
