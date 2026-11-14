@@ -1507,7 +1507,7 @@
               paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
           });
           const incs = (Array.isArray(mt.incomes) ? mt.incomes : []).filter(x => x && typeof x === 'object').map((x, xi) => ({ id: sid(x.id || ('inc_' + ci + '_' + ti + '_' + xi)), name: str(x.name), memo: str(x.memo), amount: Math.max(0, toInt(x.amount)) }));
-          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), incomes: incs, subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
+          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), incomes: incs, carryOver: Math.max(0, toInt(mt.carryOver)), subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
             dateStr: canonDateStr(str(mt.dateStr)), endTime: /^\d{2}:\d{2}$/.test(str(mt.endTime)) ? str(mt.endTime) : '', location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps,
             remind: (typeof mt.remind === 'number' && isFinite(mt.remind)) ? mt.remind : 60, seriesId: sid(str(mt.seriesId)), repeat: str(mt.repeat) });
         });
@@ -2481,6 +2481,13 @@
       const totalSpent = exps.reduce((s, e) => s + e.amount, 0);
       const totalIncome = incs.reduce((s, x) => s + x.amount, 0);
       const balance = totalIncome - totalSpent;
+      const carry = Math.max(0, toInt(activeMeeting.carryOver));
+      const grand = balance + carry;
+      const rcfg = club.reportConfig || {};
+      const roleName = role => { const m = (club.members || []).find(x => x.role === role); return m ? m.name : ''; };
+      const sigSec = rcfg.secretary || roleName('총무') || '-';
+      const sigAud = rcfg.auditor || roleName('부회장') || roleName('운영진') || '-';
+      const sigPre = rcfg.president || roleName('회장') || '-';
       const fm = n => Number(n).toLocaleString();
       const bd = 'border border-slate-800';
       const mid = activeMeeting.id;
@@ -2504,7 +2511,7 @@
           </div>
         </div>`;
 
-      const nRows = Math.max(8, incs.length, exps.length);
+      const nRows = Math.max(10, incs.length, exps.length);
       let rowsHtml = '';
       for (let i = 0; i < nRows; i++) {
         const a = incs[i], e = exps[i];
@@ -2520,12 +2527,13 @@
       }
       container.innerHTML = cards + `
         <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
-          <div class="flex items-center justify-between gap-2">
-            <h4 class="text-sm font-extrabold text-slate-900 truncate">${esc(activeMeeting.title)} 결산</h4>
-            <button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button>
+          <div class="flex justify-end"><button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button></div>
+          <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(activeMeeting.title)} 결산</h3>
+          <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
+            <span>${esc(fmtMeetingWhen(activeMeeting))}</span>
+            <span class="truncate ml-2">${esc(club.name)}</span>
           </div>
-          <p class="text-[11px] text-slate-500">${esc(fmtMeetingWhen(activeMeeting))} · 줄을 누르면 고치거나 지울 수 있어요.</p>
-          <table class="w-full border-collapse border-2 border-slate-900 text-[11px] text-slate-900 table-fixed">
+          <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed">
             <colgroup><col style="width:18%"><col style="width:23%"><col style="width:19%"><col style="width:24%"><col style="width:16%"></colgroup>
             <thead>
               <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
@@ -2534,12 +2542,37 @@
             <tbody>${rowsHtml}</tbody>
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
-              <tr class="h-9"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '-' : ''}${fm(Math.abs(balance))}</td></tr>
+              <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
+              <tr class="h-8" onclick="editSettleCarry()" style="cursor:pointer"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">전월이월금</td><td class="${bd} px-1 text-right">${fm(carry)}</td></tr>
+              <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-1 text-right text-sm ${grand < 0 ? 'text-rose-600' : ''}">${grand < 0 ? '- ' + fm(-grand) : fm(grand)}</td></tr>
             </tfoot>
           </table>
+          <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 전월이월금 줄을 누르면 금액을 넣을 수 있어요.</p>
+          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+            <div class="flex items-center justify-between">
+              <span class="font-bold text-slate-600">보관 계좌</span>
+              <span class="font-bold text-slate-800">${esc(rcfg.bankAccount || '미등록 (결산보고 ⚙️ 설정에서 입력)')}</span>
+            </div>
+            <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 text-center">
+              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">작성 (총무)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigSec)}</p></div>
+              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">확인 (감사/부회장)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigAud)}</p></div>
+              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">승인 (회장)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigPre)}</p></div>
+            </div>
+          </div>
         </div>
       `;
     }
+
+    window.editSettleCarry = function() {
+      requireAdminClub('전월이월금 입력', () => {
+        const mt = currentSettleMeeting();
+        if (!mt) return;
+        const v = window.prompt('전월이월금(원)을 숫자로 입력하세요. 없으면 0', String(mt.carryOver || 0));
+        if (v === null) return;
+        mt.carryOver = Math.max(0, toInt(String(v).replace(/,/g, '')));
+        saveState(); renderAll();
+      });
+    };
 
     // 모임 수입/지출 입력 창
     function currentSettleMeeting() {
@@ -2643,7 +2676,10 @@
       t += inc.length ? inc.map(x => `- ${[x.name, x.memo].filter(Boolean).join(' ')} ${fm(x.amount)}원`).join('\n') : '- 없음';
       t += `\n입금계 ${fm(si)}원\n\n[지출내역]\n`;
       t += exp.length ? exp.map(x => `- ${x.title} ${fm(x.amount)}원`).join('\n') : '- 없음';
+      const cy = Math.max(0, toInt(mt.carryOver)), gt = si - se + cy;
       t += `\n지출계 ${fm(se)}원\n\n(입금)-(지출) ${si - se < 0 ? '-' : ''}${fm(Math.abs(si - se))}원`;
+      if (cy > 0) t += `\n전월이월금 ${fm(cy)}원`;
+      t += `\n합계 ${gt < 0 ? '-' : ''}${fm(Math.abs(gt))}원`;
       const done = () => showToast('결산 내용을 복사했습니다. 카톡에 붙여넣으세요.');
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(() => { window.prompt('복사해서 사용하세요', t); });
       else window.prompt('복사해서 사용하세요', t);
