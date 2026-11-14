@@ -59,6 +59,11 @@
         padding: 0 !important;
       }
     }
+    /* 입력창 글씨 키우기 */
+    input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select, textarea { font-size: 17px !important; line-height: 1.35; }
+    input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select { min-height: 46px; }
+    input[type=checkbox] { width: 20px; height: 20px; }
+    ::placeholder { font-size: 15px; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
@@ -336,7 +341,7 @@
           <button type="button" onclick="setDuesPeriodFilter('year')" id="btn-dues-per-year" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">연별</button>
         </div>
         <div id="dues-period-input-row" class="hidden flex items-center space-x-1.5">
-          <input id="input-dues-filter-period" type="text" value="2026-11" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 font-bold">
+          <input id="input-dues-filter-period" type="month" value="2026-11" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 font-bold">
         </div>
         <div class="grid grid-cols-3 gap-1 pt-1 border-t border-slate-100">
           <button type="button" onclick="setDuesPaidFilter('all')" id="btn-dues-paid-all" class="py-1.5 rounded-lg bg-slate-800 text-white transition">전체 상태</button>
@@ -606,7 +611,7 @@
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">금액 (원)</label>
-          <input id="settle-entry-amount" type="number" inputmode="numeric" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input id="settle-entry-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
       </div>
       <div class="flex space-x-2 pt-1">
@@ -636,7 +641,7 @@
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">지출 총액 (원)</label>
-          <input id="input-expense-amount" type="number" placeholder="예: 150000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none">
+          <input id="input-expense-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 150000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none">
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">선결제한 회원</label>
@@ -797,22 +802,34 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label id="label-due-month" class="block font-semibold text-slate-700 mb-1">해당 년월</label>
-            <input id="input-due-month" type="text" value="2026-11" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+            <input id="input-due-month" type="month" value="2026-11" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none">
+            <select id="input-due-year" class="hidden w-full border border-slate-300 rounded-lg p-2 bg-white outline-none"></select>
           </div>
           <div>
             <label class="block font-semibold text-slate-700 mb-1">입금 날짜</label>
             <input id="input-due-paid-date" type="date" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 outline-none text-xs">
           </div>
         </div>
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">회원 선택</label>
+        <div id="due-member-single-wrap" class="hidden">
+          <label class="block font-semibold text-slate-700 mb-1">회원</label>
           <select id="input-due-member" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium">
             <!-- 동적 주입 -->
           </select>
         </div>
+        <div id="due-member-multi-wrap">
+          <div class="flex items-center justify-between mb-1">
+            <label class="font-semibold text-slate-700">회원 선택 <span class="text-xs font-normal text-slate-400">(여러 명 가능)</span></label>
+            <span id="due-multi-count" class="text-xs font-bold text-indigo-600">0명 선택</span>
+          </div>
+          <div class="flex gap-2 mb-1.5">
+            <button type="button" id="btn-due-sel-all" class="flex-1 py-2 rounded-lg bg-indigo-50 border border-indigo-200 text-indigo-700 text-sm font-bold">전체 선택</button>
+            <button type="button" id="btn-due-sel-none" class="flex-1 py-2 rounded-lg bg-slate-100 border border-slate-300 text-slate-600 text-sm font-bold">선택 해제</button>
+          </div>
+          <div id="due-member-checklist" class="grid grid-cols-2 gap-1.5 max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-1.5 bg-slate-50"></div>
+        </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">금액 (원)</label>
-          <input id="input-due-amount" type="number" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <input id="input-due-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
 
         </div>
         <div class="flex items-center space-x-2 pt-1">
@@ -870,7 +887,8 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-semibold text-slate-700 mb-1">결산 기간 표시</label>
-            <input id="input-rep-period" type="text" placeholder="예: 2026.11.01 ~ 11.30" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="input-rep-period" type="hidden">
+            <div class="flex items-center gap-1"><input id="input-rep-period-start" type="date" class="w-full min-w-0 border border-slate-300 rounded-lg p-2 outline-none"><span class="text-slate-400">~</span><input id="input-rep-period-end" type="date" class="w-full min-w-0 border border-slate-300 rounded-lg p-2 outline-none"></div>
           </div>
           <div class="hidden">
             <label class="block font-semibold text-slate-700 mb-1">전월(전기) 이월금 (원)</label>
@@ -924,7 +942,7 @@
           </div>
           <div id="entry-date-wrap">
             <label class="block font-semibold text-slate-700 mb-1">일자</label>
-            <input id="input-entry-date" type="text" placeholder="2026-11-14" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+            <input id="input-entry-date" type="date" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
           </div>
         </div>
         <div>
@@ -934,7 +952,7 @@
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
-            <input id="input-entry-amount" type="number" min="0" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <input id="input-entry-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
           </div>
           <div>
             <label class="block font-semibold text-slate-700 mb-1">비고</label>
@@ -2798,10 +2816,12 @@
 
       const paidDues = filteredDues.filter(d => d.isPaid);
       const totalAmount = paidDues.reduce((sum, d) => sum + d.amount, 0);
-      totalAmountEl.textContent = `${totalAmount.toLocaleString()}원`;
-
-      const ratio = filteredDues.length > 0 ? Math.round((paidDues.length / filteredDues.length) * 100) : 0;
-      ratioEl.textContent = `완납률 ${ratio}% (${paidDues.length}/${filteredDues.length}건)`;
+      const allDues = club.monthlyDues.filter(d => club.activeSubGroupId === "all" || d.subGroupId === club.activeSubGroupId);
+      const allPaid = allDues.filter(d => d.isPaid);
+      const allTotal = allPaid.reduce((sum, d) => sum + d.amount, 0);
+      totalAmountEl.textContent = `${allTotal.toLocaleString()}원`;
+      const isFiltered = filteredDues.length !== allDues.length;
+      ratioEl.textContent = `전체 ${allDues.length}건 중 완납 ${allPaid.length}건` + (isFiltered ? ` · 지금 목록 ${filteredDues.length}건 ${totalAmount.toLocaleString()}원` : '');
 
       if (filteredDues.length === 0) {
         container.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">등록된 회비 납부 내역이 없습니다.</div>';
@@ -2827,6 +2847,7 @@
                 ${d.isPaid ? '완납' : '미납'}
               </button>
               <button onclick="openEditDueModal('${d.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition">수정</button>
+              <button onclick="deleteDue('${d.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition">삭제</button>
             </div>
           </div>
         `;
@@ -2990,6 +3011,23 @@
       saveState();
       renderDues();
       showToast(`${getMember(due.memberId).name}님 회비 상태 변경`);
+      });
+    };
+
+    window.deleteDue = function(dueId) {
+      requireAdminClub('회비 기록 삭제', () => {
+        const club = getActiveClub();
+        const due = club.monthlyDues.find(d => d.id === dueId);
+        if (!due) return;
+        showDeleteConfirm(
+          "회비 기록 삭제",
+          `<strong>${esc(getMember(due.memberId).name)}</strong>님의 <strong>${esc(due.yearMonth)}</strong> 회비 <strong>${due.amount.toLocaleString()}원</strong> 기록을 삭제할까요?`,
+          () => {
+            club.monthlyDues = club.monthlyDues.filter(d => d.id !== dueId);
+            saveState(); renderDues();
+            showToast("회비 기록을 삭제했어요.");
+          }
+        );
       });
     };
 
@@ -3787,12 +3825,20 @@
       });
       const mInput = document.getElementById('input-due-month');
       const mLabel = document.getElementById('label-due-month');
+      const yInput = document.getElementById('input-due-year');
+      if (!yInput.options.length) {
+        const cy = Number(todayStr().slice(0, 4));
+        for (let y = cy - 6; y <= cy + 2; y++) yInput.insertAdjacentHTML('beforeend', `<option value="${y}">${y}년</option>`);
+        yInput.value = String(cy);
+      }
       if (cat === '연회비') {
         mLabel.textContent = '해당 연도';
-        if (/^\d{4}-/.test(mInput.value)) mInput.value = mInput.value.slice(0, 4);
+        mInput.classList.add('hidden'); yInput.classList.remove('hidden');
+        if (/^\d{4}/.test(mInput.value)) yInput.value = mInput.value.slice(0, 4);
       } else {
         mLabel.textContent = '해당 년월';
-        if (/^\d{4}$/.test(mInput.value)) mInput.value = todayStr().slice(0, 7);
+        yInput.classList.add('hidden'); mInput.classList.remove('hidden');
+        if (!/^\d{4}-\d{2}$/.test(mInput.value)) mInput.value = todayStr().slice(0, 7);
       }
     }
     window.setDueCategory = setDueCategory;
@@ -3811,8 +3857,7 @@
       const inp = document.getElementById('input-dues-filter-period');
       if (row && inp) {
         row.classList.toggle('hidden', mode === 'all');
-        if (mode === 'year') inp.value = todayStr().slice(0, 4);
-        if (mode === 'month' && inp.value.length <= 4) inp.value = todayStr().slice(0, 7);
+        if (!/^\d{4}-\d{2}$/.test(inp.value)) inp.value = todayStr().slice(0, 7);
       }
       renderDues();
     }
@@ -3844,14 +3889,36 @@
       document.getElementById('input-due-edit-id').value = d.id;
       const cat = d.note === '연회비' ? '연회비' : ((d.note || '').includes('찬조') || (d.note || '').includes('경조사') ? '찬조/부조' : '월회비');
       setDueCategory(cat);
-      document.getElementById('input-due-month').value = d.yearMonth || todayStr().slice(0, 7);
+      if (cat === '연회비') document.getElementById('input-due-year').value = (d.yearMonth || todayStr()).slice(0, 4);
+      else document.getElementById('input-due-month').value = /^\d{4}-\d{2}$/.test(d.yearMonth || '') ? d.yearMonth : todayStr().slice(0, 7);
       document.getElementById('input-due-paid-date').value = d.paidDate || todayStr();
       document.getElementById('input-due-member').value = d.memberId || '';
       document.getElementById('input-due-amount').value = d.amount || '';
       document.getElementById('input-due-is-paid').checked = !!d.isPaid;
+      showDueMemberMode(false);
       document.getElementById('modal-add-due').classList.remove('hidden');
     }
     window.openEditDueModal = openEditDueModal;
+
+    function showDueMemberMode(multi) {
+      document.getElementById('due-member-single-wrap').classList.toggle('hidden', multi);
+      document.getElementById('due-member-multi-wrap').classList.toggle('hidden', !multi);
+      if (!multi) return;
+      const club = getActiveClub();
+      const box = document.getElementById('due-member-checklist');
+      box.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `
+        <label class="flex items-center gap-2 p-2 rounded-lg bg-white border border-slate-200 cursor-pointer text-base">
+          <input type="checkbox" value="${m.id}" class="shrink-0 accent-indigo-600"><span class="truncate font-medium text-slate-800">${esc(m.name)}</span>
+        </label>`).join('') || '<p class="col-span-2 text-center text-sm text-slate-400 p-3">등록된 회원이 없어요. 먼저 회원을 등록해 주세요.</p>';
+      updateDueMultiCount();
+    }
+    function updateDueMultiCount() {
+      const n = document.querySelectorAll('#due-member-checklist input:checked').length;
+      document.getElementById('due-multi-count').textContent = `${n}명 선택`;
+    }
+    document.getElementById('due-member-checklist').addEventListener('change', updateDueMultiCount);
+    document.getElementById('btn-due-sel-all').addEventListener('click', () => { document.querySelectorAll('#due-member-checklist input').forEach(x => x.checked = true); updateDueMultiCount(); });
+    document.getElementById('btn-due-sel-none').addEventListener('click', () => { document.querySelectorAll('#due-member-checklist input').forEach(x => x.checked = false); updateDueMultiCount(); });
 
     document.getElementById('btn-open-add-due').addEventListener('click', () => {
       requireAdminClub('회비 기록', () => {
@@ -3861,6 +3928,7 @@
         document.getElementById('input-due-paid-date').value = todayStr();
         document.getElementById('input-due-amount').value = club.lastDueAmount ? String(club.lastDueAmount) : '';
         setDueCategory('월회비');
+        showDueMemberMode(true);
         document.getElementById('modal-add-due').classList.remove('hidden');
       });
     });
@@ -3868,11 +3936,14 @@
     document.getElementById('btn-submit-add-due').addEventListener('click', () => {
       const club = getActiveClub();
       const cat = document.getElementById('input-due-category').value || '월회비';
-      const yearMonth = document.getElementById('input-due-month').value.trim();
+      const yearMonth = (cat === '연회비' ? document.getElementById('input-due-year').value : document.getElementById('input-due-month').value).trim();
       const paidDateInput = document.getElementById('input-due-paid-date').value.trim() || todayStr();
-      const memberId = document.getElementById('input-due-member').value;
+      const editId0 = document.getElementById('input-due-edit-id').value;
+      const checkedIds = editId0 ? [] : Array.from(document.querySelectorAll('#due-member-checklist input:checked')).map(x => x.value);
+      const memberId = editId0 ? document.getElementById('input-due-member').value : (checkedIds[0] || '');
       const amount = toInt(document.getElementById('input-due-amount').value);
       const isPaid = document.getElementById('input-due-is-paid').checked;
+      if (!editId0 && checkedIds.length === 0) { showToast("회원을 한 명 이상 선택해 주세요."); return; }
 
       if (!yearMonth) {
         showToast("해당 년월(또는 연도)을 입력해주세요.");
@@ -3885,6 +3956,13 @@
 
       club.lastDueAmount = amount;
       const member = getMember(memberId);
+      const mkDue = mid => ({
+        id: uid('due'),
+        subGroupId: getMember(mid).subGroupId,
+        yearMonth, memberId: mid, amount, isPaid,
+        paidDate: isPaid ? paidDateInput : "",
+        note: cat === '월회비' ? '' : (cat === '찬조/부조' ? '경조사/찬조' : '연회비')
+      });
       const newDue = {
         id: uid('due'),
         subGroupId: member.subGroupId,
@@ -3904,8 +3982,10 @@
         }
         showToast("회비 기록이 수정되었습니다!");
       } else {
-        club.monthlyDues.unshift(newDue);
-        showToast("회비 기록이 추가되었습니다!");
+        checkedIds.slice().reverse().forEach(mid => club.monthlyDues.unshift(mkDue(mid)));
+        showToast(checkedIds.length > 1 ? `${checkedIds.length}명의 회비가 한 번에 추가되었습니다!` : "회비 기록이 추가되었습니다!");
+        // 새로 넣은 기록이 바로 보이도록 목록 조건을 전체로
+        setDuesCatFilter('all'); setDuesPeriodFilter('all'); setDuesPaidFilter('all');
       }
       saveState();
       document.getElementById('modal-add-due').classList.add('hidden');
@@ -4339,6 +4419,12 @@
         const cfg = club.reportConfig || {};
         document.getElementById('input-rep-title').value = cfg.title || `${club.name} 결산보고서`;
         document.getElementById('input-rep-period').value = cfg.period || '';
+        (function () {
+          const m = String(cfg.period || '').match(/(\d{4})\.(\d{1,2})\.(\d{1,2})\s*~\s*(?:(\d{4})\.)?(\d{1,2})\.(\d{1,2})/);
+          const p2 = n => String(n).padStart(2, '0');
+          document.getElementById('input-rep-period-start').value = m ? `${m[1]}-${p2(m[2])}-${p2(m[3])}` : '';
+          document.getElementById('input-rep-period-end').value = m ? `${m[4] || m[1]}-${p2(m[5])}-${p2(m[6])}` : '';
+        })();
         document.getElementById('input-rep-carryover').value = cfg.carryOver || 0;
         document.getElementById('input-rep-bank').value = cfg.bankAccount || '';
         document.getElementById('input-rep-secretary').value = cfg.secretary || '';
@@ -4355,7 +4441,12 @@
       if (!club.id) return;
       club.reportConfig = {
         title: document.getElementById('input-rep-title').value.trim(),
-        period: document.getElementById('input-rep-period').value.trim(),
+        period: (function () {
+          const s = document.getElementById('input-rep-period-start').value, e = document.getElementById('input-rep-period-end').value;
+          if (s && e) return `${s.replace(/-/g, '.')} ~ ${e.replace(/-/g, '.')}`;
+          if (s || e) return (s || e).replace(/-/g, '.');
+          return '';
+        })(),
         carryOver: Math.max(0, parseInt(document.getElementById('input-rep-carryover').value, 10) || 0),
         bankAccount: document.getElementById('input-rep-bank').value.trim(),
         secretary: document.getElementById('input-rep-secretary').value.trim(),
@@ -4432,7 +4523,7 @@
       const type = document.getElementById('input-entry-type').value;
       const date = document.getElementById('input-entry-date').value.trim() || todayStr();
       const title = document.getElementById('input-entry-title').value.trim();
-      const amount = Math.max(0, parseInt(document.getElementById('input-entry-amount').value, 10) || 0);
+      const amount = Math.max(0, toInt(document.getElementById('input-entry-amount').value));
       const note = document.getElementById('input-entry-note').value.trim();
 
       if (!title || amount <= 0) {
@@ -4931,6 +5022,16 @@
     applyLayers();
     fitStickyBars();
     startupReminder();
-  </script>
+  
+    // 금액 입력칸: 쉼표 자동 표시 (값을 코드로 넣어도 자동으로 쉼표가 붙음)
+    (function () {
+      const desc = Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, 'value');
+      const fmt = v => { const s = String(v == null ? '' : v).replace(/[^\d]/g, ''); return s ? Number(s).toLocaleString('en-US') : ''; };
+      document.querySelectorAll('input[data-money]').forEach(el => {
+        Object.defineProperty(el, 'value', { configurable: true, get() { return desc.get.call(this); }, set(v) { desc.set.call(this, fmt(v)); } });
+        el.addEventListener('input', () => { const raw = desc.get.call(el), f = fmt(raw); if (f !== raw) desc.set.call(el, f); });
+      });
+    })();
+</script>
 </body>
 </html>
