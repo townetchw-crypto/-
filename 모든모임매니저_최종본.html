@@ -366,7 +366,7 @@
           <span>📊</span>
           <span>자동 결산보고서</span>
         </h2>
-        <div class="flex items-center space-x-1.5">
+        <div class="hidden">
           <button id="btn-open-report-config" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition">
             ⚙️ 설정/서명
           </button>
@@ -4419,28 +4419,6 @@
           </tfoot>
         </table>
         <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
-
-        <!-- 3. 보관 계좌 & 확인 서명란 -->
-        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
-          <div class="flex items-center justify-between">
-            <span class="font-bold text-slate-600">보관 계좌</span>
-            <span class="font-bold text-slate-800">${esc(r.bankAccount || '미등록 (⚙️ 설정에서 입력)')}</span>
-          </div>
-          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 text-center">
-            <div class="bg-white border border-slate-200 rounded-lg p-2">
-              <p class="text-[10px] text-slate-400">작성 (총무)</p>
-              <p class="font-bold text-slate-800 mt-0.5">${esc(r.secretary)}</p>
-            </div>
-            <div class="bg-white border border-slate-200 rounded-lg p-2">
-              <p class="text-[10px] text-slate-400">확인 (감사/부회장)</p>
-              <p class="font-bold text-slate-800 mt-0.5">${esc(r.auditor)}</p>
-            </div>
-            <div class="bg-white border border-slate-200 rounded-lg p-2">
-              <p class="text-[10px] text-slate-400">승인 (회장)</p>
-              <p class="font-bold text-slate-800 mt-0.5">${esc(r.president)}</p>
-            </div>
-          </div>
-        </div>
       `;
     }
 
@@ -4584,7 +4562,7 @@
       renderInOutLedger();
     });
 
-    ['report-from', 'report-to'].forEach(id => document.getElementById(id).addEventListener('change', renderReport));
+    ['report-from', 'report-to'].forEach(id => { const el = document.getElementById(id); el.addEventListener('change', renderReport); el.addEventListener('input', renderReport); });
     const setRange = (f, t) => { document.getElementById('report-from').value = f; document.getElementById('report-to').value = t; renderReport(); };
     document.getElementById('btn-range-all').addEventListener('click', () => setRange('', ''));
     document.getElementById('btn-range-year').addEventListener('click', () => { const y = todayStr().slice(0, 4); setRange(y + '-01-01', y + '-12-31'); });
