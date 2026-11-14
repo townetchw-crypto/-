@@ -2903,13 +2903,26 @@
         }
         const tokens = work.split(/\s+/).filter(Boolean);
         if (tokens.length === 0) return null;
-        // "(주)실로정보시스템", "주식회사 실로정보시스템" 등 깔끔하게 보존
+
+        const orgHintRe = /^(\(주\)|주식회사)|(?:초|중|고|대|회|법인|테크|통신|산업|시스템|전자|정보|엔씨|엔씨에스|아이엔씨|모임|동문|클럽|라이온스|일동|회의|회장|총무|대표)$/i;
+        const nonNameLastRe = /^(일동|형수|형님|아우|후배|친구|선배|총무|회장|부회장|감사|화환|조화|원우회|대표회의|대표|영고|한얼|은초|한체|한체복|한체복교|한체복싱|골사|골사총무|실로|칠팔|칠팔회|팔인|팔인회|아산|오리온|제주형님|일봉후배|일봉친구)$/;
+        const korNameRe = /^[가-힣]{2,4}(?:,[가-힣]{2,4})*$/;
+
         let name = tokens[0].replace(/[\[\]]/g, '').trim();
         let affiliation = tokens.slice(1).join(' ').replace(/[\[\]]/g, '').trim();
-        if ((name === '주식회사' || name === '(주)') && tokens.length >= 2) {
+
+        const lastTok = tokens[tokens.length - 1].replace(/[\[\]]/g, '').trim();
+        const firstTok = tokens[0].replace(/[\[\]]/g, '').trim();
+
+        // "은천초 박웅렬", "(주)에버텔 강명호", "대한민국 국가대표선수회 양종옥", "총교우회 회장 서정석" 등 [소속 + 이름] 자동 판별
+        if (tokens.length >= 2 && (orgHintRe.test(firstTok) || firstTok.length >= 4) && korNameRe.test(lastTok) && !nonNameLastRe.test(lastTok)) {
+          name = lastTok;
+          affiliation = tokens.slice(0, -1).join(' ').replace(/[\[\]]/g, '').trim();
+        } else if ((firstTok === '주식회사' || firstTok === '(주)') && tokens.length >= 2) {
           name = tokens[0] + ' ' + tokens[1];
           affiliation = tokens.slice(2).join(' ').replace(/[\[\]]/g, '').trim();
         }
+
         if (name && name.length >= 2 && name.length <= 30) return { name, phone, affiliation, amount, note };
         return null;
       }
