@@ -378,11 +378,18 @@
 
       <!-- 기간/구분 필터 & SNS 출력 버튼 바 -->
       <div id="report-filter-bar" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
-        <div class="flex items-center justify-between gap-2">
-          <label class="text-xs font-bold text-slate-600 shrink-0">결산 구분</label>
-          <select id="report-period-select" class="flex-1 text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
-            <option value="ALL">전체 기간 통합</option>
-          </select>
+        <div class="space-y-1.5">
+          <label class="text-xs font-bold text-slate-600">결산 기간 (비우면 전체)</label>
+          <div class="flex items-center gap-1.5">
+            <input id="report-from" type="date" class="flex-1 min-w-0 text-base bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+            <span class="text-slate-500 font-bold">~</span>
+            <input id="report-to" type="date" class="flex-1 min-w-0 text-base bg-slate-50 border border-slate-300 rounded-lg px-2 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div class="grid grid-cols-3 gap-1.5">
+            <button type="button" id="btn-range-all" class="py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">전체</button>
+            <button type="button" id="btn-range-year" class="py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">올해</button>
+            <button type="button" id="btn-range-month" class="py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">이번 달</button>
+          </div>
         </div>
         <div class="grid grid-cols-2 gap-2">
           <button id="btn-report-print-pdf" class="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center justify-center space-x-1.5">
@@ -2545,8 +2552,8 @@
           <div class="flex justify-end"><button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button></div>
           <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(activeMeeting.title)} 결산</h3>
           <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
+            <span class="truncate mr-2">${esc(club.name)}</span>
             <span>${esc(fmtMeetingWhen(activeMeeting))}</span>
-            <span class="truncate ml-2">${esc(club.name)}</span>
           </div>
           <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
             ${lay.colgroup}
@@ -2603,6 +2610,16 @@
         if (a < b || (a === b && idx(m) < idx(mt))) {
           sum += (m.incomes || []).reduce((s, x) => s + x.amount, 0) - (m.expenses || []).reduce((s, x) => s + x.amount, 0);
         }
+      });
+      // 회비장부(완납)와 추가 수입·지출 중 이 모임 날짜보다 앞선 것도 이월금에 포함
+      const myDay = mtYmd(mt) || '9999-99-99';
+      const subId = club.activeSubGroupId || 'all';
+      const okSub = g => subId === 'all' || g === subId;
+      const dayOf = v => { v = String(v || ''); if (/^\d{4}$/.test(v)) return v + '-01-01'; if (/^\d{4}-\d{2}$/.test(v)) return v + '-01'; return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : ''; };
+      (club.monthlyDues || []).forEach(d => { const dt = dayOf(d.paidDate || d.yearMonth); if (d.isPaid && okSub(d.subGroupId) && dt && dt < myDay) sum += d.amount; });
+      (Array.isArray(club.extraLedger) ? club.extraLedger : []).forEach(x => {
+        const dt = dayOf(x.date); if (!okSub(x.subGroupId) || !dt || dt >= myDay) return;
+        sum += x.type === 'income' ? x.amount : (x.type === 'expense' ? -x.amount : 0);
       });
       return sum;
     }
@@ -4222,8 +4239,14 @@
     // --- [자동화 결산보고서 엔진] ---
     function computeReportData() {
       const club = getActiveClub();
-      const periodSel = document.getElementById('report-period-select');
-      const selectedPeriod = periodSel ? periodSel.value : 'ALL';
+      const fromEl = document.getElementById('report-from'), toEl = document.getElementById('report-to');
+      const rFrom = (fromEl && fromEl.value) || '', rTo = (toEl && toEl.value) || '';
+      const hasRange = !!(rFrom || rTo);
+      const selectedPeriod = hasRange ? (rFrom + '~' + rTo) : 'ALL';
+      const normD = v => { v = String(v || ''); if (/^\d{4}$/.test(v)) return v + '-01-01'; if (/^\d{4}-\d{2}$/.test(v)) return v + '-01'; return /^\d{4}-\d{2}-\d{2}/.test(v) ? v.slice(0, 10) : ''; };
+      const inRange = dt => { dt = normD(dt); if (!hasRange || !dt) return true; return (!rFrom || dt >= rFrom) && (!rTo || dt <= rTo); };
+      const beforeFrom = dt => { dt = normD(dt); return !!(rFrom && dt && dt < rFrom); };
+      const dueDate = d => d.paidDate || d.yearMonth;
       const subId = club.activeSubGroupId || 'all';
       const cfg = club.reportConfig || {};
       const extra = Array.isArray(club.extraLedger) ? club.extraLedger : [];
@@ -4233,7 +4256,7 @@
       // 1) 회비/경조사 장부 완납 건 자동 집계
       const paidDues = (club.monthlyDues || []).filter(d => {
         if (!d.isPaid || !matchSub(d.subGroupId)) return false;
-        if (selectedPeriod !== 'ALL' && d.yearMonth !== selectedPeriod) return false;
+        if (!inRange(dueDate(d))) return false;
         return true;
       });
 
@@ -4249,7 +4272,7 @@
       // 2) 추가 수입 (찬조금/기타수입)
       const extraIncomes = extra.filter(x => {
         if (x.type !== 'income' || !matchSub(x.subGroupId)) return false;
-        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        if (!inRange(x.date)) return false;
         return true;
       });
 
@@ -4257,7 +4280,7 @@
       const meetingExpenses = [];
       (club.meetings || []).forEach(mt => {
         if (!matchSub(mt.subGroupId)) return;
-        if (selectedPeriod !== 'ALL' && mtYmd(mt) && !mtYmd(mt).startsWith(selectedPeriod)) return;
+        if (!inRange(mtYmd(mt))) return;
         (mt.expenses || []).forEach(e => {
           meetingExpenses.push({
             date: mtYmd(mt) || '-',
@@ -4271,25 +4294,24 @@
       // 4) 일반 추가 지출 (화환, 답례품, 운영비 등)
       const extraExpenses = extra.filter(x => {
         if (x.type !== 'expense' || !matchSub(x.subGroupId)) return false;
-        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        if (!inRange(x.date)) return false;
         return true;
       });
 
       const meetingIncomes = [];
       (club.meetings || []).forEach(mt => {
-        if (selectedPeriod !== 'ALL' && mtYmd(mt) && !mtYmd(mt).startsWith(selectedPeriod)) return;
+        if (!inRange(mtYmd(mt))) return;
         (mt.incomes || []).forEach(x => meetingIncomes.push({ date: mtYmd(mt) || '-', title: x.name || x.memo, note: x.name ? x.memo : mt.title, amount: x.amount }));
       });
       let carryOver = 0;
-      if (selectedPeriod !== 'ALL') {
-        const before = ym => !!ym && ym < selectedPeriod;
-        (club.monthlyDues || []).forEach(d => { if (d.isPaid && matchSub(d.subGroupId) && before(d.yearMonth)) carryOver += d.amount; });
+      if (rFrom) {
+        (club.monthlyDues || []).forEach(d => { if (d.isPaid && matchSub(d.subGroupId) && beforeFrom(dueDate(d))) carryOver += d.amount; });
         extra.forEach(x => {
-          if (!matchSub(x.subGroupId) || !x.date || !before(x.date.slice(0, 7))) return;
+          if (!matchSub(x.subGroupId) || !beforeFrom(x.date)) return;
           carryOver += x.type === 'income' ? x.amount : (x.type === 'expense' ? -x.amount : 0);
         });
         (club.meetings || []).forEach(mt => {
-          const k = mtYmd(mt); if (!k || !before(k.slice(0, 7))) return;
+          const k = mtYmd(mt); if (!k || !beforeFrom(k)) return;
           carryOver += (mt.incomes || []).reduce((s, x) => s + x.amount, 0);
           if (matchSub(mt.subGroupId)) carryOver -= (mt.expenses || []).reduce((s, e) => s + e.amount, 0);
         });
@@ -4314,7 +4336,7 @@
         subGroup: getSubGroup(subId),
         selectedPeriod,
         title: cfg.title || `${club.name} 결산보고서`,
-        periodText: cfg.period || (selectedPeriod === 'ALL' ? '전체 기간' : selectedPeriod),
+        periodText: cfg.period || (!hasRange ? '전체 기간' : (rFrom ? rFrom.replace(/-/g, '.') : '처음') + ' ~ ' + (rTo ? rTo.replace(/-/g, '.') : '현재')),
         bankAccount: cfg.bankAccount || '',
         secretary: cfg.secretary || findRoleName('총무') || '-',
         auditor: cfg.auditor || findRoleName('부회장') || findRoleName('운영진') || '-',
@@ -4336,25 +4358,11 @@
     function renderReport() {
       const club = getActiveClub();
       const area = document.getElementById('report-printable-area');
-      const periodSel = document.getElementById('report-period-select');
-      if (!area || !periodSel) return;
+      if (!area) return;
 
       if (!club.id) {
         area.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">먼저 모임을 만들어 주세요.</div>`;
         return;
-      }
-
-      // 기간 옵션 동적 갱신 (이전 선택값 유지)
-      const prevVal = periodSel.value || 'ALL';
-      const periods = new Set();
-      (club.monthlyDues || []).forEach(d => { if (d.yearMonth) periods.add(d.yearMonth); });
-      (club.extraLedger || []).forEach(x => { if (x.date && x.date.length >= 7) periods.add(x.date.slice(0, 7)); });
-      (club.meetings || []).forEach(mt => { const k = mtYmd(mt); if (k) periods.add(k.slice(0, 7)); });
-      const sortedPeriods = Array.from(periods).sort().reverse();
-      periodSel.innerHTML = `<option value="ALL">전체 기간 통합</option>` +
-        sortedPeriods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
-      if (prevVal === 'ALL' || sortedPeriods.includes(prevVal)) {
-        periodSel.value = prevVal;
       }
 
       const r = computeReportData();
@@ -4576,7 +4584,11 @@
       renderInOutLedger();
     });
 
-    document.getElementById('report-period-select').addEventListener('change', renderReport);
+    ['report-from', 'report-to'].forEach(id => document.getElementById(id).addEventListener('change', renderReport));
+    const setRange = (f, t) => { document.getElementById('report-from').value = f; document.getElementById('report-to').value = t; renderReport(); };
+    document.getElementById('btn-range-all').addEventListener('click', () => setRange('', ''));
+    document.getElementById('btn-range-year').addEventListener('click', () => { const y = todayStr().slice(0, 4); setRange(y + '-01-01', y + '-12-31'); });
+    document.getElementById('btn-range-month').addEventListener('click', () => { const t = todayStr(), ym = t.slice(0, 7); const last = new Date(+t.slice(0, 4), +t.slice(5, 7), 0).getDate(); setRange(ym + '-01', ym + '-' + String(last).padStart(2, '0')); });
 
     // PDF 저장 / 인쇄
     document.getElementById('btn-report-print-pdf').addEventListener('click', () => {
