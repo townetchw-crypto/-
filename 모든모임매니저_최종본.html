@@ -226,7 +226,7 @@
           <span>💰</span>
           <span>정산 관리</span>
         </h2>
-        <button id="btn-open-add-expense" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-emerald-200 transition flex items-center space-x-1">
+        <button id="btn-open-add-expense" style="display:none" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-emerald-200 transition flex items-center space-x-1">
           <span>+</span>
           <span>지출 등록</span>
         </button>
@@ -2406,6 +2406,13 @@
     }
     window.settleSelectAllAttendees = settleSelectAllAttendees;
 
+    window.settleIncomeTap = function() {
+      const el = document.getElementById('settle-table-card');
+      if (!el) return;
+      el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      el.classList.add('ring-2', 'ring-emerald-400', 'rounded-2xl');
+      setTimeout(() => el.classList.remove('ring-2', 'ring-emerald-400', 'rounded-2xl'), 1200);
+    };
     function renderSettlement() {
       const club = getActiveClub();
       const select = document.getElementById('settlement-meeting-select');
@@ -2435,23 +2442,32 @@
       const activeMeeting = filteredMeetings.find(m => m.id === select.value) || filteredMeetings[0];
       if (!activeMeeting) return;
 
-      const attendingIds = Object.keys(activeMeeting.attendees).filter(id => activeMeeting.attendees[id] === "참석");
-      const totalSpent = (activeMeeting.expenses || []).reduce((sum, e) => sum + e.amount, 0);
-      const count = attendingIds.length;
+      const exps = activeMeeting.expenses || [];
+      const totalSpent = exps.reduce((sum, e) => sum + e.amount, 0);
+      const payMap = {};
+      exps.forEach(exp => {
+        const sh = splitInfo(exp);
+        (exp.splitMemberIds || []).forEach(id => {
+          const o = payMap[id] = payMap[id] || { paid: 0, unpaid: 0 };
+          const s = sh.shareOf(id);
+          if ((exp.paidMemberIds || []).includes(id)) o.paid += s; else o.unpaid += s;
+        });
+      });
+      const payIds = Object.keys(payMap);
+      const count = payIds.length;
       const perPerson = count > 0 ? Math.floor(totalSpent / count) : 0;
-      const settledMap = activeMeeting.settled || {};
-      const paidCount = attendingIds.filter(id => !!settledMap[id]).length;
-      const totalIncome = perPerson * paidCount;
+      const paidCount = payIds.filter(id => payMap[id].unpaid === 0).length;
+      const totalIncome = payIds.reduce((s, id) => s + payMap[id].paid, 0);
       const balance = totalIncome - totalSpent;
       const allMembersSorted = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
       const settleTopHtml = `
         <!-- [수입 | 지출 | 잔액] 요약 카드 (입출정산과 통일) -->
         <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
-            <p class="text-[11px] font-extrabold text-emerald-800">수입</p>
+          <button type="button" onclick="settleIncomeTap()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-2.5 transition">
+            <p class="text-[11px] font-extrabold text-emerald-800">수입 ▾</p>
             <p class="text-sm font-extrabold text-emerald-950 mt-0.5">${totalIncome.toLocaleString()}원</p>
             <p class="text-[10px] text-emerald-700 mt-0.5">완납 ${paidCount}/${count}명</p>
-          </div>
+          </button>
           <button type="button" onclick="document.getElementById('btn-open-add-expense').click()" class="bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl p-2.5 transition">
             <p class="text-[11px] font-extrabold text-rose-800">지출 ▾</p>
             <p class="text-sm font-extrabold text-rose-950 mt-0.5">${totalSpent.toLocaleString()}원</p>
@@ -2465,73 +2481,69 @@
         </div>
       `;
 
-      if (activeMeeting.expenses.length === 0) {
-        container.innerHTML = settleTopHtml + `
-          <div class="bg-white p-4 rounded-xl border border-slate-200 text-center text-xs text-slate-400">
-            아직 지출이 없습니다. 위 <strong class="text-rose-600">지출</strong> 카드를 눌러 식비나 대관료를 등록하세요.
-          </div>
-        `;
-        return;
+      // 모임 결산표 (결산보고와 같은 양식)
+      const fm = n => Number(n).toLocaleString();
+      const bd = 'border border-slate-800';
+      const incRows = payIds.map(id => ({ id, name: getMember(id).name, o: payMap[id] }))
+        .sort((x, y) => (y.o.paid > 0) - (x.o.paid > 0) || x.name.localeCompare(y.name, 'ko-KR'));
+      const expRows = exps.map(e => ({ name: e.title, amt: e.amount }));
+      const nRows = Math.max(6, incRows.length, expRows.length);
+      let rowsHtml = '';
+      for (let i = 0; i < nRows; i++) {
+        const a = incRows[i], e = expRows[i];
+        let c1 = '', c2 = '', c3 = '', tr = '';
+        if (a) {
+          const full = a.o.unpaid === 0;
+          c1 = esc(a.name);
+          c2 = full ? '' : (a.o.paid > 0 ? '일부' : '미입금');
+          c3 = a.o.paid > 0 ? fm(a.o.paid) : `<span class="text-rose-600">(${fm(a.o.unpaid)})</span>`;
+          tr = ` onclick="settleToggleMember('${activeMeeting.id}','${a.id}')" style="cursor:pointer"`;
+        }
+        rowsHtml += `<tr class="h-7">
+          <td class="${bd} px-1 text-center break-words"${tr}>${c1}</td>
+          <td class="${bd} px-1 text-center ${c2 ? 'text-rose-600 font-bold' : ''}"${tr}>${c2}</td>
+          <td class="${bd} px-1 text-right"${tr}>${c3}</td>
+          <td class="${bd} px-1 text-center break-words">${e ? esc(e.name) : ''}</td>
+          <td class="${bd} px-1 text-right">${e ? fm(e.amt) : ''}</td>
+        </tr>`;
       }
-
-      const meetingGroup = getSubGroup(activeMeeting.subGroupId);
-
       container.innerHTML = settleTopHtml + `
-        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-          <div class="flex items-center justify-between">
-            <div>
-              
-              <p class="text-xs text-slate-500 font-semibold mt-1">총 지출 금액</p>
-            </div>
-            <span class="text-xl font-extrabold text-slate-900">${totalSpent.toLocaleString()}원</span>
+        <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
+          <div class="flex items-center justify-between gap-2">
+            <h4 class="text-sm font-extrabold text-slate-900 truncate">${esc(activeMeeting.title)} 결산</h4>
+            <button onclick="${exps.length ? `openNoticeModal('${activeMeeting.id}')` : `showToast('먼저 지출을 등록해 주세요.')`}" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📢 공지문</button>
           </div>
-          <button onclick="openNoticeModal('${activeMeeting.id}')" class="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center space-x-1.5">
-            <span>📢</span>
-            <span>카카오톡 정산 공지문 생성 & 복사</span>
-          </button>
-        </div>
-
-        <div class="space-y-2.5">
-          ${activeMeeting.expenses.map(exp => {
-            const payer = getMember(exp.payerId);
-            const sh = splitInfo(exp);
-            const perPerson = sh.base;
-            const remNote = sh.rem > 0 ? (sh.payerIn ? ` (결제자 ${sh.payerShare.toLocaleString()}원)` : ' (일부 +1원)') : '';
-            return `
-              <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
-                <div class="flex items-start justify-between">
-                  <div>
-                    <h4 class="font-bold text-slate-900 text-sm">${esc(exp.title)}</h4>
-                    <p class="text-xs text-slate-500">결제자: <span class="font-semibold text-slate-800">${esc(payer.name)}</span></p>
-                  </div>
-                  <div class="text-right">
-                    <p class="font-extrabold text-emerald-600 text-sm">${exp.amount.toLocaleString()}원</p>
-                    <p class="text-xs text-slate-400">1인당 ${perPerson.toLocaleString()}원${remNote}</p>
-                  </div>
-                </div>
-
-                <div class="pt-2 border-t border-slate-100 space-y-1.5">
-                  <p class="text-xs font-semibold text-slate-500">정산 대상자 송금 상태 (클릭하여 전환)</p>
-                  <div class="grid grid-cols-2 gap-1.5">
-                    ${exp.splitMemberIds.map(mId => {
-                      const m = getMember(mId);
-                      const isPaid = exp.paidMemberIds.includes(mId);
-                      const isPayer = mId === exp.payerId;
-                      return `
-                        <button onclick="togglePaymentStatus('${activeMeeting.id}', '${exp.id}', '${mId}')" class="flex items-center justify-between p-2 rounded-xl text-xs font-medium border transition ${isPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}">
-                          <span class="truncate">${esc(m.name)} ${isPayer ? '(결제자)' : ''}</span>
-                          <span class="font-bold text-xs ml-1">${isPaid ? '✅ 완납' : '⏳ 미입금'}</span>
-                        </button>
-                      `;
-                    }).join('')}
-                  </div>
-                </div>
-              </div>
-            `;
-          }).join('')}
+          <p class="text-[11px] text-slate-500">${esc(fmtMeetingWhen(activeMeeting))} · 이름을 누르면 입금/미입금이 바뀝니다. ( ) 안은 아직 못 받은 금액이에요.</p>
+          <table class="w-full border-collapse border-2 border-slate-900 text-[11px] text-slate-900 table-fixed">
+            <colgroup><col style="width:22%"><col style="width:13%"><col style="width:21%"><col style="width:26%"><col style="width:18%"></colgroup>
+            <thead>
+              <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
+              <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">성명</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
+            </thead>
+            <tbody>${rowsHtml}</tbody>
+            <tfoot class="font-extrabold">
+              <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
+              <tr class="h-9"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
+            </tfoot>
+          </table>
         </div>
       `;
     }
+
+    window.settleToggleMember = function(meetingId, memberId) {
+      requireAdminClub('입금 확인', () => {
+        const mt = getActiveClub().meetings.find(x => x.id === meetingId);
+        if (!mt) return;
+        const mine = (mt.expenses || []).filter(e => (e.splitMemberIds || []).includes(memberId));
+        const allPaid = mine.every(e => (e.paidMemberIds || []).includes(memberId));
+        mine.forEach(e => {
+          e.paidMemberIds = (e.paidMemberIds || []).filter(x => x !== memberId);
+          if (!allPaid) e.paidMemberIds.push(memberId);
+        });
+        saveState();
+        renderAll();
+      });
+    };
 
     // [회원 관리 렌더링]
     function renderMembers() {
