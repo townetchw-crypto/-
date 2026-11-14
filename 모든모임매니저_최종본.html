@@ -66,16 +66,16 @@
   <!-- 최상위 네비게이션 헤더 (클럽 전환 드롭다운 포함) -->
   <header id="app-header" class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between">
     <!-- 모임 선택 트리거 버튼 -->
-    <button id="btn-open-club-selector" class="flex items-center space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
-      <div id="header-club-icon-box" class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 text-base">
+    <button id="btn-open-club-selector" class="flex items-center min-w-0 space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
+      <div id="header-club-icon-box" class="hidden w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 text-base">
         🏛️
       </div>
       <div>
         <div class="flex items-center space-x-1">
-          <h1 class="text-sm sm:text-base font-extrabold text-slate-900 leading-tight" id="club-title-text">한국체대 총동문회</h1>
-          <span class="text-xs text-slate-400">▼</span>
+          <h1 class="text-[28px] font-extrabold text-slate-900 leading-tight" id="club-title-text">한국체대 총동문회</h1>
+          <span class="text-base text-slate-400">▼</span>
         </div>
-        <p class="text-xs text-slate-500 font-medium" id="club-subtitle-text">터치하여 다른 모임으로 전환</p>
+        <p class="hidden text-xs text-slate-500 font-medium" id="club-subtitle-text">터치하여 다른 모임으로 전환</p>
       </div>
     </button>
 
@@ -4537,8 +4537,47 @@
     let editingMeetingId = null;
     let meetingEndTouched = false;
 
-    const REPEAT_LABELS = { none: '반복 안 함', weekly: '매주', biweekly: '2주마다', 'monthly-date': '매월 같은 날짜', 'monthly-nth': '매월 같은 요일' };
+    const REPEAT_LABELS = { none: '반복 안 함', weekly: '매주', biweekly: '2주마다', 'monthly-date': '매월 같은 날짜', 'monthly-nth': '매월 같은 요일', 'yearly-date': '매년 같은 날짜(양력)', 'lunar-monthly': '매월 음력 같은 날', 'lunar-yearly': '매년 음력 같은 날' };
     const NTH_KO = ['', '첫째', '둘째', '셋째', '넷째', '다섯째'];
+
+    // ---- 음력 반복 ----
+    function lunarParts(ymd) {
+      if (!_lunarFmt) return null;
+      try {
+        const p = ymdParts(ymd);
+        const parts = _lunarFmt.formatToParts(new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)));
+        const mp = parts.find(x => x.type === 'month'), dp = parts.find(x => x.type === 'day');
+        const m = parseInt(mp.value, 10), d = parseInt(dp.value, 10);
+        if (!m || !d) return null;
+        return { m, d, leap: /bis|윤/.test(mp.value) };
+      } catch (e) { return null; }
+    }
+    function lunarFullLabel(ymd) {
+      const q = lunarParts(ymd);
+      return q ? `음력 ${q.leap ? '윤' : ''}${q.m}월 ${q.d}일` : '';
+    }
+    // 시작일 다음 음력 달들을 차례로 훑어서 조건에 맞는 달의 (같은 음력 일)을 양력 날짜로 돌려줌 (윤달은 건너뜀)
+    function genLunarDates(startYmd, kind, count) {
+      const out = [startYmd];
+      const s = lunarParts(startYmd);
+      if (!s) return out;
+      const n = Math.max(1, Math.min(60, count | 0));
+      let ymd = startYmd, lp = s, guard = 0;
+      while (lp.d !== 1 && guard < 40) { ymd = ymdAdd(ymd, 1); lp = lunarParts(ymd); guard++; if (!lp) return out; }
+      while (out.length < n && guard < 30000) {
+        const first = ymd, m = lp.m, leap = lp.leap; let len = 1;
+        for (;;) {
+          const nx = ymdAdd(ymd, 1), q = lunarParts(nx); guard++;
+          if (!q) return out;
+          ymd = nx; lp = q;
+          if (q.d === 1 || ++len > 31) break;
+        }
+        // 위 루프가 끝나면 ymd/lp 는 다음 달 1일. 이번 달 길이는 len
+        const ok = !leap && (kind === 'lunar-monthly' || m === s.m);
+        if (ok) out.push(ymdAdd(first, Math.min(s.d, len) - 1));
+      }
+      return out;
+    }
 
     // 반복 일정의 날짜 목록 만들기
     function genRepeatDates(startYmd, kind, count) {
@@ -4546,6 +4585,11 @@
       const p = ymdParts(startYmd);
       if (!p || kind === 'none') return out;
       const n = Math.max(1, Math.min(60, count | 0));
+      if (kind === 'lunar-monthly' || kind === 'lunar-yearly') return genLunarDates(startYmd, kind, n);
+      if (kind === 'yearly-date') {
+        for (let i = 1; i < n; i++) { const yy = p[0] + i; out.push(`${yy}-${pad2(p[1])}-${pad2(Math.min(p[2], daysInMonth(yy, p[1])))}`); }
+        return out;
+      }
       if (kind === 'weekly' || kind === 'biweekly') {
         const step = kind === 'weekly' ? 7 : 14;
         for (let i = 1; i < n; i++) out.push(ymdAdd(startYmd, step * i));
@@ -4577,7 +4621,16 @@
       const sel = document.getElementById('input-meeting-repeat');
       const ymd = document.getElementById('input-meeting-date').value;
       const cur = sel.value || 'none';
-      sel.innerHTML = Object.keys(REPEAT_LABELS).map(k => `<option value="${k}">${k === 'monthly-nth' ? monthlyNthLabel(ymd) : REPEAT_LABELS[k]}</option>`).join('');
+      const lp = ymdParts(ymd) ? lunarParts(ymd) : null;
+      const labelOf = k => {
+        if (k === 'monthly-nth') return monthlyNthLabel(ymd);
+        if (k === 'monthly-date' && ymdParts(ymd)) return `매월 양력 ${ymdParts(ymd)[2]}일`;
+        if (k === 'yearly-date' && ymdParts(ymd)) return `매년 양력 ${ymdParts(ymd)[1]}월 ${ymdParts(ymd)[2]}일`;
+        if (k === 'lunar-monthly') return lp ? `매월 음력 ${lp.d}일` : REPEAT_LABELS[k];
+        if (k === 'lunar-yearly') return lp ? `매년 음력 ${lp.m}월 ${lp.d}일` : REPEAT_LABELS[k];
+        return REPEAT_LABELS[k];
+      };
+      sel.innerHTML = Object.keys(REPEAT_LABELS).filter(k => !(k.startsWith('lunar') && !_lunarFmt)).map(k => `<option value="${k}">${labelOf(k)}</option>`).join('');
       sel.value = cur;
     }
     function updateMeetingFormPreview() {
@@ -4589,12 +4642,15 @@
       cntWrap.classList.toggle('hidden', kind === 'none' || !!editingMeetingId);
       if (!ymdParts(ymd)) { pv.textContent = '날짜를 선택해 주세요.'; rpv.textContent = ''; return; }
       const hol = getHolidayName(ymd);
-      pv.textContent = `${ymd} (${WEEKDAY_KO[ymdDow(ymd)]})${hol ? ' · ' + hol : ''}`;
+      const lf = lunarFullLabel(ymd);
+      pv.textContent = `${ymd} (${WEEKDAY_KO[ymdDow(ymd)]})${lf ? ' · ' + lf : ''}${hol ? ' · ' + hol : ''}`;
       if (kind !== 'none' && !editingMeetingId) {
         const cnt = Math.max(2, Math.min(60, parseInt(document.getElementById('input-meeting-repeat-count').value, 10) || 6));
         const ds = genRepeatDates(ymd, kind, cnt);
-        const show = ds.slice(0, 4).map(d => d.slice(5).replace('-', '/')).join(', ');
-        rpv.textContent = `총 ${ds.length}회: ${show}${ds.length > 4 ? ' … ' + ds[ds.length - 1].slice(5).replace('-', '/') : ''}`;
+        const isLunar = kind.startsWith('lunar');
+        const fmtD = d => (kind === 'lunar-yearly' || kind === 'yearly-date') ? d.slice(2).replace(/-/g, '/') : d.slice(5).replace('-', '/');
+        const show = ds.slice(0, 4).map(fmtD).join(', ');
+        rpv.textContent = `총 ${ds.length}회${isLunar ? ' (양력 날짜)' : ''}: ${show}${ds.length > 4 ? ' … ' + fmtD(ds[ds.length - 1]) : ''}`;
       } else rpv.textContent = '';
     }
     function syncAllDayUI() {
