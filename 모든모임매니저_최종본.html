@@ -507,7 +507,7 @@
           <label class="block font-semibold text-slate-700 mb-1">모임명</label>
           <input id="input-meeting-title" type="text" placeholder="예: 11월 정기 월례 라운딩" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
-        <div>
+        <div class="hidden">
           <label class="block font-semibold text-slate-700 mb-1">소속 (어느 소모임 일정인가)</label>
           <select id="input-meeting-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-white focus:ring-2 focus:ring-indigo-500 outline-none"><option value="all">전체</option></select>
         </div>
@@ -1449,8 +1449,10 @@
           if (id === 'all' || club.subGroups.some(x => x.id === id)) return;
           club.subGroups.push({ id, name: str(g.name, '소모임'), icon: str(g.icon, '🏃') });
         });
-        if (!club.subGroups.some(g => g.id === club.activeSubGroupId)) club.activeSubGroupId = 'all';
-        const gid = v => { const id = sid(v || 'all'); return club.subGroups.some(g => g.id === id) ? id : 'all'; };
+        // 소모임 기능 폐지: 모든 구분을 '전체'로 통일
+        club.subGroups = club.subGroups.filter(g => g.id === 'all');
+        club.activeSubGroupId = 'all';
+        const gid = v => 'all';
         (Array.isArray(c.members) ? c.members : []).forEach((m, mi) => {
           if (!m || typeof m !== 'object') return;
           const id = sid(m.id || ('m_' + ci + '_' + mi));
@@ -1882,6 +1884,7 @@
     window.openDay = function(ymd) {
       if (!ymdParts(ymd)) return;
       calSelectedDate = ymd; dayScreenDate = ymd; calYearMonth = ymd.slice(0, 7);
+      calDayFilter = ymd;
       if (meetingsOn(ymd).length === 0) {
         requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: ymd }));
       } else {
@@ -2227,13 +2230,14 @@
       const titleEl = document.getElementById('meetings-section-title');
 
       const currentSub = getSubGroup(club.activeSubGroupId);
-      titleEl.textContent = fmtDayTitle(dayScreenDate);
+      titleEl.textContent = calDayFilter ? fmtDayTitle(calDayFilter) : (club.activeSubGroupId === 'all' ? '전체 모임 일정' : `${currentSub.name} 모임 일정`);
 
       const todayYmd = todayStr();
       const rangeStart = (document.getElementById('input-mt-range-start')?.value || '').trim();
       const rangeEnd = (document.getElementById('input-mt-range-end')?.value || '').trim();
       const filteredMeetings = club.meetings.filter(mt => {
-        const dStr = (mt.dateStr || '').slice(0, 10);
+        const dStr = mtYmd(mt) || (mt.dateStr || '').slice(0, 10);
+        if (club.activeSubGroupId !== 'all' && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== 'all') return false;
         if (calDayFilter && dStr !== calDayFilter) return false;
         if (!calDayFilter) {
           if (meetingPeriodMode === 'upcoming' && dStr && dStr < todayYmd) return false;
@@ -2244,6 +2248,14 @@
           }
         }
         return true;
+      });
+      // 하루 보기는 시간순, 전체 목록은 다가오는 일정부터(지난 일정은 뒤로)
+      filteredMeetings.sort((a, b) => {
+        const ka = mtSortKey(a), kb = mtSortKey(b);
+        if (calDayFilter) return ka < kb ? -1 : ka > kb ? 1 : 0;
+        const ua = ka.slice(0, 10) >= todayYmd, ub = kb.slice(0, 10) >= todayYmd;
+        if (ua !== ub) return ua ? -1 : 1;
+        return ua ? (ka < kb ? -1 : ka > kb ? 1 : 0) : (ka < kb ? 1 : ka > kb ? -1 : 0);
       });
       badge.textContent = filteredMeetings.length;
 
@@ -2265,8 +2277,8 @@
         container.innerHTML = `
           <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
             <span class="text-3xl block mb-2">${esc(club.icon)}</span>
-            <p class="text-sm font-semibold">이 날은 등록된 모임이 없습니다.</p>
-            <p class="text-xs mt-1">위의 '+ 정기 개설' 또는 '⚡ 번개'로 이 날 모임을 만들어 보세요.</p>
+            <p class="text-sm font-semibold">${calDayFilter ? '이 날은 등록된 모임이 없습니다.' : '조건에 맞는 모임이 없습니다.'}</p>
+            <p class="text-xs mt-1">위의 '+ 정기 개설' 또는 '⚡ 번개'로 모임을 만들어 보세요.</p>
           </div>
         `;
         return;
@@ -2721,11 +2733,11 @@
 
       // 지출 모달 - 결제자 선택
       const payerSelect = document.getElementById('input-expense-payer');
-      payerSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('');
+      payerSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
 
       // 회비 모달 - 회원 선택
       const dueMemberSelect = document.getElementById('input-due-member');
-      dueMemberSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('');
+      dueMemberSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)}</option>`).join('');
     }
 
     // --- 최상위 클럽 선택 바텀시트 렌더링 ---
@@ -3622,68 +3634,7 @@
       renderAll();
     });
 
-    // 회비 추가 모달
-    var duesPeriodFilter = 'all';
-    var duesPaidFilter = 'all';
-    function setDuesPeriodFilter(mode) {
-      duesPeriodFilter = mode;
-      window.setDuesPeriodFilter = setDuesPeriodFilter;
-      const map = { 'all': 'btn-dues-per-all', 'month': 'btn-dues-per-month', 'year': 'btn-dues-per-year' };
-      Object.entries(map).forEach(([k, id]) => {
-        const b = document.getElementById(id);
-        if (b) b.className = k === mode ? 'py-1.5 rounded-lg bg-indigo-600 text-white transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition';
-      });
-      const row = document.getElementById('dues-period-input-row');
-      const inp = document.getElementById('input-dues-filter-period');
-      if (row && inp) {
-        row.classList.toggle('hidden', mode === 'all');
-        if (mode === 'year') inp.value = todayStr().slice(0, 4);
-        if (mode === 'month' && inp.value.length <= 4) inp.value = todayStr().slice(0, 7);
-      }
-      renderDues();
-    }
-    window.setDuesPeriodFilter = setDuesPeriodFilter;
-
-    function setDuesPaidFilter(mode) {
-      duesPaidFilter = mode;
-      window.setDuesPaidFilter = setDuesPaidFilter;
-      const map = { 'all': 'btn-dues-paid-all', 'paid': 'btn-dues-paid-yes', 'unpaid': 'btn-dues-paid-no' };
-      Object.entries(map).forEach(([k, id]) => {
-        const b = document.getElementById(id);
-        if (!b) return;
-        b.className = k === mode ? 'py-1.5 rounded-lg bg-slate-800 text-white transition'
-          : (k === 'paid' ? 'py-1.5 rounded-lg bg-slate-100 text-emerald-700 transition'
-            : (k === 'unpaid' ? 'py-1.5 rounded-lg bg-slate-100 text-rose-600 transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition'));
-      });
-      renderDues();
-    }
-    window.setDuesPaidFilter = setDuesPaidFilter;
-
-    document.getElementById('input-dues-filter-period').addEventListener('input', renderDues);
-
-    function openEditDueModal(dueId) {
-      const club = getActiveClub();
-      const d = (club.monthlyDues || []).find(x => x.id === dueId);
-      if (!d) return;
-      populateDropdowns();
-      document.getElementById('due-modal-title').textContent = '회비 내역 수정';
-      document.getElementById('input-due-edit-id').value = d.id;
-      const cat = d.note === '연회비' ? '연회비' : ((d.note || '').includes('찬조') || (d.note || '').includes('경조사') ? '찬조/부조' : '월회비');
-      setDueCategory(cat);
-      document.getElementById('input-due-month').value = d.yearMonth || todayStr().slice(0, 7);
-      document.getElementById('input-due-paid-date').value = d.paidDate || todayStr();
-      document.getElementById('input-due-member').value = d.memberId || '';
-      document.getElementById('input-due-amount').value = d.amount || '';
-      document.getElementById('input-due-is-paid').checked = !!d.isPaid;
-      document.getElementById('modal-add-due').classList.remove('hidden');
-    }
-    window.openEditDueModal = openEditDueModal;
-
-    document.getElementById('btn-open-add-due').addEventListener('click', () => {
-      requireAdminClub('회비 기록', () => {
-      document.getElementById('modal-add-due').classList.remove('hidden');
-      });
-    });
+    // 회비 추가 모달 (닫기/취소)
     document.getElementById('btn-close-due-modal').addEventListener('click', () => {
       document.getElementById('modal-add-due').classList.add('hidden');
     });
@@ -3780,12 +3731,15 @@
     window.openEditDueModal = openEditDueModal;
 
     document.getElementById('btn-open-add-due').addEventListener('click', () => {
-      const club = getActiveClub();
-      document.getElementById('due-modal-title').textContent = '회비 납부 기록';
-      document.getElementById('input-due-edit-id').value = '';
-      document.getElementById('input-due-paid-date').value = todayStr();
-      document.getElementById('input-due-amount').value = club.lastDueAmount ? String(club.lastDueAmount) : '';
-      setDueCategory('월회비');
+      requireAdminClub('회비 기록', () => {
+        const club = getActiveClub();
+        document.getElementById('due-modal-title').textContent = '회비 납부 기록';
+        document.getElementById('input-due-edit-id').value = '';
+        document.getElementById('input-due-paid-date').value = todayStr();
+        document.getElementById('input-due-amount').value = club.lastDueAmount ? String(club.lastDueAmount) : '';
+        setDueCategory('월회비');
+        document.getElementById('modal-add-due').classList.remove('hidden');
+      });
     });
 
     document.getElementById('btn-submit-add-due').addEventListener('click', () => {
@@ -4464,7 +4418,7 @@
 
       let text = `📊 [${r.title}]
 `;
-      text += `• 모임: ${r.club.name} (${r.subGroup.name})
+      text += `• 모임: ${r.club.name}
 `;
       text += `• 기간: ${r.periodText} (작성일: ${todayStr()})
 `;
@@ -4617,8 +4571,8 @@
     }
     document.getElementById('btn-type-regular').addEventListener('click', () => setMeetingTypeUI('정기'));
     document.getElementById('btn-type-flash').addEventListener('click', () => setMeetingTypeUI('번개'));
-    document.getElementById('btn-open-create-meeting').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: dayScreenDate })));
-    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개', date: dayScreenDate })));
+    document.getElementById('btn-open-create-meeting').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: calDayFilter || calSelectedDate })));
+    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개', date: calDayFilter || calSelectedDate })));
     ['btn-close-meeting-modal', 'btn-cancel-create-meeting'].forEach(id => document.getElementById(id).addEventListener('click', () => closeMeetingForm()));
     document.getElementById('input-meeting-date').addEventListener('change', () => { refreshRepeatOptions(); updateMeetingFormPreview(); });
     document.getElementById('input-meeting-allday').addEventListener('change', syncAllDayUI);
