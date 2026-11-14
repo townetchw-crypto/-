@@ -477,6 +477,11 @@
           <label class="block font-semibold text-slate-700 mb-1">한 줄 설명</label>
           <input id="input-newclub-subtitle" type="text" placeholder="예: 주말 정기 라운딩 및 스크린 모임" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
+        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2.5">
+          <label class="block font-semibold text-amber-900 mb-1">💰 이월금 (처음 시작할 때 모임 통장에 있는 돈)</label>
+          <input id="input-newclub-carry" type="text" inputmode="numeric" placeholder="없으면 비워두세요. 예: 25000000" class="w-full border border-amber-300 rounded-lg p-2.5 focus:ring-2 focus:ring-amber-400 outline-none bg-white">
+          <p class="text-[10px] text-amber-800 mt-1">나중에 정산 화면에서도 고칠 수 있어요.</p>
+        </div>
       </div>
       <div class="flex space-x-2 pt-2">
         <button id="btn-cancel-create-club" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
@@ -1467,6 +1472,7 @@
             title: str(c.reportConfig && c.reportConfig.title),
             period: str(c.reportConfig && c.reportConfig.period),
             carryOver: Math.max(0, toInt(c.reportConfig && c.reportConfig.carryOver)),
+            carryAsked: !!(c.reportConfig && (c.reportConfig.carryAsked || toInt(c.reportConfig.carryOver) > 0)),
             bankAccount: str(c.reportConfig && c.reportConfig.bankAccount),
             secretary: str(c.reportConfig && c.reportConfig.secretary),
             auditor: str(c.reportConfig && c.reportConfig.auditor),
@@ -2525,7 +2531,7 @@
           <td class="${bd} px-1 text-right"${te}>${e ? fm(e.amount) : ''}</td>
         </tr>`;
       }
-      container.innerHTML = cards + `
+      container.innerHTML = carryBarHtml() + cards + `
         <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
           <div class="flex justify-end"><button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button></div>
           <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(activeMeeting.title)} 결산</h3>
@@ -2543,11 +2549,11 @@
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
-              <tr class="h-8" onclick="editSettleCarry()" style="cursor:pointer"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">전월이월금</td><td class="${bd} px-1 text-right">${carry < 0 ? '- ' + fm(-carry) : fm(carry)}</td></tr>
+              <tr class="h-8" onclick="editSettleCarry()" style="cursor:pointer"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${carry < 0 ? '- ' + fm(-carry) : fm(carry)}</td></tr>
               <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${grand < 0 ? 'text-rose-600' : ''}">${grand < 0 ? '- ' + fm(-grand) : fm(grand)}</td></tr>
             </tfoot>
           </table>
-          <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 전월이월금은 처음 시작 금액에 앞선 모임 결과가 자동으로 이어져요. 줄을 누르면 시작 금액을 넣을 수 있어요.</p>
+          <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 처음 시작 금액에 앞선 모임 결과가 자동으로 이어져요.</p>
           <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
             <div class="flex items-center justify-between">
               <span class="font-bold text-slate-600">보관 계좌</span>
@@ -2563,6 +2569,33 @@
       `;
     }
 
+    function carryBarHtml() {
+      const club = getActiveClub();
+      const cfg = club.reportConfig || {};
+      const v = Math.max(0, toInt(cfg.carryOver));
+      if (!cfg.carryAsked && v === 0) {
+        return `<div class="no-print bg-amber-50 border-2 border-amber-300 rounded-2xl p-3 space-y-2">
+          <p class="text-xs font-extrabold text-amber-900">💡 이월금을 먼저 넣어 주세요</p>
+          <p class="text-[11px] text-amber-800 leading-relaxed">모임을 시작할 때 통장에 남아 있던 돈(이월금)이 있으면 여기에 넣어야 결산이 맞아요. 없으면 '없음'을 눌러 주세요.</p>
+          <div class="flex gap-2">
+            <button type="button" onclick="openReportConfigModal()" class="flex-1 py-2 rounded-lg bg-amber-500 text-white text-xs font-bold">이월금 입력하기</button>
+            <button type="button" onclick="carryNone()" class="flex-1 py-2 rounded-lg bg-white border border-amber-300 text-amber-800 text-xs font-bold">없음 (0원)</button>
+          </div>
+        </div>`;
+      }
+      return `<button type="button" onclick="openReportConfigModal()" class="no-print w-full flex items-center justify-between bg-amber-50 border border-amber-200 rounded-xl px-3 py-2 text-xs">
+        <span class="font-bold text-amber-900">💰 이월금 (처음 시작 금액)</span>
+        <span class="font-extrabold text-amber-950">${v.toLocaleString()}원 <span class="text-amber-700 font-semibold">고치기 ✏️</span></span>
+      </button>`;
+    }
+    window.carryNone = function() {
+      requireAdmin('이월금 설정', () => {
+        const club = getActiveClub();
+        if (!club.id) return;
+        club.reportConfig = Object.assign({}, club.reportConfig || {}, { carryOver: 0, carryAsked: true });
+        saveState(); renderAll();
+      });
+    };
     function settleCarryFor(mt) {
       const club = getActiveClub();
       const start = Math.max(0, toInt((club.reportConfig || {}).carryOver));
@@ -2690,7 +2723,7 @@
       t += exp.length ? exp.map(x => `- ${x.title} ${fm(x.amount)}원`).join('\n') : '- 없음';
       const cy = settleCarryFor(mt), gt = si - se + cy;
       t += `\n지출계 ${fm(se)}원\n\n(입금)-(지출) ${si - se < 0 ? '-' : ''}${fm(Math.abs(si - se))}원`;
-      if (cy !== 0) t += `\n전월이월금 ${cy < 0 ? '-' : ''}${fm(Math.abs(cy))}원`;
+      if (cy !== 0) t += `\n이월금 ${cy < 0 ? '-' : ''}${fm(Math.abs(cy))}원`;
       t += `\n합계 ${gt < 0 ? '-' : ''}${fm(Math.abs(gt))}원`;
       const done = () => showToast('결산 내용을 복사했습니다. 카톡에 붙여넣으세요.');
       if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(() => { window.prompt('복사해서 사용하세요', t); });
@@ -3219,7 +3252,8 @@
         ],
         members: [],
         meetings: [],
-        monthlyDues: []
+        monthlyDues: [],
+        reportConfig: { carryOver: Math.max(0, toInt(String(document.getElementById('input-newclub-carry').value || '').replace(/,/g, ''))), carryAsked: true }
       };
 
       appState.clubs.push(newClub);
@@ -3229,6 +3263,7 @@
       document.getElementById('input-newclub-name').value = '';
       document.getElementById('input-newclub-category').value = '';
       document.getElementById('input-newclub-subtitle').value = '';
+      document.getElementById('input-newclub-carry').value = '';
       renderAll();
       showToast(`🎉 새로운 모임 '${name}'이(가) 개설되었습니다!`);
     });
@@ -4284,7 +4319,7 @@
           <td class="${bd} px-1 text-right"${ec}>${e ? fm(e.amt) : ''}</td>
         </tr>`;
       }
-      area.innerHTML = `
+      area.innerHTML = carryBarHtml() + `
         <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.title)}</h3>
         <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
           <span>${todayStr().replace(/-/g, '.')}</span>
@@ -4300,11 +4335,11 @@
           <tfoot class="font-extrabold">
             <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-0.5 text-right">${fm(incSum)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(r.totalExpense)}</td></tr>
             <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${diff < 0 ? '- ' + fm(-diff) : fm(diff)}</td></tr>
-            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">전월이월금</td><td class="${bd} px-1 text-right">${fm(r.carryOver)}</td></tr>
+            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${fm(r.carryOver)}</td></tr>
             <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${r.balance < 0 ? 'text-rose-600' : ''}">${r.balance < 0 ? '- ' + fm(-r.balance) : fm(r.balance)}</td></tr>
           </tfoot>
         </table>
-        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 전월이월금은 ⚙️ 설정에서 입력합니다.</p>
+        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 위의 이월금 칸에서 고칠 수 있어요.</p>
 
         <!-- 3. 보관 계좌 & 확인 서명란 -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
@@ -4359,7 +4394,8 @@
         bankAccount: document.getElementById('input-rep-bank').value.trim(),
         secretary: document.getElementById('input-rep-secretary').value.trim(),
         auditor: document.getElementById('input-rep-auditor').value.trim(),
-        president: document.getElementById('input-rep-president').value.trim()
+        president: document.getElementById('input-rep-president').value.trim(),
+        carryAsked: true
       };
       saveState();
       document.getElementById('modal-report-config').classList.add('hidden');
@@ -4481,7 +4517,7 @@
 `;
       text += `💰 총 수입(A): ${r.totalIncome.toLocaleString()}원
 `;
-      if (r.carryOver > 0) text += `  - 전월 이월금: ${r.carryOver.toLocaleString()}원
+      if (r.carryOver > 0) text += `  - 이월금: ${r.carryOver.toLocaleString()}원
 `;
       r.duesGroups.forEach(g => { text += `  - ${g.label} 수납(${g.count}건): ${g.amount.toLocaleString()}원
 `; });
