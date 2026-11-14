@@ -36,12 +36,13 @@
       -ms-overflow-style: none;
       scrollbar-width: none;
     }
+    .momo-focused,
     input:not([type="checkbox"]):not([type="radio"]):not([type="hidden"]):focus,
     textarea:focus,
     select:focus {
       border-color: #2563eb !important;
       border-width: 2px !important;
-      background-color: #f0f9ff !important;
+      background-color: #dbeafe !important;
       box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.15) !important;
       outline: none !important;
     }
@@ -232,10 +233,7 @@
           <span>+</span>
           <span>지출 등록</span>
         </button>
-        <button id="btn-open-add-inout" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center space-x-1">
-          <span>+</span>
-          <span>입출 등록</span>
-        </button>
+
       </div>
 
       <!-- [모임정산] / [입출정산] 전환 버튼 -->
@@ -257,10 +255,13 @@
         </div>
       </div>
 
-      <!-- 2) 입출정산 영역 (일반 수입/지출) -->
+      <!-- 2) 입출정산 영역 (수입 / 지출 카드 터치로 바로 장부 열기) -->
       <div id="settlement-inout-pane" class="hidden space-y-3">
         <div id="inout-summary-cards" class="grid grid-cols-3 gap-2 text-center">
           <!-- 동적 렌더링 -->
+        </div>
+        <div id="inout-quick-action-bar" class="hidden">
+          <!-- 수입/지출 선택 시 바로 기입 버튼 -->
         </div>
         <div id="inout-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
           <!-- 동적 렌더링 -->
@@ -1650,7 +1651,7 @@
       document.getElementById('settlement-meeting-pane').classList.toggle('hidden', !isMt);
       document.getElementById('settlement-inout-pane').classList.toggle('hidden', isMt);
       document.getElementById('btn-open-add-expense').classList.toggle('hidden', !isMt);
-      document.getElementById('btn-open-add-inout').classList.toggle('hidden', isMt);
+      
       document.getElementById('btn-settle-mode-meeting').className = isMt
         ? 'py-2 rounded-lg bg-white text-indigo-700 shadow-xs transition'
         : 'py-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
@@ -1661,34 +1662,79 @@
     }
     window.setSettlementMode = setSettlementMode;
 
+    var inoutFilter = 'all'; // 'all' | 'income' | 'expense'
+    function setInOutFilter(mode) {
+      inoutFilter = mode;
+      window.setInOutFilter = setInOutFilter;
+      renderInOutLedger();
+    }
+    window.setInOutFilter = setInOutFilter;
+
+    function openInOutEntryModal(presetType) {
+      const club = getActiveClub();
+      if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+      document.getElementById('report-entry-modal-title').textContent = presetType === 'income' ? '💰 수입 장부 기입' : '💸 지출 장부 기입';
+      document.getElementById('input-entry-edit-id').value = '';
+      document.getElementById('input-entry-type').value = presetType === 'income' ? 'income' : 'expense';
+      document.getElementById('input-entry-date').value = todayStr();
+      document.getElementById('input-entry-title').value = '';
+      document.getElementById('input-entry-amount').value = '';
+      document.getElementById('input-entry-note').value = '';
+      document.getElementById('modal-report-entry').classList.remove('hidden');
+    }
+    window.openInOutEntryModal = openInOutEntryModal;
+
     function renderInOutLedger() {
       const club = getActiveClub();
       const cardsEl = document.getElementById('inout-summary-cards');
+      const actionEl = document.getElementById('inout-quick-action-bar');
       const listEl = document.getElementById('inout-list-container');
       if (!cardsEl || !listEl) return;
 
-      const list = (club.extraLedger || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
-      const incTotal = list.filter(x => x.type === 'income').reduce((s, x) => s + x.amount, 0);
-      const expTotal = list.filter(x => x.type !== 'income').reduce((s, x) => s + x.amount, 0);
+      const allList = (club.extraLedger || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const incTotal = allList.filter(x => x.type === 'income').reduce((s, x) => s + x.amount, 0);
+      const expTotal = allList.filter(x => x.type !== 'income').reduce((s, x) => s + x.amount, 0);
       const diff = incTotal - expTotal;
 
       cardsEl.innerHTML = `
-        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
-          <p class="text-[11px] font-bold text-emerald-700">일반 수입</p>
-          <p class="text-sm font-extrabold text-emerald-900 mt-0.5">${incTotal.toLocaleString()}원</p>
-        </div>
-        <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5">
-          <p class="text-[11px] font-bold text-rose-700">일반 지출</p>
-          <p class="text-sm font-extrabold text-rose-900 mt-0.5">${expTotal.toLocaleString()}원</p>
-        </div>
-        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
-          <p class="text-[11px] font-bold text-indigo-700">입출 차액</p>
-          <p class="text-sm font-extrabold ${diff < 0 ? 'text-rose-600' : 'text-indigo-900'} mt-0.5">${diff.toLocaleString()}원</p>
-        </div>
+        <button type="button" onclick="setInOutFilter('income')" class="text-center rounded-xl p-2.5 border transition ${inoutFilter === 'income' ? 'bg-emerald-100 border-emerald-500 ring-2 ring-emerald-400' : 'bg-emerald-50 border-emerald-200 hover:bg-emerald-100'}">
+          <p class="text-[11px] font-extrabold text-emerald-800">수입 ▾</p>
+          <p class="text-sm font-extrabold text-emerald-950 mt-0.5">${incTotal.toLocaleString()}원</p>
+        </button>
+        <button type="button" onclick="setInOutFilter('expense')" class="text-center rounded-xl p-2.5 border transition ${inoutFilter === 'expense' ? 'bg-rose-100 border-rose-500 ring-2 ring-rose-400' : 'bg-rose-50 border-rose-200 hover:bg-rose-100'}">
+          <p class="text-[11px] font-extrabold text-rose-800">지출 ▾</p>
+          <p class="text-sm font-extrabold text-rose-950 mt-0.5">${expTotal.toLocaleString()}원</p>
+        </button>
+        <button type="button" onclick="setInOutFilter('all')" class="text-center rounded-xl p-2.5 border transition ${inoutFilter === 'all' ? 'bg-indigo-100 border-indigo-500 ring-2 ring-indigo-400' : 'bg-indigo-50 border-indigo-200 hover:bg-indigo-100'}">
+          <p class="text-[11px] font-extrabold text-indigo-800">차액 (전체)</p>
+          <p class="text-sm font-extrabold ${diff < 0 ? 'text-rose-600' : 'text-indigo-950'} mt-0.5">${diff.toLocaleString()}원</p>
+        </button>
       `;
 
+      if (actionEl) {
+        if (inoutFilter === 'income') {
+          actionEl.classList.remove('hidden');
+          actionEl.innerHTML = `<button type="button" onclick="openInOutEntryModal('income')" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-extrabold shadow-sm transition">+ 수입 장부에 바로 기입하기</button>`;
+        } else if (inoutFilter === 'expense') {
+          actionEl.classList.remove('hidden');
+          actionEl.innerHTML = `<button type="button" onclick="openInOutEntryModal('expense')" class="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-extrabold shadow-sm transition">+ 지출 장부에 바로 기입하기</button>`;
+        } else {
+          actionEl.classList.add('hidden');
+          actionEl.innerHTML = '';
+        }
+      }
+
+      const list = inoutFilter === 'all'
+        ? allList
+        : allList.filter(x => (inoutFilter === 'income' ? x.type === 'income' : x.type !== 'income'));
+
       if (list.length === 0) {
-        listEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">등록된 입출 내역이 없습니다. 오른쪽 위 '+ 입출 등록'을 눌러 화환·답례품·찬조금 등을 기록하세요.</div>`;
+        const emptyMsg = inoutFilter === 'income'
+          ? '수입 내역이 없습니다. 위 "+ 수입 장부에 바로 기입하기"를 눌러 주세요.'
+          : (inoutFilter === 'expense'
+              ? '지출 내역이 없습니다. 위 "+ 지출 장부에 바로 기입하기"를 눌러 주세요.'
+              : '위 [수입] 또는 [지출] 카드를 누르면 해당 장부가 바로 열립니다.');
+        listEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">${emptyMsg}</div>`;
         return;
       }
 
@@ -1710,8 +1756,15 @@
       `).join('');
     }
 
-    document.getElementById('btn-open-add-inout').addEventListener('click', () => {
-      document.getElementById('btn-open-add-report-entry').click();
+    // 입력칸/메모란 클릭 시 확실한 파란 테두리 + 하늘색 배경 표식
+    document.addEventListener('focusin', e => {
+      const t = e.target;
+      if (t && (t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || (t.tagName === 'INPUT' && !['checkbox','radio','hidden','file'].includes(t.type)))) {
+        t.classList.add('momo-focused');
+      }
+    });
+    document.addEventListener('focusout', e => {
+      if (e.target && e.target.classList) e.target.classList.remove('momo-focused');
     });
 
     var calDayFilter = '';
