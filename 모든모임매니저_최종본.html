@@ -589,6 +589,38 @@
   <!-- ============================================== -->
   <!-- [모달 2] 지출 내역 추가 모달 -->
   <!-- ============================================== -->
+  <!-- [모달] 모임 수입/지출 항목 입력 -->
+  <div id="modal-settle-entry" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 id="settle-entry-title" class="font-bold text-slate-900 text-base">수입 입력</h3>
+        <button id="btn-close-settle-entry" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <input type="hidden" id="settle-entry-type" value="income">
+      <input type="hidden" id="settle-entry-id" value="">
+      <div class="space-y-2.5 text-xs sm:text-sm">
+        <div id="settle-entry-name-wrap">
+          <label class="block font-semibold text-slate-700 mb-1">성명 (회원을 고르거나 직접 입력)</label>
+          <input id="settle-entry-name" list="settle-member-list" type="text" placeholder="예: 홍길동" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+          <datalist id="settle-member-list"></datalist>
+        </div>
+        <div>
+          <label id="settle-entry-memo-label" class="block font-semibold text-slate-700 mb-1">내역</label>
+          <input id="settle-entry-memo" type="text" placeholder="예: 회비, 그린피" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">금액 (원)</label>
+          <input id="settle-entry-amount" type="number" inputmode="numeric" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-delete-settle-entry" class="hidden px-3 py-2.5 rounded-lg border border-rose-200 bg-rose-50 text-rose-600 font-semibold text-xs">삭제</button>
+        <button id="btn-cancel-settle-entry" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-save-settle-entry" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">저장</button>
+      </div>
+    </div>
+  </div>
+
   <div id="modal-add-expense" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -1473,7 +1505,8 @@
               payerId: sid(e.payerId), splitMemberIds: (Array.isArray(e.splitMemberIds) ? e.splitMemberIds : []).map(sid),
               paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
           });
-          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
+          const incs = (Array.isArray(mt.incomes) ? mt.incomes : []).filter(x => x && typeof x === 'object').map((x, xi) => ({ id: sid(x.id || ('inc_' + ci + '_' + ti + '_' + xi)), name: str(x.name), memo: str(x.memo), amount: Math.max(0, toInt(x.amount)) }));
+          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), incomes: incs, subGroupId: gid(mt.subGroupId), meetingType: mt.meetingType === '번개' ? '번개' : '정기', title: str(mt.title, '모임'),
             dateStr: canonDateStr(str(mt.dateStr)), endTime: /^\d{2}:\d{2}$/.test(str(mt.endTime)) ? str(mt.endTime) : '', location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps,
             remind: (typeof mt.remind === 'number' && isFinite(mt.remind)) ? mt.remind : 60, seriesId: sid(str(mt.seriesId)), repeat: str(mt.repeat) });
         });
@@ -2443,79 +2476,56 @@
       if (!activeMeeting) return;
 
       const exps = activeMeeting.expenses || [];
-      const totalSpent = exps.reduce((sum, e) => sum + e.amount, 0);
-      const payMap = {};
-      exps.forEach(exp => {
-        const sh = splitInfo(exp);
-        (exp.splitMemberIds || []).forEach(id => {
-          const o = payMap[id] = payMap[id] || { paid: 0, unpaid: 0 };
-          const s = sh.shareOf(id);
-          if ((exp.paidMemberIds || []).includes(id)) o.paid += s; else o.unpaid += s;
-        });
-      });
-      const payIds = Object.keys(payMap);
-      const count = payIds.length;
-      const perPerson = count > 0 ? Math.floor(totalSpent / count) : 0;
-      const paidCount = payIds.filter(id => payMap[id].unpaid === 0).length;
-      const totalIncome = payIds.reduce((s, id) => s + payMap[id].paid, 0);
+      const incs = activeMeeting.incomes || [];
+      const totalSpent = exps.reduce((s, e) => s + e.amount, 0);
+      const totalIncome = incs.reduce((s, x) => s + x.amount, 0);
       const balance = totalIncome - totalSpent;
-      const allMembersSorted = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
-      const settleTopHtml = `
-        <!-- [수입 | 지출 | 잔액] 요약 카드 (입출정산과 통일) -->
+      const fm = n => Number(n).toLocaleString();
+      const bd = 'border border-slate-800';
+      const mid = activeMeeting.id;
+
+      const cards = `
         <div class="grid grid-cols-3 gap-2 text-center">
-          <button type="button" onclick="settleIncomeTap()" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-2.5 transition">
+          <button type="button" onclick="openSettleEntry('income')" class="bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl p-2.5 transition">
             <p class="text-[11px] font-extrabold text-emerald-800">수입 ▾</p>
-            <p class="text-sm font-extrabold text-emerald-950 mt-0.5">${totalIncome.toLocaleString()}원</p>
-            <p class="text-[10px] text-emerald-700 mt-0.5">완납 ${paidCount}/${count}명</p>
+            <p class="text-sm font-extrabold text-emerald-950 mt-0.5">${fm(totalIncome)}원</p>
+            <p class="text-[10px] text-emerald-700 mt-0.5">누르면 기입</p>
           </button>
-          <button type="button" onclick="document.getElementById('btn-open-add-expense').click()" class="bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl p-2.5 transition">
+          <button type="button" onclick="openSettleEntry('expense')" class="bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl p-2.5 transition">
             <p class="text-[11px] font-extrabold text-rose-800">지출 ▾</p>
-            <p class="text-sm font-extrabold text-rose-950 mt-0.5">${totalSpent.toLocaleString()}원</p>
+            <p class="text-sm font-extrabold text-rose-950 mt-0.5">${fm(totalSpent)}원</p>
             <p class="text-[10px] text-rose-700 mt-0.5">누르면 기입</p>
           </button>
           <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
             <p class="text-[11px] font-extrabold text-indigo-800">잔액</p>
-            <p class="text-sm font-extrabold ${balance < 0 ? 'text-rose-600' : 'text-indigo-950'} mt-0.5">${balance.toLocaleString()}원</p>
-            <p class="text-[10px] text-indigo-700 mt-0.5">1인당 ${perPerson.toLocaleString()}원</p>
+            <p class="text-sm font-extrabold ${balance < 0 ? 'text-rose-600' : 'text-indigo-950'} mt-0.5">${balance < 0 ? '-' : ''}${fm(Math.abs(balance))}원</p>
+            <p class="text-[10px] text-indigo-700 mt-0.5">수입-지출</p>
           </div>
-        </div>
-      `;
+        </div>`;
 
-      // 모임 결산표 (결산보고와 같은 양식)
-      const fm = n => Number(n).toLocaleString();
-      const bd = 'border border-slate-800';
-      const incRows = payIds.map(id => ({ id, name: getMember(id).name, o: payMap[id] }))
-        .sort((x, y) => (y.o.paid > 0) - (x.o.paid > 0) || x.name.localeCompare(y.name, 'ko-KR'));
-      const expRows = exps.map(e => ({ name: e.title, amt: e.amount }));
-      const nRows = Math.max(6, incRows.length, expRows.length);
+      const nRows = Math.max(8, incs.length, exps.length);
       let rowsHtml = '';
       for (let i = 0; i < nRows; i++) {
-        const a = incRows[i], e = expRows[i];
-        let c1 = '', c2 = '', c3 = '', tr = '';
-        if (a) {
-          const full = a.o.unpaid === 0;
-          c1 = esc(a.name);
-          c2 = full ? '' : (a.o.paid > 0 ? '일부' : '미입금');
-          c3 = a.o.paid > 0 ? fm(a.o.paid) : `<span class="text-rose-600">(${fm(a.o.unpaid)})</span>`;
-          tr = ` onclick="settleToggleMember('${activeMeeting.id}','${a.id}')" style="cursor:pointer"`;
-        }
+        const a = incs[i], e = exps[i];
+        const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '';
+        const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '';
         rowsHtml += `<tr class="h-7">
-          <td class="${bd} px-1 text-center break-words"${tr}>${c1}</td>
-          <td class="${bd} px-1 text-center ${c2 ? 'text-rose-600 font-bold' : ''}"${tr}>${c2}</td>
-          <td class="${bd} px-1 text-right"${tr}>${c3}</td>
-          <td class="${bd} px-1 text-center break-words">${e ? esc(e.name) : ''}</td>
-          <td class="${bd} px-1 text-right">${e ? fm(e.amt) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.memo) : ''}</td>
+          <td class="${bd} px-1 text-right"${ta}>${a ? fm(a.amount) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${te}>${e ? esc(e.title) : ''}</td>
+          <td class="${bd} px-1 text-right"${te}>${e ? fm(e.amount) : ''}</td>
         </tr>`;
       }
-      container.innerHTML = settleTopHtml + `
+      container.innerHTML = cards + `
         <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
           <div class="flex items-center justify-between gap-2">
             <h4 class="text-sm font-extrabold text-slate-900 truncate">${esc(activeMeeting.title)} 결산</h4>
-            <button onclick="${exps.length ? `openNoticeModal('${activeMeeting.id}')` : `showToast('먼저 지출을 등록해 주세요.')`}" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📢 공지문</button>
+            <button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button>
           </div>
-          <p class="text-[11px] text-slate-500">${esc(fmtMeetingWhen(activeMeeting))} · 이름을 누르면 입금/미입금이 바뀝니다. ( ) 안은 아직 못 받은 금액이에요.</p>
+          <p class="text-[11px] text-slate-500">${esc(fmtMeetingWhen(activeMeeting))} · 줄을 누르면 고치거나 지울 수 있어요.</p>
           <table class="w-full border-collapse border-2 border-slate-900 text-[11px] text-slate-900 table-fixed">
-            <colgroup><col style="width:22%"><col style="width:13%"><col style="width:21%"><col style="width:26%"><col style="width:18%"></colgroup>
+            <colgroup><col style="width:22%"><col style="width:16%"><col style="width:20%"><col style="width:26%"><col style="width:16%"></colgroup>
             <thead>
               <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
               <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">성명</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
@@ -2523,26 +2533,90 @@
             <tbody>${rowsHtml}</tbody>
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
-              <tr class="h-9"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
+              <tr class="h-9"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '-' : ''}${fm(Math.abs(balance))}</td></tr>
             </tfoot>
           </table>
         </div>
       `;
     }
 
-    window.settleToggleMember = function(meetingId, memberId) {
-      requireAdminClub('입금 확인', () => {
-        const mt = getActiveClub().meetings.find(x => x.id === meetingId);
-        if (!mt) return;
-        const mine = (mt.expenses || []).filter(e => (e.splitMemberIds || []).includes(memberId));
-        const allPaid = mine.every(e => (e.paidMemberIds || []).includes(memberId));
-        mine.forEach(e => {
-          e.paidMemberIds = (e.paidMemberIds || []).filter(x => x !== memberId);
-          if (!allPaid) e.paidMemberIds.push(memberId);
-        });
-        saveState();
-        renderAll();
+    // 모임 수입/지출 입력 창
+    function currentSettleMeeting() {
+      const club = getActiveClub();
+      const sel = document.getElementById('settlement-meeting-select');
+      return (club.meetings || []).find(m => m.id === (sel && sel.value)) || null;
+    }
+    window.openSettleEntry = function(type, entryId) {
+      requireAdminClub('수입·지출 기입', () => {
+        const mt = currentSettleMeeting();
+        if (!mt) { showToast('먼저 모임을 선택해 주세요.'); return; }
+        const isInc = type === 'income';
+        const ent = entryId ? (isInc ? (mt.incomes || []) : (mt.expenses || [])).find(x => x.id === entryId) : null;
+        document.getElementById('settle-entry-type').value = isInc ? 'income' : 'expense';
+        document.getElementById('settle-entry-id').value = ent ? ent.id : '';
+        document.getElementById('settle-entry-title').textContent = (ent ? '' : '') + (isInc ? '💰 수입 ' : '💸 지출 ') + (ent ? '수정' : '입력');
+        document.getElementById('settle-entry-name-wrap').classList.toggle('hidden', !isInc);
+        document.getElementById('settle-entry-memo-label').textContent = isInc ? '내역' : '지출 내역';
+        document.getElementById('settle-entry-memo').placeholder = isInc ? '예: 회비, 그린피' : '예: 그린피, 식사, 대관료';
+        document.getElementById('settle-member-list').innerHTML = (getActiveClub().members || []).map(m => `<option value="${esc(m.name)}"></option>`).join('');
+        document.getElementById('settle-entry-name').value = ent && isInc ? ent.name : '';
+        document.getElementById('settle-entry-memo').value = ent ? (isInc ? ent.memo : ent.title) : '';
+        document.getElementById('settle-entry-amount').value = ent ? ent.amount : '';
+        document.getElementById('btn-delete-settle-entry').classList.toggle('hidden', !ent);
+        document.getElementById('modal-settle-entry').classList.remove('hidden');
       });
+    };
+    function closeSettleEntry() { document.getElementById('modal-settle-entry').classList.add('hidden'); }
+    document.getElementById('btn-close-settle-entry').addEventListener('click', closeSettleEntry);
+    document.getElementById('btn-cancel-settle-entry').addEventListener('click', closeSettleEntry);
+    document.getElementById('btn-save-settle-entry').addEventListener('click', () => {
+      const mt = currentSettleMeeting();
+      if (!mt) return;
+      const isInc = document.getElementById('settle-entry-type').value === 'income';
+      const id = document.getElementById('settle-entry-id').value;
+      const name = document.getElementById('settle-entry-name').value.trim();
+      const memo = document.getElementById('settle-entry-memo').value.trim();
+      const amount = toInt(document.getElementById('settle-entry-amount').value);
+      if (isInc && !name && !memo) { showToast('성명이나 내역을 입력해 주세요.'); return; }
+      if (!isInc && !memo) { showToast('지출 내역을 입력해 주세요.'); return; }
+      if (!amount || amount < 0) { showToast('금액을 입력해 주세요.'); return; }
+      if (isInc) {
+        mt.incomes = mt.incomes || [];
+        const t = id ? mt.incomes.find(x => x.id === id) : null;
+        if (t) { t.name = name; t.memo = memo; t.amount = amount; } else mt.incomes.push({ id: uid('inc'), name, memo, amount });
+      } else {
+        const t = id ? mt.expenses.find(x => x.id === id) : null;
+        if (t) { t.title = memo; t.amount = amount; } else mt.expenses.push({ id: uid('exp'), title: memo, amount, payerId: '', splitMemberIds: [], paidMemberIds: [] });
+      }
+      saveState(); closeSettleEntry(); renderAll();
+      showToast(id ? '수정되었습니다.' : (isInc ? '수입이 기입되었습니다.' : '지출이 기입되었습니다.'));
+    });
+    document.getElementById('btn-delete-settle-entry').addEventListener('click', () => {
+      const mt = currentSettleMeeting();
+      const isInc = document.getElementById('settle-entry-type').value === 'income';
+      const id = document.getElementById('settle-entry-id').value;
+      if (!mt || !id) return;
+      showDeleteConfirm('항목 삭제', '이 항목을 삭제할까요?', () => {
+        if (isInc) mt.incomes = (mt.incomes || []).filter(x => x.id !== id);
+        else mt.expenses = (mt.expenses || []).filter(x => x.id !== id);
+        saveState(); closeSettleEntry(); renderAll();
+        showToast('삭제되었습니다.');
+      });
+    });
+    window.settleCopySummary = function(meetingId) {
+      const mt = getActiveClub().meetings.find(x => x.id === meetingId);
+      if (!mt) return;
+      const fm = n => Number(n).toLocaleString();
+      const inc = (mt.incomes || []), exp = (mt.expenses || []);
+      const si = inc.reduce((s, x) => s + x.amount, 0), se = exp.reduce((s, x) => s + x.amount, 0);
+      let t = `📋 ${mt.title} 결산 (${fmtMeetingWhen(mt)})\n\n[입금내역]\n`;
+      t += inc.length ? inc.map(x => `- ${[x.name, x.memo].filter(Boolean).join(' ')} ${fm(x.amount)}원`).join('\n') : '- 없음';
+      t += `\n입금계 ${fm(si)}원\n\n[지출내역]\n`;
+      t += exp.length ? exp.map(x => `- ${x.title} ${fm(x.amount)}원`).join('\n') : '- 없음';
+      t += `\n지출계 ${fm(se)}원\n\n(입금)-(지출) ${si - se < 0 ? '-' : ''}${fm(Math.abs(si - se))}원`;
+      const done = () => showToast('결산 내용을 복사했습니다. 카톡에 붙여넣으세요.');
+      if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(t).then(done).catch(() => { window.prompt('복사해서 사용하세요', t); });
+      else window.prompt('복사해서 사용하세요', t);
     };
 
     // [회원 관리 렌더링]
@@ -4035,9 +4109,14 @@
         return true;
       });
 
+      const meetingIncomes = [];
+      (club.meetings || []).forEach(mt => {
+        if (selectedPeriod !== 'ALL' && mtYmd(mt) && !mtYmd(mt).startsWith(selectedPeriod)) return;
+        (mt.incomes || []).forEach(x => meetingIncomes.push({ date: mtYmd(mt) || '-', title: x.name || x.memo, note: x.name ? x.memo : mt.title, amount: x.amount }));
+      });
       const carryOver = toInt(cfg.carryOver);
       const duesTotal = paidDues.reduce((s, d) => s + d.amount, 0);
-      const extraIncomeTotal = extraIncomes.reduce((s, x) => s + x.amount, 0);
+      const extraIncomeTotal = extraIncomes.reduce((s, x) => s + x.amount, 0) + meetingIncomes.reduce((s, x) => s + x.amount, 0);
       const totalIncome = carryOver + duesTotal + extraIncomeTotal;
 
       const meetingExpTotal = meetingExpenses.reduce((s, e) => s + e.amount, 0);
@@ -4066,6 +4145,7 @@
         duesCount: paidDues.length,
         duesTotal,
         extraIncomes,
+        meetingIncomes,
         totalIncome,
         meetingExpenses,
         extraExpenses,
@@ -4105,6 +4185,7 @@
       const incRows = [];
       r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount }));
       r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id }));
+      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount }));
       const expRows = [];
       r.meetingExpenses.forEach(e => expRows.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
       r.extraExpenses.forEach(x => expRows.push({ name: x.title, amt: x.amount, id: x.id }));
