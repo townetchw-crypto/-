@@ -2861,12 +2861,30 @@
       if (!rawText || !rawText.trim()) return [];
 
       const phoneRegex = /(01[016789]-?\d{3,4}-?\d{4})/;
-      // 금액 패턴: 50,000 / 1,000,000 / 150000 (천 단위 쉼표 포함 또는 4자리 이상 숫자)
-      const amountRegex = /(?:^|[\s ])(\d{1,3}(?:,\d{3})+|\d{4,})(?=$|[\s 원])/;
-      const manRegex = /(?:^|\s)(\d+)만\s*원?(?=\s|$)/;   // "5만원" / "10만"
-      const results = [];
+      const amountRegex = /(?:^|[\s\u00A0])(\d{1,3}(?:,\d{3})+|\d{4,})(?=$|[\s\u00A0원])/;
+      const manRegex = /(?:^|\s)(\d+)만\s*원?(?=\s|$)/;
+      const pureAmountRegex = /^(\d{1,3}(?:,\d{3})+|\d{4,}|\d+만\s*원?)\s*원?$/;
 
-      // 한 사람 분량의 텍스트("홍길동 65골 50,000 화환")를 해석
+      // 표 머리글 · 날짜 · 합계 · 인원수 등 명단이 아닌 줄 자동 제외
+      function isNoiseLine(line) {
+        const compact = line.replace(/\s+/g, '');
+        if (/^(賻儀|부의|축의|부의금|축의금|과목|금액|성명|이름|비고|번호|순번|연락처|전화번호|합계|소계|총계|작성일|결산기간)$/i.test(compact)) return true;
+        if (/^\d{4}[년\-.\/]\s*\d{1,2}[월\-.\/]/.test(line)) return true; // 2014년 12월 15일 현재 등
+        if (/^(회사명|모임명|총무|회장|인원|합계|총액|총계|기간|일자)\s*[:：]/.test(compact)) return true;
+        if (/^인원\s*[:：]?\s*\d+명?$/.test(compact)) return true;
+        if (/^\d+명$/.test(compact)) return true; // "37명", "137명"
+        if (/^총\s*[\d,]+원?$/.test(compact)) return true; // "총 19,600,000"
+        return false;
+      }
+
+      function parsePureAmount(line) {
+        const mMan = line.match(/^(\d+)만\s*원?$/);
+        if (mMan) return (parseInt(mMan[1], 10) || 0) * 10000;
+        const mNum = line.match(/^(\d{1,3}(?:,\d{3})+|\d{4,})\s*원?$/);
+        if (mNum) return parseInt(mNum[1].replace(/,/g, ''), 10) || 0;
+        return 0;
+      }
+
       function parseOne(text) {
         const matchedPhone = text.match(phoneRegex);
         const phone = matchedPhone ? matchedPhone[0] : "";
@@ -2885,26 +2903,68 @@
         }
         const tokens = work.split(/\s+/).filter(Boolean);
         if (tokens.length === 0) return null;
-        const name = tokens[0].replace(/[()\[\]]/g, '').trim();
-        const affiliation = tokens.slice(1).join(' ').replace(/[()\[\]]/g, '').trim();
-        if (name && name.length >= 2 && name.length <= 20) return { name, phone, affiliation, amount, note };
+        // "(주)실로정보시스템", "주식회사 실로정보시스템" 등 깔끔하게 보존
+        let name = tokens[0].replace(/[\[\]]/g, '').trim();
+        let affiliation = tokens.slice(1).join(' ').replace(/[\[\]]/g, '').trim();
+        if ((name === '주식회사' || name === '(주)') && tokens.length >= 2) {
+          name = tokens[0] + ' ' + tokens[1];
+          affiliation = tokens.slice(2).join(' ').replace(/[\[\]]/g, '').trim();
+        }
+        if (name && name.length >= 2 && name.length <= 30) return { name, phone, affiliation, amount, note };
         return null;
       }
 
-      const lines = rawText.split(/[\r\n]+/);
-      for (let rawLine of lines) {
-        let line = rawLine.replace(/ /g, ' ').trim();
+      // 1단계: 줄 정리 및 머리글/잡음 제거
+      const cleanLines = [];
+      for (let rawLine of rawText.split(/[\r\n]+/)) {
+        let line = rawLine.replace(/\u00A0/g, ' ').trim();
         if (!line) continue;
-        // 순번/불릿 제거 ('1. ', '1) ', '• ')
         line = line.replace(/^[0-9]+[.\)]\s*|^[-*•·]\s*/, '').trim();
-        if (!line) continue;
+        if (!line || isNoiseLine(line)) continue;
+        cleanLines.push(line);
+      }
 
-        // 금액의 천 단위 쉼표는 보호하고, 나머지 쉼표/슬래시로 여러 명이 나열된 경우 분리
+      // 2단계: 삼성 T 표 복사처럼 [이름 줄들]과 [단독 금액 줄들]이 위아래로 갈라진 경우 자동 짝짓기
+      const pureAmounts = [];
+      const nonPureLines = [];
+      cleanLines.forEach(line => {
+        if (pureAmountRegex.test(line)) {
+          pureAmounts.push(parsePureAmount(line));
+        } else {
+          nonPureLines.push(line);
+        }
+      });
+
+      if (pureAmounts.length >= 2 && nonPureLines.length >= 2) {
+        const noAmtIndices = [];
+        nonPureLines.forEach((l, i) => {
+          if (!manRegex.test(l) && !amountRegex.test(l)) noAmtIndices.push(i);
+        });
+        if (noAmtIndices.length >= 2) {
+          const results = [];
+          let amtIdx = 0;
+          for (let i = 0; i < nonPureLines.length; i++) {
+            const line = nonPureLines[i];
+            const item = parseOne(line);
+            if (!item) continue;
+            if (item.amount === 0 && amtIdx < pureAmounts.length) {
+              item.amount = pureAmounts[amtIdx++];
+            }
+            results.push(item);
+          }
+          return results;
+        }
+      }
+
+      // 3단계: 일반 한 줄씩 해석 (쉼표/슬래시 다중 나열 포함)
+      const results = [];
+      for (const line of cleanLines) {
+        if (pureAmountRegex.test(line)) continue;
         const protectedLine = line.replace(/\d{1,3}(?:,\d{3})+/g, m => m.replace(/,/g, '\u0001'));
         if (protectedLine.includes(',') || protectedLine.includes('/')) {
           protectedLine.split(/[,/]+/).forEach(p => {
             p = p.replace(/\u0001/g, ',').trim().replace(/^[0-9]+[.\)]\s*/, '');
-            if (!p) return;
+            if (!p || isNoiseLine(p)) return;
             const item = parseOne(p);
             if (item) results.push(item);
           });
