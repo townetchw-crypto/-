@@ -82,62 +82,33 @@
 
   <!-- 캘린더 컨트롤 바 (삼성 캘린더 스타일, 상단 고정) -->
   <div id="calendar-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
-    <div class="max-w-lg mx-auto space-y-1.5">
-      <div class="flex items-center justify-between gap-1">
-        <div class="flex items-center space-x-1">
-          <button id="btn-cal-prev-month" aria-label="이전" class="shrink-0 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">◀</button>
-          <label class="relative px-1 text-center cursor-pointer whitespace-nowrap">
-            <span id="cal-current-label" class="text-sm font-extrabold text-slate-900">2026년 11월</span><span class="text-[10px] text-slate-400"> ▾</span>
-            <input id="cal-month-picker" type="month" aria-label="월 선택" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
-          </label>
-          <button id="btn-cal-next-month" aria-label="다음" class="shrink-0 px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-800 font-extrabold text-xs rounded-lg border border-slate-200 transition">▶</button>
-          <button id="btn-cal-today" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 transition">오늘</button>
-        </div>
-        <button id="btn-cal-toggle-grid" class="shrink-0 whitespace-nowrap px-2.5 py-1.5 text-xs font-bold rounded-lg border border-indigo-200 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 transition">접기</button>
+    <div class="max-w-lg mx-auto flex items-center justify-between gap-1">
+      <button id="btn-open-year" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-extrabold rounded-lg transition">☰ 모임내역</button>
+      <div class="flex items-center">
+        <button id="btn-cal-prev-month" aria-label="이전 달" class="shrink-0 px-2.5 py-1.5 text-slate-800 font-extrabold text-xs rounded-lg hover:bg-slate-100 transition">◀</button>
+        <label class="relative px-1 text-center cursor-pointer whitespace-nowrap">
+          <span id="cal-current-label" class="text-sm font-extrabold text-slate-900">2026년 11월</span><span class="text-[10px] text-slate-400"> ▾</span>
+          <input id="cal-month-picker" type="month" aria-label="월 선택" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+        </label>
+        <button id="btn-cal-next-month" aria-label="다음 달" class="shrink-0 px-2.5 py-1.5 text-slate-800 font-extrabold text-xs rounded-lg hover:bg-slate-100 transition">▶</button>
       </div>
-      <div class="flex items-center gap-1.5">
-        <div class="flex-1 grid grid-cols-3 bg-slate-100 rounded-lg p-0.5 text-xs font-bold">
-          <button id="btn-cal-view-month" class="py-1 rounded-md transition bg-white shadow-sm text-indigo-700">월</button>
-          <button id="btn-cal-view-week" class="py-1 rounded-md transition text-slate-500">주</button>
-          <button id="btn-cal-view-agenda" class="py-1 rounded-md transition text-slate-500">일정</button>
-        </div>
-        <button id="btn-cal-scope-toggle" class="shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition">📋 전체</button>
-      </div>
+      <button id="btn-cal-today" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-lg border border-slate-200 transition">오늘</button>
     </div>
   </div>
 
-  <!-- 달력 본체 (월 / 주 / 일정 보기) -->
-  <section id="calendar-grid-panel" class="max-w-lg mx-auto w-full px-3 pt-2">
-    <div id="calendar-surface" class="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm" style="touch-action: pan-y;">
+  <!-- 달력 본체 (월 보기, 좌우로 밀면 이전/다음 달) -->
+  <section id="calendar-grid-panel" class="max-w-lg mx-auto w-full px-3 pt-2 pb-24 space-y-2">
+    <div id="calendar-surface" class="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-sm overflow-hidden" style="touch-action: pan-y;">
       <div id="cal-weekday-head" class="grid grid-cols-7 text-center text-[11px] font-bold text-slate-500 pb-1 border-b border-slate-100 mb-1">
         <span class="text-rose-500">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-blue-600">토</span>
       </div>
       <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
-      <div id="calendar-week-view" class="hidden space-y-1"></div>
-      <div id="calendar-agenda-view" class="hidden space-y-3 p-1"></div>
     </div>
-    <div id="calendar-selected-bar" class="hidden mt-2 bg-white border border-indigo-200 rounded-xl p-2.5 space-y-2">
-      <div class="flex items-center justify-between gap-2">
-        <div>
-          <span id="cal-selected-date-text" class="text-xs font-extrabold text-indigo-900">2026-11-14</span>
-          <span id="cal-selected-holiday-text" class="text-[11px] font-bold text-rose-600 ml-1.5"></span>
-        </div>
-        <div class="flex items-center space-x-1.5 shrink-0">
-          <button id="btn-cal-quick-regular" class="px-2.5 py-1 bg-indigo-600 text-white text-xs font-bold rounded-lg">＋ 정기</button>
-          <button id="btn-cal-quick-flash" class="px-2.5 py-1 bg-amber-400 text-amber-950 text-xs font-bold rounded-lg">⚡ 번개</button>
-        </div>
-      </div>
-      <div id="cal-selected-day-events" class="space-y-1.5 text-xs"></div>
-    </div>
-    <div id="calendar-upcoming" class="mt-2"></div>
-    <div class="flex gap-1.5 mt-2">
-      <button onclick="exportMonthToICS()" class="flex-1 py-2 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-700">📲 이 달 일정 폰 캘린더로</button>
-      <button onclick="exportAllToICS()" class="flex-1 py-2 bg-white border border-slate-300 rounded-xl text-[11px] font-bold text-slate-700">📲 전체 일정</button>
-    </div>
+    <button id="btn-cal-add-bar" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold rounded-xl shadow-sm transition">추가 ＋</button>
   </section>
 
   <!-- 메인 뷰 컨테이너 (모바일 최적화 폭) -->
-  <main class="flex-1 w-full max-w-lg mx-auto p-4 space-y-4">
+  <main id="app-main" class="hidden flex-1 w-full max-w-lg mx-auto p-4 space-y-4">
 
     <!-- 토스트 알림창 -->
     <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
@@ -185,10 +156,10 @@
     </div>
 
     <!-- [섹션 1] 모임 일정 & 출결 탭 -->
-    <div id="tab-meetings-view" class="space-y-4">
+    <div id="tab-meetings-view" class="hidden space-y-4">
+      <button id="btn-day-back" class="whitespace-nowrap px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg">← 달력</button>
       <div class="flex items-center justify-between">
         <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
-          <span>📅</span>
           <span id="meetings-section-title">모임 일정</span>
           <span id="meeting-count-badge" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">0</span>
         </h2>
@@ -208,6 +179,21 @@
       <div id="meetings-list-container" class="space-y-3">
         <!-- 동적으로 카드 렌더링 -->
       </div>
+    </div>
+
+    <!-- [화면] 1년 모임내역 -->
+    <div id="screen-year" class="hidden space-y-3">
+      <div id="year-controls" class="sticky z-10 -mx-4 px-4 py-2 bg-slate-100 border-b border-slate-200 flex items-center justify-between gap-1">
+        <button id="btn-year-back" class="shrink-0 whitespace-nowrap px-2.5 py-1.5 bg-white hover:bg-slate-50 border border-slate-300 text-slate-700 text-xs font-bold rounded-lg">← 달력</button>
+        <div class="flex items-center">
+          <button id="btn-year-prev" aria-label="이전 해" class="px-2.5 py-1.5 text-slate-800 font-extrabold text-xs rounded-lg hover:bg-slate-100">◀</button>
+          <span id="year-title" class="text-sm font-extrabold text-slate-900 px-1">2026년</span>
+          <button id="btn-year-next" aria-label="다음 해" class="px-2.5 py-1.5 text-slate-800 font-extrabold text-xs rounded-lg hover:bg-slate-100">▶</button>
+        </div>
+        <button onclick="exportAllToICS()" class="shrink-0 whitespace-nowrap px-2 py-1.5 bg-white border border-slate-300 text-slate-700 text-[11px] font-bold rounded-lg">📲 전체 폰캘린더</button>
+      </div>
+      <p id="year-summary" class="text-xs text-slate-500 font-semibold"></p>
+      <div id="year-list" class="space-y-2"></div>
     </div>
 
     <!-- [섹션 2] 1/N 정산 및 송금 탭 -->
@@ -434,8 +420,8 @@
   <!-- ============================================== -->
   <!-- [모달 1] 새 모임 일정 개설 모달 -->
   <!-- ============================================== -->
-  <div id="modal-create-meeting" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[92vh] overflow-y-auto">
+  <div id="modal-create-meeting" class="fixed inset-0 z-50 bg-slate-100 hidden overflow-y-auto">
+    <div class="bg-white w-full max-w-lg mx-auto min-h-full p-4 pb-10 space-y-4 shadow-xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 id="meeting-modal-title" class="font-bold text-slate-900 text-base">새 모임 일정 개설</h3>
         <button id="btn-close-meeting-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
@@ -496,7 +482,7 @@
           <input id="input-meeting-cap" type="number" value="8" min="2" max="200" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
       </div>
-      <div class="flex space-x-2 pt-2">
+      <div class="flex space-x-2 pt-2 sticky bottom-0 bg-white pb-3 border-t border-slate-100">
         <button id="btn-cancel-create-meeting" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
         <button id="btn-submit-create-meeting" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">개설하기</button>
       </div>
@@ -1532,20 +1518,138 @@
       { btnId: 'nav-btn-report', viewId: 'tab-report-view' },
     ];
 
-    function switchTab(targetViewId) {
-      tabs.forEach(t => {
-        const view = document.getElementById(t.viewId);
-        const btn = document.getElementById(t.btnId);
-        if (t.viewId === targetViewId) {
-          view.classList.remove('hidden');
-          btn.className = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-bold transition-colors";
-        } else {
-          view.classList.add('hidden');
-          btn.className = "flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors";
-        }
-      });
-      renderAll();
+    // [화면 전환: 달력 홈 ↔ 날짜 화면 / 1년 모임내역 / 하단 메뉴 화면 / 입력 화면]
+    let layerStack = [];           // 쌓인 화면들. 비어 있으면 달력 홈
+    let dayScreenDate = todayStr();
+    let yearScreenYear = Number(todayStr().slice(0, 4));
+    let histPushed = false, ignorePop = false;
+    const VIEW_IDS = ['tab-meetings-view', 'tab-settlement-view', 'tab-members-view', 'tab-dues-view', 'tab-report-view', 'screen-year'];
+    const NAV_ON = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-bold transition-colors";
+    const NAV_OFF = "flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors";
+
+    function topView() {
+      for (let i = layerStack.length - 1; i >= 0; i--) if (layerStack[i] !== 'form') return layerStack[i];
+      return '';
     }
+    function fmtDayTitle(ymd) {
+      const p = ymdParts(ymd);
+      if (!p) return '모임 일정';
+      return `${p[1]}월 ${p[2]}일 (${WEEKDAY_KO[ymdDow(ymd)]})`;
+    }
+    function syncHistory() {
+      try {
+        if (layerStack.length && !histPushed) { history.pushState({ mm: 1 }, ''); histPushed = true; }
+        else if (!layerStack.length && histPushed) { ignorePop = true; histPushed = false; history.back(); }
+      } catch (e) {}
+    }
+    window.addEventListener('popstate', () => {
+      if (ignorePop) { ignorePop = false; return; }
+      histPushed = false;
+      if (layerStack.length) { layerStack.pop(); applyLayers(); }
+    });
+
+    function applyLayers() {
+      const top = topView();
+      const cal = !top;
+      document.getElementById('calendar-bar').classList.toggle('hidden', !cal);
+      document.getElementById('calendar-grid-panel').classList.toggle('hidden', !cal);
+      document.getElementById('app-main').classList.toggle('hidden', cal);
+      VIEW_IDS.forEach(id => { const el = document.getElementById(id); if (el) el.classList.toggle('hidden', id !== top); });
+      tabs.forEach(t => {
+        const on = (cal || top === 'screen-year') ? t.viewId === 'tab-meetings-view' : t.viewId === top;
+        document.getElementById(t.btnId).className = on ? NAV_ON : NAV_OFF;
+      });
+      const formOn = layerStack[layerStack.length - 1] === 'form';
+      document.getElementById('modal-create-meeting').classList.toggle('hidden', !formOn);
+      syncHistory();
+      renderAll();
+      if (!formOn) window.scrollTo(0, 0);
+    }
+    function pushLayer(id) { layerStack.push(id); applyLayers(); }
+    function popLayer() { if (layerStack.length) { layerStack.pop(); applyLayers(); } }
+    window.goCalendar = function() { layerStack = []; applyLayers(); };
+    window.closeMeetingForm = function() { if (layerStack[layerStack.length - 1] === 'form') popLayer(); };
+
+    // 날짜를 눌렀을 때: 모임이 없으면 바로 입력 화면, 있으면 그날 일정 화면
+    window.openDay = function(ymd) {
+      if (!ymdParts(ymd)) return;
+      calSelectedDate = ymd; dayScreenDate = ymd; calYearMonth = ymd.slice(0, 7);
+      if (meetingsOn(ymd).length === 0) {
+        requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: ymd }));
+      } else {
+        if (topView() !== 'tab-meetings-view') pushLayer('tab-meetings-view');
+      }
+    };
+    window.openYear = function() {
+      yearScreenYear = Number(calYearMonth.slice(0, 4));
+      layerStack = ['screen-year'];
+      applyLayers();
+      scrollYearToUpcoming();
+    };
+    function scrollYearToUpcoming() {
+      const el = document.querySelector('#year-list [data-upcoming="1"]');
+      if (el) el.scrollIntoView({ block: 'start' });
+    }
+    function switchTab(targetViewId) {
+      if (targetViewId === 'tab-meetings-view') { goCalendar(); return; }
+      layerStack = [targetViewId];
+      applyLayers();
+    }
+
+    function renderYearScreen() {
+      if (topView() !== 'screen-year') return;
+      const y = yearScreenYear;
+      document.getElementById('year-title').textContent = `${y}년`;
+      const list = meetingsForCalendar().filter(mt => (mtYmd(mt) || '').startsWith(y + '-')).sort(byMeetingTime);
+      document.getElementById('year-summary').textContent = `${y}년 모임 총 ${list.length}건`;
+      const el = document.getElementById('year-list');
+      if (!list.length) { el.innerHTML = `<div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400 text-sm font-semibold">${y}년에 등록된 모임이 없습니다.</div>`; return; }
+      const club = getActiveClub();
+      const groups = {};
+      list.forEach(mt => { const k = mtYmd(mt); (groups[k] = groups[k] || []).push(mt); });
+      const today = todayStr();
+      let markedUpcoming = false;
+      el.innerHTML = Object.keys(groups).sort().map(ymd => {
+        const dow = ymdDow(ymd), holiday = getHolidayName(ymd);
+        const col = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-900');
+        const up = !markedUpcoming && ymd >= today;
+        if (up) markedUpcoming = true;
+        const rows = groups[ymd].map(mt => {
+          const start = mtStartHM(mt);
+          const explicitEnd = /^\d{2}:\d{2}$/.test(mt.endTime || '') && mt.endTime > start;
+          const timeTxt = start ? (explicitEnd ? `${start}–${mt.endTime}` : start) : '종일';
+          return `<div class="flex items-stretch gap-2">
+              <div style="background:${meetingColor(club, mt)}" class="w-1 rounded-full shrink-0"></div>
+              <div class="min-w-0 flex-1">
+                <p class="text-[11px] font-bold text-slate-500">${esc(timeTxt)}${mt.meetingType === '번개' ? ' · ⚡번개' : ''}${mt.seriesId ? ' · 🔁' : ''}</p>
+                <p class="text-sm font-bold text-slate-900 break-words">${esc(mt.title)}</p>
+                <p class="text-[11px] text-slate-500 break-words">📍 ${esc(mt.location)} · 👥 ${attendCount(mt)}/${mt.maxCapacity}명</p>
+              </div></div>`;
+        }).join('');
+        return `<button onclick="openDay('${ymd}')" ${up ? 'data-upcoming="1"' : ''} style="scroll-margin-top:70px" class="block w-full text-left bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-xs hover:bg-slate-50">
+            <div class="flex items-center justify-between">
+              <span class="text-sm font-extrabold ${col}">${esc(fmtDayTitle(ymd))}${holiday ? ` <span class="text-[11px]">${esc(holiday)}</span>` : ''}</span>
+              <span class="text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${ddayDiff(ymd) < 0 ? 'bg-slate-100 text-slate-500' : 'bg-rose-50 text-rose-600'}">${ddayLabel(ymd)}</span>
+            </div>${rows}</button>`;
+      }).join('');
+    }
+
+    document.getElementById('btn-open-year').addEventListener('click', openYear);
+    document.getElementById('btn-year-back').addEventListener('click', () => goCalendar());
+    document.getElementById('btn-day-back').addEventListener('click', () => popLayer());
+    document.getElementById('btn-year-prev').addEventListener('click', () => { yearScreenYear--; renderYearScreen(); });
+    document.getElementById('btn-year-next').addEventListener('click', () => { yearScreenYear++; renderYearScreen(); });
+
+    // 시작 준비: 토스트는 항상 보이게, 백업 알림은 달력 위로, 달 이동 애니메이션 CSS
+    (function() {
+      const toast = document.getElementById('toast-container');
+      if (toast) document.body.appendChild(toast);
+      const b = document.getElementById('backup-banner'), p = document.getElementById('calendar-grid-panel');
+      if (b && p) p.insertBefore(b, p.firstChild);
+      const st = document.createElement('style');
+      st.textContent = '@keyframes mm-slide-L{from{transform:translateX(36px);opacity:.25}to{transform:none;opacity:1}}@keyframes mm-slide-R{from{transform:translateX(-36px);opacity:.25}to{transform:none;opacity:1}}';
+      document.head.appendChild(st);
+    })();
 
     tabs.forEach(t => {
       document.getElementById(t.btnId).addEventListener('click', () => switchTab(t.viewId));
@@ -1637,6 +1741,7 @@
 
       renderHeaderBanner();
       renderBackupBanner();
+      renderYearScreen();
       renderSubGroupChips();
       renderMeetings();
       renderSettlement();
@@ -1666,21 +1771,14 @@
       }
     }
 
-    // [년/월 캘린더 v2 - 삼성 캘린더 스타일: 월 / 주 / 일정 보기]
+    // [년/월 캘린더 v3 - 달력만 보이는 홈 화면 / 좌우로 밀어 월 이동 / 날짜 누르면 입력 화면]
     let calYearMonth = todayStr().slice(0, 7);
-    let calScope = 'all';            // 'all' | 'month' : 아래 목록(모임일정·정산)을 달력의 월에 맞출지
+    const calScope = 'all';          // 목록·정산 필터가 참조 (항상 전체)
     let calSelectedDate = todayStr();
-    let calView = 'month';           // 'month' | 'week' | 'agenda'
-    let calPanelOpen = true;
     let activeBatchRsvpMeetingId = null;
-    try {
-      const u = JSON.parse(localStorage.getItem('mm_cal_ui_v1') || '{}');
-      if (['month', 'week', 'agenda'].includes(u.view)) calView = u.view;
-      if (typeof u.open === 'boolean') calPanelOpen = u.open;
-    } catch (e) {}
-    function saveCalUI() { try { localStorage.setItem('mm_cal_ui_v1', JSON.stringify({ view: calView, open: calPanelOpen })); } catch (e) {} }
+    let calSwipedAt = 0;
 
-    // 달력에 보여줄 일정 = 모임일정 목록과 같은 소모임 필터
+    // 달력에 보여줄 일정 = 현재 선택된 소모임 기준
     function meetingsForCalendar() {
       const club = getActiveClub();
       const sub = club.activeSubGroupId || 'all';
@@ -1691,72 +1789,40 @@
     function attendCount(mt) { return Object.keys(mt.attendees || {}).filter(id => mt.attendees[id] === '참석').length; }
     function chipTextColor(mt) { return mt.meetingType === '번개' ? '#451a03' : '#ffffff'; }
 
-    function syncReportPeriod() {
-      const repSel = document.getElementById('report-period-select');
-      if (!repSel) return;
-      if (calScope === 'month') repSel.value = [...repSel.options].some(o => o.value === calYearMonth) ? calYearMonth : 'ALL';
+    // 음력 (매월 1일·15일만 작게 표시)
+    const _lunarFmt = (() => { try { return new Intl.DateTimeFormat('en-u-ca-chinese', { timeZone: 'UTC', month: 'numeric', day: 'numeric' }); } catch (e) { return null; } })();
+    const _lunarCache = {};
+    function lunarLabel(ymd) {
+      if (!_lunarFmt) return '';
+      if (_lunarCache[ymd] !== undefined) return _lunarCache[ymd];
+      let out = '';
+      try {
+        const p = ymdParts(ymd);
+        const parts = _lunarFmt.formatToParts(new Date(Date.UTC(p[0], p[1] - 1, p[2], 12)));
+        const mo = parseInt(parts.find(x => x.type === 'month').value, 10);
+        const da = parseInt(parts.find(x => x.type === 'day').value, 10);
+        if (mo && (da === 1 || da === 15)) out = `음${mo}.${da}`;
+      } catch (e) {}
+      return (_lunarCache[ymd] = out);
     }
 
-    function calNav(delta) {
-      if (calView === 'week') {
-        const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
-        calSelectedDate = ymdAdd(anchor, 7 * delta);
-        calYearMonth = calSelectedDate.slice(0, 7);
-      } else {
-        const [y, m] = calYearMonth.split('-').map(Number);
-        const d = new Date(Date.UTC(y, m - 1 + delta, 1));
-        calYearMonth = `${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`;
-        if (calSelectedDate && !calSelectedDate.startsWith(calYearMonth)) calSelectedDate = '';
-      }
-      syncReportPeriod();
-      renderAll();
+    function animateGrid(dir) {
+      const g = document.getElementById('calendar-days-grid');
+      if (!g || !dir) return;
+      g.style.animation = 'none'; void g.offsetWidth;
+      g.style.animation = (dir > 0 ? 'mm-slide-L' : 'mm-slide-R') + ' .22s ease-out';
     }
-    window.selectCalendarDate = function(dStr) {
-      calSelectedDate = dStr;
-      if (!dStr.startsWith(calYearMonth)) calYearMonth = dStr.slice(0, 7);
+    function calSetMonth(ym, dir) {
+      calYearMonth = ym;
+      const t = todayStr();
+      calSelectedDate = t.startsWith(ym) ? t : ym + '-01';
       renderCalendar();
-    };
-    window.calJumpTo = function(dStr) {
-      calSelectedDate = dStr; calYearMonth = dStr.slice(0, 7);
-      if (calView === 'agenda') calView = 'month';
-      syncReportPeriod(); renderAll();
-    };
-    window.setCalView = function(v) {
-      calView = v;
-      if (v === 'week' && !ymdParts(calSelectedDate)) calSelectedDate = calYearMonth === todayStr().slice(0, 7) ? todayStr() : calYearMonth + '-01';
-      if (v === 'week' && !calSelectedDate.startsWith(calYearMonth)) calYearMonth = calSelectedDate.slice(0, 7);
-      saveCalUI(); renderCalendar();
-    };
-
-    // 일정 카드 (일 상세 / 주 보기 / 일정 보기 공용)
-    function eventCardHtml(mt, showDate) {
-      const club = getActiveClub();
-      const color = meetingColor(club, mt);
-      const start = mtStartHM(mt);
-      const explicitEnd = /^\d{2}:\d{2}$/.test(mt.endTime || '') && mt.endTime > start;
-      const timeTxt = start ? (explicitEnd ? `${start} – ${mt.endTime}` : start) : '종일';
-      const ymd = mtYmd(mt);
-      const att = attendCount(mt);
-      return `
-        <div class="flex items-stretch bg-white rounded-xl border border-slate-200 overflow-hidden">
-          <div style="background:${color}" class="w-1.5 shrink-0"></div>
-          <div class="flex-1 min-w-0 p-2.5 space-y-1">
-            <div class="flex items-start justify-between gap-2">
-              <div class="min-w-0">
-                <p class="text-[11px] font-bold text-slate-500">${showDate ? esc(ymd + ' (' + WEEKDAY_KO[ymdDow(ymd)] + ') ') : ''}${esc(timeTxt)}${mt.meetingType === '번개' ? ' · ⚡번개' : ''}${mt.seriesId ? ' · 🔁반복' : ''}</p>
-                <p class="font-bold text-slate-900 text-sm leading-snug break-words">${esc(mt.title)}</p>
-              </div>
-              <span class="shrink-0 text-[11px] font-extrabold px-1.5 py-0.5 rounded-full ${ddayDiff(ymd) < 0 ? 'bg-slate-100 text-slate-500' : 'bg-rose-50 text-rose-600'}">${ddayLabel(ymd)}</span>
-            </div>
-            <p class="text-[11px] text-slate-500 break-words">📍 ${esc(mt.location)} · 👥 ${att}/${mt.maxCapacity}명</p>
-            <div class="flex flex-wrap gap-1 pt-0.5">
-              <button onclick="exportMeetingToICS('${mt.id}')" class="px-2 py-1 bg-indigo-50 border border-indigo-200 rounded-md text-[11px] font-bold text-indigo-700">📲 폰 캘린더</button>
-              <button onclick="openGoogleCalendar('${mt.id}')" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-bold text-slate-700">구글캘린더</button>
-              <button onclick="openMeetingModal({mode:'edit',meetingId:'${mt.id}'})" class="px-2 py-1 bg-white border border-slate-300 rounded-md text-[11px] font-bold text-slate-700">✏️ 수정</button>
-              <button onclick="handleDeleteMeeting('${mt.id}')" class="px-2 py-1 bg-rose-50 border border-rose-200 rounded-md text-[11px] font-bold text-rose-600">삭제</button>
-            </div>
-          </div>
-        </div>`;
+      animateGrid(dir);
+    }
+    function calNav(delta) {
+      const [y, m] = calYearMonth.split('-').map(Number);
+      const d = new Date(Date.UTC(y, m - 1 + delta, 1));
+      calSetMonth(`${d.getUTCFullYear()}-${pad2(d.getUTCMonth() + 1)}`, delta);
     }
 
     function renderMonthView(gridEl) {
@@ -1776,174 +1842,38 @@
         const day = Number(dStr.slice(8));
         const holiday = getHolidayName(dStr);
         const items = (map[dStr] || []).slice().sort(byMeetingTime);
-        const isToday = dStr === today, isSel = dStr === calSelectedDate;
+        const isToday = dStr === today;
         const numColor = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
         const numCls = isToday ? 'bg-indigo-600 text-white' : numColor;
+        const lunar = inMonth ? lunarLabel(dStr) : '';
         const chips = items.slice(0, 3).map(mt => `<div style="background:${meetingColor(club, mt)};color:${chipTextColor(mt)}" class="w-full px-1 py-0.5 rounded"><div style="display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:keep-all" class="text-[9px] leading-[11px] font-bold text-left">${mt.meetingType === '번개' ? '⚡' : ''}${esc(mt.title)}</div></div>`).join('');
         const more = items.length > 3 ? `<div class="text-[9px] font-bold text-slate-500 text-left">+${items.length - 3}</div>` : '';
+        const sub = holiday ? `<span class="w-full truncate text-[8px] leading-none font-bold text-rose-500 text-center">${esc(holiday)}</span>`
+          : (lunar ? `<span class="w-full truncate text-[8px] leading-none text-slate-400 text-center">${lunar}</span>` : '');
         html += `
-          <button onclick="calCellClick('${dStr}')" class="min-h-[76px] p-0.5 rounded-lg flex flex-col items-stretch justify-start gap-0.5 transition border ${isSel ? 'border-indigo-500 ring-1 ring-indigo-400 bg-indigo-50' : 'border-slate-200/70 bg-white hover:bg-slate-50'} ${inMonth ? '' : 'opacity-40'}">
+          <button data-date="${dStr}" onclick="calCellClick('${dStr}')" class="min-h-[64px] p-0.5 rounded-lg flex flex-col items-stretch justify-start gap-0.5 transition border border-slate-200/70 bg-white hover:bg-slate-50 ${inMonth ? '' : 'opacity-40'}">
             <span class="self-center w-5 h-5 rounded-full flex items-center justify-center text-[11px] font-extrabold ${numCls}">${day}</span>
-            ${holiday ? `<span class="w-full truncate text-[8px] leading-none font-bold text-rose-500 text-center">${esc(holiday)}</span>` : ''}
-            ${chips}${more}
+            ${sub}${chips}${more}
           </button>`;
       }
       gridEl.innerHTML = html;
     }
     window.calCellClick = function(dStr) {
-      if (!dStr.startsWith(calYearMonth)) { calYearMonth = dStr.slice(0, 7); calSelectedDate = dStr; syncReportPeriod(); renderAll(); }
-      else window.selectCalendarDate(dStr);
+      if (Date.now() - calSwipedAt < 400) return;   // 밀기 직후의 클릭은 무시
+      openDay(dStr);
     };
 
-    function weekRangeOf(anchor) {
-      const start = ymdAdd(anchor, -ymdDow(anchor));
-      return [start, ymdAdd(start, 6)];
-    }
-    function renderWeekView(el) {
-      const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
-      const [start] = weekRangeOf(anchor);
-      const today = todayStr();
-      let html = '';
-      for (let i = 0; i < 7; i++) {
-        const d = ymdAdd(start, i);
-        const dow = ymdDow(d), holiday = getHolidayName(d);
-        const items = meetingsOn(d);
-        const color = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
-        const isSel = d === calSelectedDate, isToday = d === today;
-        html += `
-          <div class="flex gap-2 p-1.5 rounded-xl ${isSel ? 'bg-indigo-50 border border-indigo-200' : 'border border-transparent'}">
-            <button onclick="selectCalendarDate('${d}')" class="w-11 shrink-0 flex flex-col items-center pt-0.5">
-              <span class="text-[11px] font-bold ${color}">${WEEKDAY_KO[dow]}</span>
-              <span class="w-7 h-7 rounded-full flex items-center justify-center text-sm font-extrabold ${isToday ? 'bg-indigo-600 text-white' : color}">${Number(d.slice(8))}</span>
-              ${holiday ? `<span class="text-[8px] font-bold text-rose-500 leading-tight text-center">${esc(holiday)}</span>` : ''}
-            </button>
-            <div class="flex-1 min-w-0 space-y-1.5">
-              ${items.length ? items.map(mt => eventCardHtml(mt, false)).join('') : `<p class="text-[11px] text-slate-400 py-2">일정 없음</p>`}
-            </div>
-            <button onclick="openMeetingModal({type:'정기',date:'${d}'})" class="shrink-0 self-start w-7 h-7 rounded-full bg-slate-100 hover:bg-slate-200 text-slate-600 font-extrabold text-sm" aria-label="일정 추가">＋</button>
-          </div>`;
-      }
-      el.innerHTML = html;
-    }
-    function renderAgendaView(el) {
-      const list = meetingsForCalendar().filter(mt => mtYmd(mt).startsWith(calYearMonth)).sort(byMeetingTime);
-      const bad = meetingsForCalendar().filter(mt => !mtYmd(mt));
-      if (!list.length && !bad.length) {
-        el.innerHTML = `<p class="text-center text-xs text-slate-400 py-8">이 달에 등록된 일정이 없습니다.</p>`;
-        return;
-      }
-      const groups = {};
-      list.forEach(mt => { const k = mtYmd(mt); (groups[k] = groups[k] || []).push(mt); });
-      const today = todayStr();
-      let html = Object.keys(groups).sort().map(d => {
-        const dow = ymdDow(d), holiday = getHolidayName(d);
-        const color = (dow === 0 || holiday) ? 'text-rose-600' : (dow === 6 ? 'text-blue-600' : 'text-slate-800');
-        return `
-          <div class="space-y-1.5">
-            <div class="flex items-center gap-1.5">
-              <span class="text-sm font-extrabold ${color}">${Number(d.slice(8))}일 ${WEEKDAY_KO[dow]}</span>
-              ${holiday ? `<span class="text-[10px] font-bold text-rose-500">${esc(holiday)}</span>` : ''}
-              ${d === today ? '<span class="text-[10px] font-extrabold px-1.5 py-0.5 rounded-full bg-indigo-600 text-white">오늘</span>' : ''}
-            </div>
-            ${groups[d].map(mt => eventCardHtml(mt, false)).join('')}
-          </div>`;
-      }).join('');
-      if (bad.length) {
-        html += `<div class="space-y-1.5"><p class="text-xs font-extrabold text-rose-600">⚠️ 날짜 확인 필요 (${bad.length})</p>${bad.map(mt => `
-          <div class="flex items-center justify-between bg-rose-50 border border-rose-200 rounded-xl p-2.5">
-            <span class="text-xs font-bold text-slate-800 truncate">${esc(mt.title)} <span class="text-slate-400 font-normal">(${esc(mt.dateStr || '일시 없음')})</span></span>
-            <button onclick="openMeetingModal({mode:'edit',meetingId:'${mt.id}'})" class="shrink-0 ml-2 px-2 py-1 bg-white border border-rose-300 rounded-md text-[11px] font-bold text-rose-700">✏️ 날짜 고치기</button>
-          </div>`).join('')}</div>`;
-      }
-      el.innerHTML = html;
-    }
-    function renderSelectedDayPanel() {
-      const bar = document.getElementById('calendar-selected-bar');
-      if (!bar) return;
-      if (calView !== 'month' || !ymdParts(calSelectedDate)) { bar.classList.add('hidden'); return; }
-      const txt = document.getElementById('cal-selected-date-text');
-      const holEl = document.getElementById('cal-selected-holiday-text');
-      const evEl = document.getElementById('cal-selected-day-events');
-      txt.textContent = `📅 ${calSelectedDate} (${WEEKDAY_KO[ymdDow(calSelectedDate)]})`;
-      if (holEl) holEl.textContent = getHolidayName(calSelectedDate);
-      const items = meetingsOn(calSelectedDate);
-      evEl.innerHTML = items.length
-        ? items.map(mt => eventCardHtml(mt, false)).join('')
-        : `<p class="text-[11px] text-slate-400">이 날 등록된 일정이 없습니다. 오른쪽 버튼으로 바로 만드세요.</p>`;
-      bar.classList.remove('hidden');
-    }
-    function renderUpcoming() {
-      const el = document.getElementById('calendar-upcoming');
-      if (!el) return;
-      const today = todayStr();
-      const list = meetingsForCalendar().filter(mt => { const k = mtYmd(mt); return k && k >= today; }).sort(byMeetingTime).slice(0, 3);
-      if (calView !== 'month' || !list.length) { el.innerHTML = ''; return; }
-      const club = getActiveClub();
-      el.innerHTML = `
-        <div class="bg-white border border-slate-200 rounded-xl p-2.5 space-y-1.5">
-          <p class="text-[11px] font-extrabold text-slate-500">⏰ 다가오는 일정</p>
-          ${list.map(mt => `
-            <button onclick="calJumpTo('${mtYmd(mt)}')" class="w-full flex items-center gap-2 text-left">
-              <span style="background:${meetingColor(club, mt)}" class="w-2 h-2 rounded-full shrink-0"></span>
-              <span class="text-[11px] font-extrabold text-rose-600 w-9 shrink-0">${ddayLabel(mtYmd(mt))}</span>
-              <span class="flex-1 min-w-0 truncate text-xs font-bold text-slate-800">${esc(mt.title)}</span>
-              <span class="text-[11px] text-slate-400 shrink-0">${esc(mtYmd(mt).slice(5).replace('-', '/'))} ${esc(mtStartHM(mt))}</span>
-            </button>`).join('')}
-        </div>`;
-    }
-
-    // renderAll()에서 호출되는 달력 전체 그리기
     function renderCalendar() {
       const labelEl = document.getElementById('cal-current-label');
       if (!labelEl) return;
       const [y, m] = calYearMonth.split('-').map(Number);
-      if (calView === 'week') {
-        const anchor = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
-        const [ws, we] = weekRangeOf(anchor);
-        const ap = ymdParts(anchor);
-        const firstDow = ymdDow(`${anchor.slice(0, 7)}-01`);
-        labelEl.textContent = `${ap[0]}년 ${ap[1]}월 ${Math.ceil((ap[2] + firstDow) / 7)}주`;
-        labelEl.title = `${ws} ~ ${we}`;
-      } else {
-        labelEl.textContent = `${y}년 ${m}월`;
-        labelEl.title = '';
-      }
+      labelEl.textContent = `${y}년 ${m}월`;
       const picker = document.getElementById('cal-month-picker');
       if (picker) picker.value = calYearMonth;
-
-      const scopeBtn = document.getElementById('btn-cal-scope-toggle');
-      if (calScope === 'month') {
-        scopeBtn.textContent = `📋 ${m}월만`;
-        scopeBtn.className = "shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-extrabold rounded-lg border border-indigo-600 bg-indigo-600 text-white transition";
-      } else {
-        scopeBtn.textContent = "📋 전체";
-        scopeBtn.className = "shrink-0 whitespace-nowrap px-2 py-1.5 text-xs font-bold rounded-lg border border-slate-300 bg-slate-50 hover:bg-slate-100 text-slate-700 transition";
-      }
-      const gridBtn = document.getElementById('btn-cal-toggle-grid');
-      gridBtn.textContent = calPanelOpen ? '접기' : '펴기';
-      ['month', 'week', 'agenda'].forEach(v => {
-        const b = document.getElementById('btn-cal-view-' + v);
-        if (b) b.className = 'py-1 rounded-md transition ' + (calView === v ? 'bg-white shadow-sm text-indigo-700' : 'text-slate-500');
-      });
-
-      const panel = document.getElementById('calendar-grid-panel');
-      panel.classList.toggle('hidden', !calPanelOpen);
-
-      const head = document.getElementById('cal-weekday-head');
-      const gridEl = document.getElementById('calendar-days-grid');
-      const weekEl = document.getElementById('calendar-week-view');
-      const agendaEl = document.getElementById('calendar-agenda-view');
-      head.classList.toggle('hidden', calView !== 'month');
-      gridEl.classList.toggle('hidden', calView !== 'month');
-      weekEl.classList.toggle('hidden', calView !== 'week');
-      agendaEl.classList.toggle('hidden', calView !== 'agenda');
-      if (calPanelOpen) {
-        if (calView === 'month') renderMonthView(gridEl);
-        else if (calView === 'week') renderWeekView(weekEl);
-        else renderAgendaView(agendaEl);
-        renderSelectedDayPanel();
-        renderUpcoming();
-      }
+      renderMonthView(document.getElementById('calendar-days-grid'));
+      const sd = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
+      const addBtn = document.getElementById('btn-cal-add-bar');
+      if (addBtn) addBtn.textContent = `${Number(sd.slice(5, 7))}월 ${Number(sd.slice(8, 10))}일에 추가 ＋`;
       fitStickyBars();
     }
     function renderSubGroupChips() { renderCalendar(); }   // renderAll()과의 호환용 이름
@@ -1953,33 +1883,29 @@
     document.getElementById('btn-cal-next-month').addEventListener('click', () => calNav(1));
     document.getElementById('btn-cal-today').addEventListener('click', () => {
       const t = todayStr();
-      calYearMonth = t.slice(0, 7); calSelectedDate = t;
-      syncReportPeriod(); renderAll();
+      const dir = t.slice(0, 7) > calYearMonth ? 1 : (t.slice(0, 7) < calYearMonth ? -1 : 0);
+      calSetMonth(t.slice(0, 7), dir);
     });
-    document.getElementById('btn-cal-scope-toggle').addEventListener('click', () => {
-      calScope = calScope === 'month' ? 'all' : 'month';
-      const repSel = document.getElementById('report-period-select');
-      if (calScope === 'all' && repSel) repSel.value = 'ALL'; else syncReportPeriod();
-      renderAll();
-    });
-    document.getElementById('btn-cal-toggle-grid').addEventListener('click', () => { calPanelOpen = !calPanelOpen; saveCalUI(); renderCalendar(); });
-    ['month', 'week', 'agenda'].forEach(v => document.getElementById('btn-cal-view-' + v).addEventListener('click', () => setCalView(v)));
     document.getElementById('cal-month-picker').addEventListener('change', (ev) => {
       const v = ev.target.value;
-      if (/^\d{4}-\d{2}$/.test(v)) {
-        calYearMonth = v;
-        if (calView === 'week' || !calSelectedDate.startsWith(v)) calSelectedDate = (v === todayStr().slice(0, 7)) ? todayStr() : v + '-01';
-        syncReportPeriod(); renderAll();
-      }
+      if (/^\d{4}-\d{2}$/.test(v)) calSetMonth(v, v > calYearMonth ? 1 : -1);
     });
-    // 좌우로 밀어서 이동 (스와이프)
+    document.getElementById('btn-cal-add-bar').addEventListener('click', () => {
+      const d = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
+      requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: d }));
+    });
+    // 좌우로 밀어서(스와이프) 이전/다음 달, 가로 휠도 지원
     (function() {
-      const surf = document.getElementById('calendar-surface');
+      const panel = document.getElementById('calendar-grid-panel');
       let sx = 0, sy = 0, t0 = 0;
-      surf.addEventListener('touchstart', e => { const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true });
-      surf.addEventListener('touchend', e => {
+      panel.addEventListener('touchstart', e => { const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true });
+      panel.addEventListener('touchend', e => {
         const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
-        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - t0 < 800) calNav(dx < 0 ? 1 : -1);
+        if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - t0 < 900) { calSwipedAt = Date.now(); calNav(dx < 0 ? 1 : -1); }
+      }, { passive: true });
+      let wheelAt = 0;
+      panel.addEventListener('wheel', e => {
+        if (Math.abs(e.deltaX) > Math.abs(e.deltaY) && Math.abs(e.deltaX) > 30 && Date.now() - wheelAt > 450) { wheelAt = Date.now(); calNav(e.deltaX > 0 ? 1 : -1); }
       }, { passive: true });
     })();
 
@@ -1991,22 +1917,16 @@
       const titleEl = document.getElementById('meetings-section-title');
 
       const currentSub = getSubGroup(club.activeSubGroupId);
-      titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 일정` : `${currentSub.name} 모임 일정`;
+      titleEl.textContent = fmtDayTitle(dayScreenDate);
 
       const filteredMeetings = club.meetings.filter(mt => {
         if (club.activeSubGroupId !== "all" && mt.subGroupId !== club.activeSubGroupId && mt.subGroupId !== "all") return false;
+        if (mtYmd(mt) !== dayScreenDate) return false;
         if (calScope === 'month' && mtYmd(mt) && !mtYmd(mt).startsWith(calYearMonth)) return false;
         return true;
       });
 
-      // 가까운 일정부터(지난 일정은 뒤로)
-      const _today = todayStr();
-      filteredMeetings.sort((a, b) => {
-        const ka = mtSortKey(a), kb = mtSortKey(b);
-        const ua = ka.slice(0, 10) >= _today, ub = kb.slice(0, 10) >= _today;
-        if (ua !== ub) return ua ? -1 : 1;
-        return ua ? (ka < kb ? -1 : ka > kb ? 1 : 0) : (ka < kb ? 1 : ka > kb ? -1 : 0);
-      });
+      filteredMeetings.sort(byMeetingTime);
       badge.textContent = filteredMeetings.length;
 
       if (!club.id) {
@@ -2027,8 +1947,8 @@
         container.innerHTML = `
           <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
             <span class="text-3xl block mb-2">${esc(club.icon)}</span>
-            <p class="text-sm font-semibold">${esc(club.name)}에 등록된 모임 일정이 없습니다.</p>
-            <p class="text-xs mt-1">상단의 '+ 모임 개설'을 눌러 첫 모임을 열어보세요!</p>
+            <p class="text-sm font-semibold">이 날은 등록된 모임이 없습니다.</p>
+            <p class="text-xs mt-1">위의 '+ 정기 개설' 또는 '⚡ 번개'로 이 날 모임을 만들어 보세요.</p>
           </div>
         `;
         return;
@@ -3355,6 +3275,7 @@
     function fitStickyBars() {
       const h = document.getElementById('app-header'), b = document.getElementById('calendar-bar');
       if (h && b) b.style.top = h.offsetHeight + 'px';
+      const yc = document.getElementById('year-controls'); if (yc && h) yc.style.top = h.offsetHeight + 'px';
     }
     window.addEventListener('resize', fitStickyBars);
     window.addEventListener('load', fitStickyBars);
@@ -3916,7 +3837,7 @@
       document.getElementById('meeting-repeat-block').classList.toggle('hidden', !!mt);
       document.getElementById('meeting-series-note').classList.toggle('hidden', !(mt && mt.seriesId));
       refreshRepeatOptions(); syncAllDayUI(); updateMeetingFormPreview();
-      document.getElementById('modal-create-meeting').classList.remove('hidden');
+      if (layerStack[layerStack.length - 1] !== 'form') pushLayer('form');
     };
     function setMeetingTypeUI(type) {
       document.getElementById('input-meeting-type').value = type;
@@ -3932,11 +3853,9 @@
     }
     document.getElementById('btn-type-regular').addEventListener('click', () => setMeetingTypeUI('정기'));
     document.getElementById('btn-type-flash').addEventListener('click', () => setMeetingTypeUI('번개'));
-    document.getElementById('btn-open-create-meeting').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기' })));
-    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개' })));
-    document.getElementById('btn-cal-quick-regular').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: calSelectedDate })));
-    document.getElementById('btn-cal-quick-flash').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개', date: calSelectedDate })));
-    ['btn-close-meeting-modal', 'btn-cancel-create-meeting'].forEach(id => document.getElementById(id).addEventListener('click', () => document.getElementById('modal-create-meeting').classList.add('hidden')));
+    document.getElementById('btn-open-create-meeting').addEventListener('click', () => requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: dayScreenDate })));
+    document.getElementById('btn-open-flash-meeting').addEventListener('click', () => requireAdminClub('번개 모임', () => openMeetingModal({ type: '번개', date: dayScreenDate })));
+    ['btn-close-meeting-modal', 'btn-cancel-create-meeting'].forEach(id => document.getElementById(id).addEventListener('click', () => closeMeetingForm()));
     document.getElementById('input-meeting-date').addEventListener('change', () => { refreshRepeatOptions(); updateMeetingFormPreview(); });
     document.getElementById('input-meeting-allday').addEventListener('change', syncAllDayUI);
     document.getElementById('input-meeting-repeat').addEventListener('change', updateMeetingFormPreview);
@@ -3976,9 +3895,8 @@
         mt.title = title; mt.meetingType = type; mt.subGroupId = subGroupId; mt.dateStr = dateStr; mt.endTime = end;
         mt.location = location || '장소 미정'; mt.maxCapacity = cap; mt.remind = remindVal;
         saveState();
-        document.getElementById('modal-create-meeting').classList.add('hidden');
-        calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7); syncReportPeriod();
-        renderAll();
+        calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7);
+        goCalendar();
         showToast("일정이 수정되었습니다.");
         return;
       }
@@ -4000,9 +3918,8 @@
       });
       if (!made) { showToast("⚠️ 같은 이름·같은 날짜의 일정이 이미 있습니다."); return; }
       saveState();
-      document.getElementById('modal-create-meeting').classList.add('hidden');
-      calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7); syncReportPeriod();
-      renderAll();
+      calSelectedDate = ymd; calYearMonth = ymd.slice(0, 7);
+      goCalendar();
       showToast(made > 1 ? `🔁 반복 일정 ${made}개가 등록되었습니다.${skipped ? ` (중복 ${skipped}개 제외)` : ''}` : "새 모임 일정이 등록되었습니다!");
     });
 
@@ -4159,7 +4076,7 @@
 
 
     // 초기 구동
-    renderAll();
+    applyLayers();
     fitStickyBars();
     startupReminder();
   </script>
