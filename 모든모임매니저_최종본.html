@@ -618,7 +618,7 @@
   <!-- [모달 3-1] 회원 일괄 가져오기 모달 (밴드/카톡 텍스트 붙여넣기) -->
   <!-- ============================================== -->
   <div id="modal-batch-import" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <div>
           <h3 class="font-extrabold text-slate-900 text-base">📋 회원 명단 일괄 가져오기</h3>
@@ -634,8 +634,25 @@
             <!-- 동적 주입 -->
           </select>
         </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button type="button" id="btn-ocr-camera" class="py-2.5 px-2 bg-indigo-50 hover:bg-indigo-100 text-indigo-800 border border-indigo-200 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1 transition">
+            <span>📷</span>
+            <span>명부 찍기</span>
+          </button>
+          <button type="button" id="btn-ocr-gallery" class="py-2.5 px-2 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-200 rounded-xl text-xs font-extrabold flex items-center justify-center space-x-1 transition">
+            <span>🖼️</span>
+            <span>갤러리 사진</span>
+          </button>
+          <input id="input-ocr-camera" type="file" accept="image/*" capture="environment" class="hidden">
+          <input id="input-ocr-gallery" type="file" accept="image/*" class="hidden">
+        </div>
+        <div id="ocr-status-box" class="hidden bg-amber-50 border border-amber-200 text-amber-900 rounded-xl px-3 py-2 text-xs font-bold flex items-center justify-between">
+          <span id="ocr-status-text">🔍 사진 글자 읽는 중...</span>
+          <span id="ocr-progress-pct" class="text-indigo-700">0%</span>
+        </div>
+
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">명단 텍스트 붙여넣기</label>
+          <label class="block font-semibold text-slate-700 mb-1">명단 텍스트 (직접 붙여넣기 또는 사진 인식 결과)</label>
           <textarea id="textarea-batch-input" rows="5" placeholder="밴드·카톡·경조사 명단을 그대로 붙여넣으세요.&#10;&#10;[지원 형식]&#10;하주희 65골 150,000&#10;허기주 한체복교 200,000 화환&#10;홍길동 010-1234-5678 / 홍길동, 이순신" class="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none text-xs leading-relaxed resize-none"></textarea>
         </div>
 
@@ -1417,14 +1434,80 @@
       return normalizeState(JSON.parse(JSON.stringify(defaultState)));
     }
 
+    // --- [대용량 폰 메모리 저장소: IndexedDB + localStorage 자동 연동] ---
+    const IDB_NAME = 'MomoLargeDB';
+    const IDB_STORE = 'appData';
+    let idbReady = false;
+
+    function openMomoDB() {
+      return new Promise((resolve, reject) => {
+        if (!window.indexedDB) return reject(new Error('No IndexedDB'));
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = () => {
+          const db = req.result;
+          if (!db.objectStoreNames.contains(IDB_STORE)) {
+            db.createObjectStore(IDB_STORE);
+          }
+        };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbGet(key) {
+      const db = await openMomoDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readonly');
+        const req = tx.objectStore(IDB_STORE).get(key);
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function idbSet(key, val) {
+      const db = await openMomoDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, 'readwrite');
+        tx.objectStore(IDB_STORE).put(val, key);
+        tx.oncomplete = () => resolve(true);
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function initLargeStorage() {
+      try {
+        const stored = await idbGet('main');
+        idbReady = true;
+        if (stored && typeof stored === 'object' && Array.isArray(stored.clubs)) {
+          appState = normalizeState(stored);
+          renderAll();
+        } else if (appState && Array.isArray(appState.clubs) && appState.clubs.length > 0) {
+          // 기존 localStorage 자료를 대용량 IndexedDB로 자동 이관
+          await idbSet('main', JSON.parse(JSON.stringify(appState)));
+        }
+      } catch (e) {
+        console.warn("IndexedDB 초기화 실패, localStorage 유지", e);
+      }
+    }
+
     let saveWarned = false;
     function saveState() {
       try { dailySnapshot(); } catch (e) {}
+      let idbSaved = false;
+      if (window.indexedDB) {
+        idbSet('main', JSON.parse(JSON.stringify(appState))).catch(err => {
+          console.warn("IndexedDB 저장 실패", err);
+        });
+        idbSaved = true;
+      }
       try {
         localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
       } catch (e) {
-        console.warn("로컬스토리지 저장 실패", e);
-        if (!saveWarned) { saveWarned = true; showToast("⚠️ 저장에 실패했습니다. 💾 백업을 먼저 해 두세요."); }
+        console.warn("로컬스토리지 용량 초과 또는 저장 실패", e);
+        if (!idbSaved && !saveWarned) {
+          saveWarned = true;
+          showToast("⚠️ 저장에 실패했습니다. 💾 백업을 먼저 해 두세요.");
+        }
       }
     }
 
@@ -1633,7 +1716,6 @@
       }).join('');
     }
 
-    { const by = document.getElementById('btn-open-year'); if (by) by.addEventListener('click', openYear); }
     document.getElementById('btn-year-back').addEventListener('click', () => goCalendar());
     document.getElementById('btn-day-back').addEventListener('click', () => popLayer());
     document.getElementById('btn-year-prev').addEventListener('click', () => { yearScreenYear--; renderYearScreen(); });
@@ -2884,6 +2966,111 @@
 
     document.getElementById('textarea-batch-input').addEventListener('input', updateBatchPreview);
 
+    // --- [카메라 / 갤러리 명부 사진 OCR 글자 인식] ---
+    let tesseractPromise = null;
+    function loadTesseract() {
+      if (window.Tesseract) return Promise.resolve(window.Tesseract);
+      if (tesseractPromise) return tesseractPromise;
+      tesseractPromise = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js';
+        s.onload = () => resolve(window.Tesseract);
+        s.onerror = () => { tesseractPromise = null; reject(new Error('OCR 엔진 로드 실패 (인터넷 연결 확인)')); };
+        document.head.appendChild(s);
+      });
+      return tesseractPromise;
+    }
+
+    function preprocessImageForOCR(file) {
+      return new Promise((resolve, reject) => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(url);
+          const maxW = 1600;
+          const scale = img.width > maxW ? (maxW / img.width) : 1;
+          const w = Math.round(img.width * scale);
+          const h = Math.round(img.height * scale);
+          const canvas = document.createElement('canvas');
+          canvas.width = w;
+          canvas.height = h;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, w, h);
+          // 그레이스케일 + 대비 강조로 한글 인식률 향상
+          const imgData = ctx.getImageData(0, 0, w, h);
+          const d = imgData.data;
+          for (let i = 0; i < d.length; i += 4) {
+            const g = 0.299 * d[i] + 0.587 * d[i + 1] + 0.114 * d[i + 2];
+            const cVal = Math.min(255, Math.max(0, (g - 128) * 1.35 + 128));
+            d[i] = d[i + 1] = d[i + 2] = cVal;
+          }
+          ctx.putImageData(imgData, 0, 0);
+          resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('이미지 열기 실패')); };
+        img.src = url;
+      });
+    }
+
+    async function handleOcrFile(file) {
+      if (!file) return;
+      const statusBox = document.getElementById('ocr-status-box');
+      const statusTxt = document.getElementById('ocr-status-text');
+      const pctEl = document.getElementById('ocr-progress-pct');
+      const ta = document.getElementById('textarea-batch-input');
+
+      statusBox.classList.remove('hidden');
+      statusTxt.textContent = '🔍 사진 글자 읽는 중... (최초 1회는 몇 초 걸립니다)';
+      pctEl.textContent = '5%';
+
+      try {
+        const [Tesseract, dataUrl] = await Promise.all([
+          loadTesseract(),
+          preprocessImageForOCR(file)
+        ]);
+        const result = await Tesseract.recognize(dataUrl, 'kor+eng', {
+          logger: m => {
+            if (m.status === 'recognizing text' && typeof m.progress === 'number') {
+              pctEl.textContent = Math.round(m.progress * 100) + '%';
+            }
+          }
+        });
+        const rawText = (result && result.data && result.data.text) ? result.data.text.trim() : '';
+        if (!rawText) {
+          showToast('사진에서 글자를 찾지 못했습니다. 더 밝고 선명하게 찍어보세요.');
+        } else {
+          const cleanLines = rawText
+            .split(/[\r\n]+/)
+            .map(l => l.replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .join('\n');
+          ta.value = ta.value.trim() ? (ta.value.trim() + '\n' + cleanLines) : cleanLines;
+          updateBatchPreview();
+          showToast('✅ 사진 글자 추출 완료! 오타가 있으면 살짝 고친 뒤 등록하세요.');
+        }
+      } catch (err) {
+        console.warn('OCR 오류:', err);
+        showToast('⚠️ 글자 인식에 실패했습니다. 인터넷 연결을 확인하거나 갤러리 텍스트 복사를 이용해 주세요.');
+      } finally {
+        statusBox.classList.add('hidden');
+      }
+    }
+
+    document.getElementById('btn-ocr-camera').addEventListener('click', () => {
+      const inp = document.getElementById('input-ocr-camera');
+      inp.value = '';
+      inp.click();
+    });
+    document.getElementById('btn-ocr-gallery').addEventListener('click', () => {
+      const inp = document.getElementById('input-ocr-gallery');
+      inp.value = '';
+      inp.click();
+    });
+    document.getElementById('input-ocr-camera').addEventListener('change', e => handleOcrFile(e.target.files[0]));
+    document.getElementById('input-ocr-gallery').addEventListener('change', e => handleOcrFile(e.target.files[0]));
+
+
+
     document.getElementById('btn-submit-batch-import').addEventListener('click', () => {
       const club = getActiveClub();
       const subGroupId = document.getElementById('input-batch-subgroup').value;
@@ -4070,6 +4257,7 @@
       saveState();
       document.getElementById('modal-batch-rsvp').classList.add('hidden');
       renderAll();
+    initLargeStorage();
       showToast(`✅ 참석자 ${Object.keys(newAtt).length}명이 확정되었습니다.`);
     });
 
