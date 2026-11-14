@@ -64,6 +64,9 @@
     input:not([type=checkbox]):not([type=radio]):not([type=hidden]), select { min-height: 46px; }
     input[type=checkbox] { width: 20px; height: 20px; }
     ::placeholder { font-size: 15px; }
+    /* 10억대 큰 숫자가 나오면 금액 글자를 줄여서 칸에 맞춤 */
+    .big-num td:not(.lbl), .big-num th:not(.lbl) { font-size: 10px !important; }
+    .big-num td.whitespace-nowrap:not(.lbl) { font-size: 9px !important; }
   </style>
 </head>
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
@@ -545,9 +548,8 @@
           <label class="block font-semibold text-slate-700 mb-1">장소</label>
           <input id="input-meeting-loc" type="text" placeholder="예: 가평 베네스트 GC" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
         </div>
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">최대 정원 (선착순)</label>
-          <input id="input-meeting-cap" type="number" value="8" min="2" max="200" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        <div class="hidden">
+          <input id="input-meeting-cap" type="number" value="8">
         </div>
       </div>
       <div class="flex space-x-2 pt-2 sticky bottom-0 bg-white pb-3 border-t border-slate-100">
@@ -1984,7 +1986,7 @@
               <div class="min-w-0 flex-1">
                 <p class="text-[11px] font-bold text-slate-500">${esc(timeTxt)}${mt.meetingType === '번개' ? ' · ⚡번개' : ''}${mt.seriesId ? ' · 🔁' : ''}</p>
                 <p class="text-sm font-bold text-slate-900 break-words">${esc(mt.title)}</p>
-                <p class="text-[11px] text-slate-500 break-words">📍 ${esc(mt.location)} · 👥 ${attendCount(mt)}/${mt.maxCapacity}명</p>
+                <p class="text-[11px] text-slate-500 break-words">📍 ${esc(mt.location)} · 👥 ${attendCount(mt)}/${capOf(mt)}명</p>
               </div></div>`;
         }).join('');
         return `<button onclick="openDay('${ymd}')" ${up ? 'data-upcoming="1"' : ''} style="scroll-margin-top:70px" class="block w-full text-left bg-white border border-slate-200 rounded-2xl p-3 space-y-2 shadow-xs hover:bg-slate-50">
@@ -2147,6 +2149,7 @@
     }
     function byMeetingTime(a, b) { const ka = mtSortKey(a), kb = mtSortKey(b); return ka < kb ? -1 : ka > kb ? 1 : 0; }
     function meetingsOn(ymd) { return meetingsForCalendar().filter(mt => mtYmd(mt) === ymd).sort(byMeetingTime); }
+    function capOf(mt) { try { return Math.max(1, getActiveClub().members.length); } catch (e) { return 1; } }
     function attendCount(mt) { return Object.keys(mt.attendees || {}).filter(id => mt.attendees[id] === '참석').length; }
     function chipTextColor(mt) { return mt.meetingType === '번개' ? '#451a03' : '#ffffff'; }
 
@@ -2329,7 +2332,7 @@
       container.innerHTML = filteredMeetings.map(meeting => {
         const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
         const waitingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "대기");
-        const isFull = attendingIds.length >= meeting.maxCapacity;
+        const isFull = attendingIds.length >= capOf(meeting);
         const groupInfo = getSubGroup(meeting.subGroupId);
         const isOrgWide = meeting.subGroupId === "all";
 
@@ -2375,7 +2378,7 @@
               <div class="flex items-center justify-between pt-1">
                 <span class="text-slate-400">👥 참석 현황:</span>
                 <span class="font-bold ${isFull ? 'text-amber-600' : 'text-indigo-600'}">
-                  ${attendingIds.length} / ${meeting.maxCapacity}명
+                  ${attendingIds.length} / ${capOf(meeting)}명
                 </span>
               </div>
             </div>
@@ -2498,6 +2501,11 @@
       const fm = n => Number(n).toLocaleString();
       const bd = 'border border-slate-800';
       const mid = activeMeeting.id;
+      const sgn = n => n < 0 ? '- ' + fm(-n) : fm(n);
+      const lay = amtLayout(
+        [...incs.map(x => fm(x.amount)), fm(totalIncome)],
+        [...exps.map(x => fm(x.amount)), fm(totalSpent), sgn(balance), sgn(carry), sgn(grand)]
+      );
 
       const cards = `
         <div class="grid grid-cols-3 gap-2 text-center">
@@ -2540,18 +2548,18 @@
             <span>${esc(fmtMeetingWhen(activeMeeting))}</span>
             <span class="truncate ml-2">${esc(club.name)}</span>
           </div>
-          <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed">
-            <colgroup><col style="width:18%"><col style="width:23%"><col style="width:19%"><col style="width:24%"><col style="width:16%"></colgroup>
+          <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
+            ${lay.colgroup}
             <thead>
               <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
               <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">성명</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="font-extrabold">
-              <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
-              <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${balance < 0 ? '- ' + fm(-balance) : fm(balance)}</td></tr>
-              <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${carry < 0 ? '- ' + fm(-carry) : fm(carry)}</td></tr>
-              <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${grand < 0 ? 'text-rose-600' : ''}">${grand < 0 ? '- ' + fm(-grand) : fm(grand)}</td></tr>
+              <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} lbl text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} lbl text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
+              <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
+              <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">이 월 금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
+              <tr class="h-11"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
             </tfoot>
           </table>
           <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 앞선 모임들의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈이 있으면 수입란에 적어 주세요.</p>
@@ -2571,6 +2579,18 @@
     }
 
     function carryBarHtml() { return ''; }
+    // 결산서 금액 칸 너비 자동 조절 (숫자가 길수록 금액 칸을 넓힘, 10억대도 들어가게)
+    function amtLayout(incStrs, expStrs) {
+      const need = s => { const t = String(s); const dig = (t.match(/\d/g) || []).length, com = (t.match(/,/g) || []).length; return dig * 7.4 + com * 3.6 + (/^-/.test(t) ? 10 : 0) + 10; };
+      const maxPx = arr => Math.max(0, ...arr.map(need));
+      const mi = maxPx(incStrs), me = maxPx(expStrs);
+      const W = Math.max(260, Math.min(window.innerWidth || 390, 640) - 60);
+      const huge = Math.max(mi, me) > 78, k = huge ? 0.91 : 1;
+      const a3 = Math.max(19, Math.ceil(mi * k / W * 100)), a5 = Math.max(18, Math.ceil(me * k / W * 100));
+      const rem = 100 - a3 - a5, f = n => (rem * n / 65).toFixed(1);
+      const cg = `<colgroup><col style="width:${f(16)}%"><col style="width:${f(27)}%"><col style="width:${a3}%"><col style="width:${f(22)}%"><col style="width:${a5}%"></colgroup>`;
+      return { colgroup: cg, cls: huge ? ' big-num' : '' };
+    }
     function settleCarryFor(mt) {
       const club = getActiveClub();
       const start = 0;
@@ -2938,7 +2958,7 @@
       const memberName = getMember(memberId).name;
 
       if (status === "참석") {
-        if (attendingIds.length >= meeting.maxCapacity && meeting.attendees[memberId] !== "참석") {
+        if (attendingIds.length >= capOf(meeting) && meeting.attendees[memberId] !== "참석") {
           meeting.attendees[memberId] = "대기";
           showToast(`정원 초과로 ${memberName}님이 '대기'로 등록되었습니다.`);
         } else {
@@ -4352,6 +4372,11 @@
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
       const bd = 'border border-slate-800';
+      const sgn = n => n < 0 ? '- ' + fm(-n) : fm(n);
+      const lay = amtLayout(
+        [...incRows.map(x => fm(x.amt)), fm(incSum)],
+        [...expRows.map(x => fm(x.amt)), fm(r.totalExpense), sgn(diff), sgn(r.carryOver), sgn(r.balance)]
+      );
       let bodyRows = '';
       for (let i = 0; i < nRows; i++) {
         const a = incRows[i], e = expRows[i];
@@ -4371,18 +4396,18 @@
           <span>${todayStr().replace(/-/g, '.')}</span>
           <span>${esc(r.periodText)}</span>
         </div>
-        <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed">
-          <colgroup><col style="width:18%"><col style="width:23%"><col style="width:19%"><col style="width:24%"><col style="width:16%"></colgroup>
+        <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
+          ${lay.colgroup}
           <thead>
             <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
             <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">성명</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
           </thead>
           <tbody>${bodyRows}</tbody>
           <tfoot class="font-extrabold">
-            <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-0.5 text-right">${fm(incSum)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(r.totalExpense)}</td></tr>
-            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${diff < 0 ? '- ' + fm(-diff) : fm(diff)}</td></tr>
-            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} px-0 text-center whitespace-nowrap text-[10px]">이월금</td><td class="${bd} px-1 text-right">${fm(r.carryOver)}</td></tr>
-            <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-0.5 text-right text-[11px] ${r.balance < 0 ? 'text-rose-600' : ''}">${r.balance < 0 ? '- ' + fm(-r.balance) : fm(r.balance)}</td></tr>
+            <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} lbl text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(incSum)}</td><td class="${bd} lbl text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(r.totalExpense)}</td></tr>
+            <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
+            <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">이 월 금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
+            <tr class="h-11"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
           </tfoot>
         </table>
         <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
@@ -4861,7 +4886,7 @@
     function mtDescription(club, mt) {
       const names = Object.keys(mt.attendees || {}).filter(id => mt.attendees[id] === '참석').map(id => getMember(id).name);
       let d = `${mt.meetingType === '번개' ? '번개 모임' : '정기 모임'} · ${club.name}`;
-      d += `\n참석 확정 ${names.length}/${mt.maxCapacity}명`;
+      d += `\n참석 확정 ${names.length}/${capOf(mt)}명`;
       if (names.length) d += ` (${names.slice(0, 15).join(', ')}${names.length > 15 ? ' 외' : ''})`;
       return d;
     }
