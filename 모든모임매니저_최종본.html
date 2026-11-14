@@ -140,7 +140,7 @@
         <span class="text-xs text-indigo-300 font-semibold tracking-wider block" id="banner-club-category">동문회 · 기수 연동</span>
         <h2 class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5" id="banner-group-title">
           <span>🏛️</span>
-          <span>한국체대 총동문회 (전체 통합)</span>
+          <span>한국체대 총동문회</span>
         </h2>
       </div>
       <button onclick="openClubSelectorModal()" class="text-xs bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full text-indigo-200 font-medium transition flex items-center space-x-1">
@@ -226,25 +226,45 @@
       <div class="flex items-center justify-between">
         <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
           <span>💰</span>
-          <span>1/N 정산 & 송금</span>
+          <span>정산 관리</span>
         </h2>
-        <button id="btn-open-add-expense" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm shadow-emerald-200 transition flex items-center space-x-1">
+        <button id="btn-open-add-expense" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-lg shadow-sm shadow-emerald-200 transition flex items-center space-x-1">
           <span>+</span>
           <span>지출 등록</span>
         </button>
+        <button id="btn-open-add-inout" class="hidden px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition flex items-center space-x-1">
+          <span>+</span>
+          <span>입출 등록</span>
+        </button>
       </div>
 
-      <!-- 정산 대상 모임 셀렉터 -->
-      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
-        <label class="block text-xs font-semibold text-slate-600">정산할 모임 선택</label>
-        <select id="settlement-meeting-select" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 font-medium">
-          <!-- 동적 주입 -->
-        </select>
+      <!-- [모임정산] / [입출정산] 전환 버튼 -->
+      <div class="grid grid-cols-2 gap-1.5 bg-slate-200/80 p-1 rounded-xl text-xs font-extrabold">
+        <button type="button" id="btn-settle-mode-meeting" onclick="setSettlementMode('meeting')" class="py-2 rounded-lg bg-white text-indigo-700 shadow-xs transition">모임정산</button>
+        <button type="button" id="btn-settle-mode-inout" onclick="setSettlementMode('inout')" class="py-2 rounded-lg text-slate-600 hover:text-slate-900 transition">입출정산</button>
       </div>
 
-      <!-- 정산 상세 카드 -->
-      <div id="settlement-detail-container" class="space-y-3">
-        <!-- 동적 렌더링 -->
+      <!-- 1) 모임정산 영역 -->
+      <div id="settlement-meeting-pane" class="space-y-3">
+        <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+          <label class="block text-xs font-semibold text-slate-600">정산할 모임 선택</label>
+          <select id="settlement-meeting-select" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 font-medium">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+        <div id="settlement-detail-container" class="space-y-3">
+          <!-- 동적 렌더링 -->
+        </div>
+      </div>
+
+      <!-- 2) 입출정산 영역 (일반 수입/지출) -->
+      <div id="settlement-inout-pane" class="hidden space-y-3">
+        <div id="inout-summary-cards" class="grid grid-cols-3 gap-2 text-center">
+          <!-- 동적 렌더링 -->
+        </div>
+        <div id="inout-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+          <!-- 동적 렌더링 -->
+        </div>
       </div>
     </div>
 
@@ -367,7 +387,7 @@
       </button>
       <button id="nav-btn-settlement" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">💰</span>
-        <span class="text-[11px]">1/N 정산</span>
+        <span class="text-[11px]">정산</span>
       </button>
       <button id="nav-btn-members" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">👥</span>
@@ -1621,6 +1641,79 @@
     ];
 
     // [화면 전환: 달력 홈 ↔ 날짜 화면 / 1년 모임내역 / 하단 메뉴 화면 / 입력 화면]
+
+    var settlementMode = 'meeting';
+    function setSettlementMode(mode) {
+      settlementMode = mode;
+      window.setSettlementMode = setSettlementMode;
+      const isMt = mode === 'meeting';
+      document.getElementById('settlement-meeting-pane').classList.toggle('hidden', !isMt);
+      document.getElementById('settlement-inout-pane').classList.toggle('hidden', isMt);
+      document.getElementById('btn-open-add-expense').classList.toggle('hidden', !isMt);
+      document.getElementById('btn-open-add-inout').classList.toggle('hidden', isMt);
+      document.getElementById('btn-settle-mode-meeting').className = isMt
+        ? 'py-2 rounded-lg bg-white text-indigo-700 shadow-xs transition'
+        : 'py-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+      document.getElementById('btn-settle-mode-inout').className = !isMt
+        ? 'py-2 rounded-lg bg-white text-indigo-700 shadow-xs transition'
+        : 'py-2 rounded-lg text-slate-600 hover:text-slate-900 transition';
+      if (!isMt) renderInOutLedger();
+    }
+    window.setSettlementMode = setSettlementMode;
+
+    function renderInOutLedger() {
+      const club = getActiveClub();
+      const cardsEl = document.getElementById('inout-summary-cards');
+      const listEl = document.getElementById('inout-list-container');
+      if (!cardsEl || !listEl) return;
+
+      const list = (club.extraLedger || []).slice().sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+      const incTotal = list.filter(x => x.type === 'income').reduce((s, x) => s + x.amount, 0);
+      const expTotal = list.filter(x => x.type !== 'income').reduce((s, x) => s + x.amount, 0);
+      const diff = incTotal - expTotal;
+
+      cardsEl.innerHTML = `
+        <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+          <p class="text-[11px] font-bold text-emerald-700">일반 수입</p>
+          <p class="text-sm font-extrabold text-emerald-900 mt-0.5">${incTotal.toLocaleString()}원</p>
+        </div>
+        <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5">
+          <p class="text-[11px] font-bold text-rose-700">일반 지출</p>
+          <p class="text-sm font-extrabold text-rose-900 mt-0.5">${expTotal.toLocaleString()}원</p>
+        </div>
+        <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
+          <p class="text-[11px] font-bold text-indigo-700">입출 차액</p>
+          <p class="text-sm font-extrabold ${diff < 0 ? 'text-rose-600' : 'text-indigo-900'} mt-0.5">${diff.toLocaleString()}원</p>
+        </div>
+      `;
+
+      if (list.length === 0) {
+        listEl.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">등록된 입출 내역이 없습니다. 오른쪽 위 '+ 입출 등록'을 눌러 화환·답례품·찬조금 등을 기록하세요.</div>`;
+        return;
+      }
+
+      listEl.innerHTML = list.map(x => `
+        <div class="p-3.5 flex items-center justify-between gap-2 hover:bg-slate-50 transition">
+          <div class="min-w-0">
+            <div class="flex items-center space-x-1.5">
+              <span class="text-[11px] font-extrabold px-2 py-0.5 rounded-full ${x.type === 'income' ? 'bg-emerald-100 text-emerald-800' : 'bg-rose-100 text-rose-800'}">${x.type === 'income' ? '수입' : '지출'}</span>
+              <span class="font-bold text-sm text-slate-900 truncate">${esc(x.title)}</span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">${esc(x.date || '-')}${x.note ? ' · ' + esc(x.note) : ''}</p>
+          </div>
+          <div class="flex items-center space-x-2 shrink-0">
+            <span class="font-extrabold text-sm ${x.type === 'income' ? 'text-emerald-700' : 'text-rose-700'}">${x.amount.toLocaleString()}원</span>
+            <button onclick="openEditReportEntry('${x.id}')" class="px-2 py-1 text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200">수정</button>
+            <button onclick="handleDeleteReportEntry('${x.id}')" class="px-2 py-1 text-xs font-bold text-rose-600 bg-rose-50 hover:bg-rose-100 rounded-lg border border-rose-200">삭제</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    document.getElementById('btn-open-add-inout').addEventListener('click', () => {
+      document.getElementById('btn-open-add-report-entry').click();
+    });
+
     var calDayFilter = '';
     var meetingPeriodMode = 'all';
     function setMeetingPeriod(mode) {
@@ -1870,6 +1963,7 @@
       renderMembers();
       renderDues();
       renderReport();
+      renderInOutLedger();
       populateDropdowns();
     }
 
@@ -1884,7 +1978,7 @@
       const statsEl = document.getElementById('banner-group-stats');
 
       if (club.activeSubGroupId === "all") {
-        titleEl.innerHTML = `<span>${esc(club.icon)}</span><span>${esc(club.name)} (전체 통합)</span>`;
+        titleEl.innerHTML = `<span>${esc(club.icon)}</span><span>${esc(club.name)}</span>`;
         statsEl.textContent = `${appState.clubs.length}개 모임 보유`;
       } else {
         titleEl.innerHTML = `<span>${esc(activeSub.icon)}</span><span>${esc(activeSub.name)}</span>`;
@@ -2151,7 +2245,7 @@
                   const mGroup = getSubGroup(m.subGroupId);
                   return `
                     <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
-                      ${m.role && m.role !== "일반회원" ? (m.role === "회장" ? "👑 " : (m.role === "총무" ? "💰 " : (m.role === "부회장" ? "🎖️ " : "⭐ "))) : ""}${esc(m.name)} <span class="text-xs text-indigo-400 ml-1">(${esc(mGroup.name)})</span>
+                      ${m.role && m.role !== "일반회원" ? (m.role === "회장" ? "👑 " : (m.role === "총무" ? "💰 " : (m.role === "부회장" ? "🎖️ " : "⭐ "))) : ""}${esc(m.name)} <span class="text-xs text-indigo-400 ml-1"></span>
                       <button onclick="handleRsvpChange('${meeting.id}', '${id}', '취소')" class="ml-1 text-indigo-300 hover:text-rose-500 text-xs">✕</button>
                     </span>
                   `;
@@ -2161,7 +2255,7 @@
               ${waitingIds.length > 0 ? `
                 <div class="pt-2 text-xs text-amber-700 font-semibold flex items-center space-x-1">
                   <span>⏳ 대기 중 (${waitingIds.length}명):</span>
-                  <span>${waitingIds.map(id => `${esc(getMember(id).name)}(${esc(getSubGroup(getMember(id).subGroupId).name)})`).join(', ')}</span>
+                  <span>${waitingIds.map(id => `${esc(getMember(id).name)}`).join(', ')}</span>
                 </div>
               ` : ''}
             </div>
@@ -2202,7 +2296,7 @@
 
       const currentSelected = select.value || filteredMeetings[0].id;
       select.innerHTML = filteredMeetings.map(m => `
-        <option value="${m.id}" ${m.id === currentSelected ? 'selected' : ''}>[${esc(getSubGroup(m.subGroupId).name)}] ${esc(m.title)}</option>
+        <option value="${m.id}" ${m.id === currentSelected ? 'selected' : ''}>${esc(m.title)}</option>
       `).join('');
 
       const activeMeeting = filteredMeetings.find(m => m.id === select.value) || filteredMeetings[0];
@@ -2231,7 +2325,7 @@
         <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
           <div class="flex items-center justify-between">
             <div>
-              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(meetingGroup.name)}</span>
+              
               <p class="text-xs text-slate-500 font-semibold mt-1">총 지출 금액</p>
             </div>
             <span class="text-xl font-extrabold text-slate-900">${totalSpent.toLocaleString()}원</span>
@@ -2406,7 +2500,7 @@
             <div>
               <div class="flex items-center space-x-1.5">
                 <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(d.yearMonth)}</span>
-                <span class="text-xs text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded">${esc(g.name)}</span>
+                
                 <span class="text-sm font-bold text-slate-900">${esc(m.name)}</span>
               </div>
               <p class="text-xs text-slate-400 mt-0.5">${d.isPaid ? `납부일: ${esc(d.paidDate || '확인됨')}` : '납부 대기 중'}${d.note ? ` · <span class="text-amber-700 font-bold">${esc(d.note)}</span>` : ""}</p>
@@ -2443,7 +2537,7 @@
 
       // 지출 모달 - 모임 선택
       const meetingSelect = document.getElementById('input-expense-meeting');
-      meetingSelect.innerHTML = club.meetings.map(m => `<option value="${m.id}">[${esc(getSubGroup(m.subGroupId).name)}] ${esc(m.title)}</option>`).join('');
+      meetingSelect.innerHTML = club.meetings.map(m => `<option value="${m.id}">${esc(m.title)}</option>`).join('');
 
       // 지출 모달 - 결제자 선택
       const payerSelect = document.getElementById('input-expense-payer');
@@ -2711,7 +2805,7 @@
       const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
       const totalSpent = meeting.expenses.reduce((sum, e) => sum + e.amount, 0);
 
-      let text = `📢 [${club.name} - ${group.name}] ${meeting.title} 정산 안내\n`;
+      let text = `📢 [${club.name}] ${meeting.title} 정산 안내\n`;
       text += `• 일시: ${fmtMeetingWhen(meeting)}\n`;
       text += `• 장소: ${meeting.location}\n`;
       text += `• 참석: ${attendingIds.length}명 (${attendingIds.map(id => getMember(id).name).join(', ')})\n`;
@@ -2954,8 +3048,13 @@
 
         let coreTokens = [...tokens];
         let trailingParen = '';
-        if (coreTokens.length >= 2 && /^\([^)]+\)$/.test(coreTokens[coreTokens.length - 1])) {
+        const lastRaw = coreTokens[coreTokens.length - 1];
+        const attachedParenMatch = lastRaw.match(/^(.+?)(\([^)]+\))$/);
+        if (coreTokens.length >= 2 && /^\([^)]+\)$/.test(lastRaw)) {
           trailingParen = coreTokens.pop();
+        } else if (coreTokens.length >= 2 && attachedParenMatch) {
+          coreTokens[coreTokens.length - 1] = attachedParenMatch[1];
+          trailingParen = attachedParenMatch[2];
         }
 
         const lastTok = coreTokens[coreTokens.length - 1].replace(/[\[\]]/g, '').trim();
@@ -3952,6 +4051,7 @@
             club.extraLedger = (club.extraLedger || []).filter(item => item.id !== entryId);
             saveState();
             renderReport();
+            renderInOutLedger();
             showToast("결산 항목이 삭제되었습니다.");
           }
         );
@@ -3993,6 +4093,7 @@
       saveState();
       document.getElementById('modal-report-entry').classList.add('hidden');
       renderReport();
+      renderInOutLedger();
     });
 
     document.getElementById('report-period-select').addEventListener('change', renderReport);
