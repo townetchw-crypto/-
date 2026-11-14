@@ -4827,7 +4827,8 @@
       const blob = new Blob([buildICS(ok, club)], { type: 'text/calendar;charset=utf-8' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = `${String(fileBase).replace(/[\\/:*?"<>|]/g, '_')}.ics`;
+      const _n = new Date(); const _tag = `${pad2(_n.getMonth() + 1)}${pad2(_n.getDate())}-${pad2(_n.getHours())}${pad2(_n.getMinutes())}${pad2(_n.getSeconds())}`;
+      a.download = `${String(fileBase).replace(/[\\/:*?"<>|]/g, '_')}_${_tag}.ics`;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 2000);
       showToast(doneMsg || `📲 일정 ${ok.length}개 파일(.ics)을 저장했습니다. 파일을 누르면 삼성 캘린더에 들어갑니다.`);
@@ -4837,7 +4838,26 @@
       const mt = (club.meetings || []).find(x => x.id === meetingId);
       if (!mt) return;
       if (!mtInfo(mt)) { showToast("날짜 형식을 먼저 고쳐주세요. (✏️ 수정)"); return; }
-      downloadICS([mt], mt.title);
+      let sheet = document.getElementById('modal-cal-choose');
+      if (!sheet) {
+        sheet = document.createElement('div');
+        sheet.id = 'modal-cal-choose';
+        sheet.className = 'fixed inset-0 z-50 bg-black/60 hidden flex items-end sm:items-center justify-center p-3';
+        sheet.innerHTML = `<div class="bg-white rounded-2xl w-full max-w-sm p-4 space-y-2.5 shadow-2xl">
+          <div class="flex items-center justify-between"><h3 class="font-bold text-slate-900 text-base">📲 폰 캘린더에 넣기</h3><button id="cal-choose-close" class="text-slate-400 text-lg font-bold p-1">✕</button></div>
+          <p id="cal-choose-title" class="text-xs text-slate-500"></p>
+          <button id="cal-choose-google" class="w-full py-3 rounded-xl bg-indigo-600 text-white text-sm font-extrabold">📅 구글 캘린더로 바로 넣기 (추천)</button>
+          <p class="text-[11px] text-slate-400 -mt-1">누르면 구글 캘린더가 열려요. 위에서 '저장'만 누르면 끝. 삼성 캘린더에 구글 계정이 연결되어 있으면 거기에도 나와요.</p>
+          <button id="cal-choose-ics" class="w-full py-3 rounded-xl bg-slate-100 border border-slate-300 text-slate-700 text-sm font-bold">📄 파일(.ics)로 받기</button>
+          <p class="text-[11px] text-slate-400 -mt-1">받은 파일을 누르면 폰 캘린더 앱이 열려요.</p>
+        </div>`;
+        document.body.appendChild(sheet);
+        sheet.addEventListener('click', ev => { if (ev.target === sheet || ev.target.id === 'cal-choose-close') sheet.classList.add('hidden'); });
+      }
+      document.getElementById('cal-choose-title').textContent = `${mt.title} · ${fmtMeetingWhen(mt)}`;
+      document.getElementById('cal-choose-google').onclick = () => { sheet.classList.add('hidden'); openGoogleCalendar(meetingId); };
+      document.getElementById('cal-choose-ics').onclick = () => { sheet.classList.add('hidden'); downloadICS([mt], mt.title); };
+      sheet.classList.remove('hidden');
     };
     window.exportMonthToICS = function() {
       const club = getActiveClub();
