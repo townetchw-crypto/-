@@ -83,9 +83,6 @@
       <button id="btn-open-backup" class="whitespace-nowrap shrink-0 px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
         💾 백업
       </button>
-      <button id="btn-open-create-club" class="whitespace-nowrap shrink-0 px-2 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition">
-        + 모임 추가
-      </button>
 
     </div>
   </header>
@@ -113,7 +110,6 @@
       </div>
       <div id="calendar-days-grid" class="grid grid-cols-7 gap-1 text-center text-xs"></div>
     </div>
-    <button id="btn-cal-add-bar" class="w-full py-3 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold rounded-xl shadow-sm transition">추가 ＋</button>
   </section>
 
   <!-- 메인 뷰 컨테이너 (모바일 최적화 폭) -->
@@ -1664,7 +1660,7 @@
           name: "모임 없음",
           category: "새 모임을 추가하세요",
           icon: "📋",
-          subtitle: "상단 '+ 모임 추가'를 눌러 시작하세요",
+          subtitle: "모임 이름 옆 ▼를 눌러 시작하세요",
           activeSubGroupId: "all",
           subGroups: [{ id: "all", name: "전체 통합", icon: "📋" }],
           members: [],
@@ -2021,7 +2017,7 @@
     function requireAdminClub(actionName, callback) {
       requireAdmin(actionName, () => {
         if (!getActiveClub().id) {
-          showToast("먼저 '+ 모임 추가'로 모임을 만들어 주세요.");
+          showToast("먼저 모임 이름 옆 ▼를 눌러 모임을 만들어 주세요.");
           document.getElementById('modal-create-club').classList.remove('hidden');
           return;
         }
@@ -2225,8 +2221,6 @@
       if (picker) picker.value = calYearMonth;
       renderMonthView(document.getElementById('calendar-days-grid'));
       const sd = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
-      const addBtn = document.getElementById('btn-cal-add-bar');
-      if (addBtn) addBtn.textContent = `${Number(sd.slice(5, 7))}월 ${Number(sd.slice(8, 10))}일에 추가 ＋`;
       fitStickyBars();
     }
     function renderSubGroupChips() { renderCalendar(); }   // renderAll()과의 호환용 이름
@@ -2242,10 +2236,6 @@
     document.getElementById('cal-month-picker').addEventListener('change', (ev) => {
       const v = ev.target.value;
       if (/^\d{4}-\d{2}$/.test(v)) calSetMonth(v, v > calYearMonth ? 1 : -1);
-    });
-    document.getElementById('btn-cal-add-bar').addEventListener('click', () => {
-      const d = ymdParts(calSelectedDate) ? calSelectedDate : todayStr();
-      requireAdminClub('모임 개설', () => openMeetingModal({ type: '정기', date: d }));
     });
     // 좌우로 밀어서(스와이프) 이전/다음 달, 가로 휠도 지원
     (function() {
@@ -3210,9 +3200,6 @@
     document.getElementById('btn-close-club-selector').addEventListener('click', closeClubSelectorModal);
 
     // 새 클럽 만들기 모달
-    document.getElementById('btn-open-create-club').addEventListener('click', () => {
-      document.getElementById('modal-create-club').classList.remove('hidden');
-    });
     document.getElementById('btn-trigger-add-club').addEventListener('click', () => {
       closeClubSelectorModal();
       document.getElementById('modal-create-club').classList.remove('hidden');
@@ -4618,7 +4605,7 @@
     window.openMeetingModal = function(opts) {
       opts = opts || {};
       const club = getActiveClub();
-      if (!club.id) { showToast("먼저 상단 '+ 모임 추가'를 눌러 모임을 만들어 주세요."); document.getElementById('modal-create-club').classList.remove('hidden'); return; }
+      if (!club.id) { showToast("먼저 모임 이름 옆 ▼를 눌러 모임을 만들어 주세요."); document.getElementById('modal-create-club').classList.remove('hidden'); return; }
       populateDropdowns();
       editingMeetingId = null;
       let mt = null;
