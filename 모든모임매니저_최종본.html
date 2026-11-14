@@ -144,10 +144,7 @@
           <span>한국체대 총동문회</span>
         </h2>
       </div>
-      <button onclick="openClubSelectorModal()" class="text-xs bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full text-indigo-200 font-medium transition flex items-center space-x-1">
-        <span id="banner-group-stats">3개 모임 보유</span>
-        <span>⇄</span>
-      </button>
+      <span id="banner-group-stats" class="text-xs bg-white/10 px-2.5 py-1 rounded-full text-indigo-200 font-medium">3개 모임 보유</span>
     </div>
 
     <!-- 운영진 권한 알림 바 (일반 회원 모드일 때 안내 표시) -->
@@ -334,6 +331,23 @@
         <button type="button" onclick="setDuesCatFilter('월회비')" id="btn-dues-flt-monthly" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">월회비</button>
         <button type="button" onclick="setDuesCatFilter('연회비')" id="btn-dues-flt-yearly" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">연회비</button>
         <button type="button" onclick="setDuesCatFilter('찬조/부조')" id="btn-dues-flt-gift" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">찬조/부조</button>
+      </div>
+
+      <!-- 기간(전체/월/년) & 완납/미납 필터 -->
+      <div class="bg-white p-2 rounded-xl border border-slate-200 space-y-1.5 text-xs font-bold">
+        <div class="grid grid-cols-3 gap-1">
+          <button type="button" onclick="setDuesPeriodFilter('all')" id="btn-dues-per-all" class="py-1.5 rounded-lg bg-indigo-600 text-white transition">기간: 전체</button>
+          <button type="button" onclick="setDuesPeriodFilter('month')" id="btn-dues-per-month" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">월별</button>
+          <button type="button" onclick="setDuesPeriodFilter('year')" id="btn-dues-per-year" class="py-1.5 rounded-lg bg-slate-100 text-slate-600 transition">연별</button>
+        </div>
+        <div id="dues-period-input-row" class="hidden flex items-center space-x-1.5">
+          <input id="input-dues-filter-period" type="text" value="2026-11" class="flex-1 border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs bg-slate-50 font-bold">
+        </div>
+        <div class="grid grid-cols-3 gap-1 pt-1 border-t border-slate-100">
+          <button type="button" onclick="setDuesPaidFilter('all')" id="btn-dues-paid-all" class="py-1.5 rounded-lg bg-slate-800 text-white transition">전체 상태</button>
+          <button type="button" onclick="setDuesPaidFilter('paid')" id="btn-dues-paid-yes" class="py-1.5 rounded-lg bg-slate-100 text-emerald-700 transition">완납만</button>
+          <button type="button" onclick="setDuesPaidFilter('unpaid')" id="btn-dues-paid-no" class="py-1.5 rounded-lg bg-slate-100 text-rose-600 transition">미납자만</button>
+        </div>
       </div>
 
       <!-- 회비 내역 목록 -->
@@ -738,7 +752,8 @@
   <div id="modal-add-due" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
-        <h3 class="font-bold text-slate-900 text-base">회비 납부 기록</h3>
+        <h3 id="due-modal-title" class="font-bold text-slate-900 text-base">회비 납부 기록</h3>
+        <input type="hidden" id="input-due-edit-id" value="">
         <button id="btn-close-due-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
       </div>
       <div class="space-y-3 text-xs sm:text-sm">
@@ -770,13 +785,7 @@
         <div>
           <label class="block font-semibold text-slate-700 mb-1">금액 (원)</label>
           <input id="input-due-amount" type="number" placeholder="예: 50000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
-          <div class="grid grid-cols-5 gap-1 mt-1.5 text-[11px] font-bold">
-            <button type="button" onclick="document.getElementById('input-due-amount').value=10000" class="py-1 bg-slate-100 hover:bg-indigo-50 text-slate-700 rounded-md border border-slate-200">1만</button>
-            <button type="button" onclick="document.getElementById('input-due-amount').value=20000" class="py-1 bg-slate-100 hover:bg-indigo-50 text-slate-700 rounded-md border border-slate-200">2만</button>
-            <button type="button" onclick="document.getElementById('input-due-amount').value=30000" class="py-1 bg-slate-100 hover:bg-indigo-50 text-slate-700 rounded-md border border-slate-200">3만</button>
-            <button type="button" onclick="document.getElementById('input-due-amount').value=50000" class="py-1 bg-slate-100 hover:bg-indigo-50 text-slate-700 rounded-md border border-slate-200">5만</button>
-            <button type="button" onclick="document.getElementById('input-due-amount').value=100000" class="py-1 bg-slate-100 hover:bg-indigo-50 text-slate-700 rounded-md border border-slate-200">10만</button>
-          </div>
+
         </div>
         <div class="flex items-center space-x-2 pt-1">
           <input id="input-due-is-paid" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
@@ -2358,6 +2367,33 @@
     }
 
     // [정산 탭 렌더링]
+    function toggleSettlementAttendee(meetingId, memberId, checked) {
+      const club = getActiveClub();
+      const mt = (club.meetings || []).find(x => x.id === meetingId);
+      if (!mt) return;
+      if (!mt.attendees) mt.attendees = {};
+      if (checked) mt.attendees[memberId] = '참석';
+      else delete mt.attendees[memberId];
+      saveState();
+      renderSettlement();
+      renderMeetings();
+    }
+    window.toggleSettlementAttendee = toggleSettlementAttendee;
+
+    function settleSelectAllAttendees(meetingId, selectAll) {
+      const club = getActiveClub();
+      const mt = (club.meetings || []).find(x => x.id === meetingId);
+      if (!mt) return;
+      mt.attendees = {};
+      if (selectAll) {
+        (club.members || []).forEach(m => { mt.attendees[m.id] = '참석'; });
+      }
+      saveState();
+      renderSettlement();
+      renderMeetings();
+    }
+    window.settleSelectAllAttendees = settleSelectAllAttendees;
+
     function renderSettlement() {
       const club = getActiveClub();
       const select = document.getElementById('settlement-meeting-select');
@@ -2390,7 +2426,59 @@
       const attendingIds = Object.keys(activeMeeting.attendees).filter(id => activeMeeting.attendees[id] === "참석");
 
       if (activeMeeting.expenses.length === 0) {
-        container.innerHTML = `
+        
+      const totalSpent = (activeMeeting.expenses || []).reduce((sum, e) => sum + e.amount, 0);
+      const count = attendingIds.length;
+      const perPerson = count > 0 ? Math.floor(totalSpent / count) : 0;
+      const allMembersSorted = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+      const settleTopHtml = `
+        <!-- [지출 | 참석자 | 1인당] 요약 카드 (입출정산과 통일) -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <button type="button" onclick="document.getElementById('btn-open-add-expense').click()" class="bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl p-2.5 transition">
+            <p class="text-[11px] font-extrabold text-rose-800">지출 ▾</p>
+            <p class="text-sm font-extrabold text-rose-950 mt-0.5">${totalSpent.toLocaleString()}원</p>
+          </button>
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
+            <p class="text-[11px] font-extrabold text-indigo-800">참석자</p>
+            <p class="text-sm font-extrabold text-indigo-950 mt-0.5">${count}명</p>
+          </div>
+          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+            <p class="text-[11px] font-extrabold text-emerald-800">1인당</p>
+            <p class="text-sm font-extrabold text-emerald-950 mt-0.5">${perPerson.toLocaleString()}원</p>
+          </div>
+        </div>
+
+        <!-- 회원목록 연동 참석자 체크박스 (약 5명 높이 스크롤 박스) -->
+        <div class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
+          <div class="flex items-center justify-between">
+            <span class="text-xs font-extrabold text-slate-800">👥 참석자 체크 (${count} / ${allMembersSorted.length}명)</span>
+            <div class="space-x-1.5 text-[11px] font-bold">
+              <button type="button" onclick="settleSelectAllAttendees('${activeMeeting.id}', true)" class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200">전체선택</button>
+              <button type="button" onclick="settleSelectAllAttendees('${activeMeeting.id}', false)" class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">해제</button>
+            </div>
+          </div>
+          <div class="max-h-[210px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+            ${allMembersSorted.length === 0
+              ? '<div class="p-4 text-center text-xs text-slate-400">회원목록에 등록된 회원이 없습니다.</div>'
+              : allMembersSorted.map(m => {
+                  const isAtt = activeMeeting.attendees && activeMeeting.attendees[m.id] === '참석';
+                  return `
+                    <label class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-50">
+                      <div class="flex items-center space-x-2.5 min-w-0">
+                        <input type="checkbox" onchange="toggleSettlementAttendee('${activeMeeting.id}', '${m.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded shrink-0" ${isAtt ? 'checked' : ''}>
+                        <span class="text-xs font-bold text-slate-900 whitespace-nowrap">${esc(m.name)}</span>
+                        ${m.affiliation ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold truncate max-w-[100px]">${esc(m.affiliation)}</span>` : ''}
+                      </div>
+                      <span class="text-[11px] font-bold ${isAtt ? 'text-indigo-600' : 'text-slate-300'} shrink-0">${isAtt ? '참석' : '미참석'}</span>
+                    </label>
+                  `;
+                }).join('')
+            }
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = settleTopHtml + `
           <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center space-y-2">
             <span class="text-3xl block">💳</span>
             <p class="text-sm font-bold text-slate-700">등록된 지출 내역이 없습니다.</p>
@@ -2403,7 +2491,6 @@
         return;
       }
 
-      const totalSpent = activeMeeting.expenses.reduce((sum, e) => sum + e.amount, 0);
       const meetingGroup = getSubGroup(activeMeeting.subGroupId);
 
       container.innerHTML = `
@@ -2552,9 +2639,13 @@
       titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 회비 장부` : `${currentSub.name} 회비 장부`;
       labelEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 누적 총수납액` : `${currentSub.name} 누적 회비`;
 
+      const pVal = (document.getElementById('input-dues-filter-period')?.value || '').trim();
       const filteredDues = club.monthlyDues.filter(d => {
         if (club.activeSubGroupId !== "all" && d.subGroupId !== club.activeSubGroupId) return false;
-        if (calScope === 'month' && d.yearMonth && d.yearMonth !== calYearMonth) return false;
+        if (duesPeriodFilter === 'month' && pVal && !(d.yearMonth || '').startsWith(pVal)) return false;
+        if (duesPeriodFilter === 'year' && pVal && !(d.yearMonth || '').startsWith(pVal.slice(0, 4))) return false;
+        if (duesPaidFilter === 'paid' && !d.isPaid) return false;
+        if (duesPaidFilter === 'unpaid' && d.isPaid) return false;
         if (duesCatFilter === '월회비' && (d.note === '연회비' || (d.note || '').includes('찬조') || (d.note || '').includes('경조사'))) return false;
         if (duesCatFilter === '연회비' && d.note !== '연회비') return false;
         if (duesCatFilter === '찬조/부조' && !(d.note || '').includes('찬조') && !(d.note || '').includes('경조사')) return false;
@@ -2598,6 +2689,7 @@
               <button onclick="toggleDuePayment('${d.id}')" class="px-2 py-1 rounded-lg text-xs font-bold border transition ${d.isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}">
                 ${d.isPaid ? '완납' : '미납'}
               </button>
+              <button onclick="openEditDueModal('${d.id}')" class="px-2 py-1 rounded-lg text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 transition">수정</button>
             </div>
           </div>
         `;
@@ -3531,6 +3623,62 @@
     });
 
     // 회비 추가 모달
+    var duesPeriodFilter = 'all';
+    var duesPaidFilter = 'all';
+    function setDuesPeriodFilter(mode) {
+      duesPeriodFilter = mode;
+      window.setDuesPeriodFilter = setDuesPeriodFilter;
+      const map = { 'all': 'btn-dues-per-all', 'month': 'btn-dues-per-month', 'year': 'btn-dues-per-year' };
+      Object.entries(map).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (b) b.className = k === mode ? 'py-1.5 rounded-lg bg-indigo-600 text-white transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition';
+      });
+      const row = document.getElementById('dues-period-input-row');
+      const inp = document.getElementById('input-dues-filter-period');
+      if (row && inp) {
+        row.classList.toggle('hidden', mode === 'all');
+        if (mode === 'year') inp.value = todayStr().slice(0, 4);
+        if (mode === 'month' && inp.value.length <= 4) inp.value = todayStr().slice(0, 7);
+      }
+      renderDues();
+    }
+    window.setDuesPeriodFilter = setDuesPeriodFilter;
+
+    function setDuesPaidFilter(mode) {
+      duesPaidFilter = mode;
+      window.setDuesPaidFilter = setDuesPaidFilter;
+      const map = { 'all': 'btn-dues-paid-all', 'paid': 'btn-dues-paid-yes', 'unpaid': 'btn-dues-paid-no' };
+      Object.entries(map).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.className = k === mode ? 'py-1.5 rounded-lg bg-slate-800 text-white transition'
+          : (k === 'paid' ? 'py-1.5 rounded-lg bg-slate-100 text-emerald-700 transition'
+            : (k === 'unpaid' ? 'py-1.5 rounded-lg bg-slate-100 text-rose-600 transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition'));
+      });
+      renderDues();
+    }
+    window.setDuesPaidFilter = setDuesPaidFilter;
+
+    document.getElementById('input-dues-filter-period').addEventListener('input', renderDues);
+
+    function openEditDueModal(dueId) {
+      const club = getActiveClub();
+      const d = (club.monthlyDues || []).find(x => x.id === dueId);
+      if (!d) return;
+      populateDropdowns();
+      document.getElementById('due-modal-title').textContent = '회비 내역 수정';
+      document.getElementById('input-due-edit-id').value = d.id;
+      const cat = d.note === '연회비' ? '연회비' : ((d.note || '').includes('찬조') || (d.note || '').includes('경조사') ? '찬조/부조' : '월회비');
+      setDueCategory(cat);
+      document.getElementById('input-due-month').value = d.yearMonth || todayStr().slice(0, 7);
+      document.getElementById('input-due-paid-date').value = d.paidDate || todayStr();
+      document.getElementById('input-due-member').value = d.memberId || '';
+      document.getElementById('input-due-amount').value = d.amount || '';
+      document.getElementById('input-due-is-paid').checked = !!d.isPaid;
+      document.getElementById('modal-add-due').classList.remove('hidden');
+    }
+    window.openEditDueModal = openEditDueModal;
+
     document.getElementById('btn-open-add-due').addEventListener('click', () => {
       requireAdminClub('회비 기록', () => {
       document.getElementById('modal-add-due').classList.remove('hidden');
@@ -3575,8 +3723,66 @@
     }
     window.setDueCategory = setDueCategory;
 
+    var duesPeriodFilter = 'all';
+    var duesPaidFilter = 'all';
+    function setDuesPeriodFilter(mode) {
+      duesPeriodFilter = mode;
+      window.setDuesPeriodFilter = setDuesPeriodFilter;
+      const map = { 'all': 'btn-dues-per-all', 'month': 'btn-dues-per-month', 'year': 'btn-dues-per-year' };
+      Object.entries(map).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (b) b.className = k === mode ? 'py-1.5 rounded-lg bg-indigo-600 text-white transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition';
+      });
+      const row = document.getElementById('dues-period-input-row');
+      const inp = document.getElementById('input-dues-filter-period');
+      if (row && inp) {
+        row.classList.toggle('hidden', mode === 'all');
+        if (mode === 'year') inp.value = todayStr().slice(0, 4);
+        if (mode === 'month' && inp.value.length <= 4) inp.value = todayStr().slice(0, 7);
+      }
+      renderDues();
+    }
+    window.setDuesPeriodFilter = setDuesPeriodFilter;
+
+    function setDuesPaidFilter(mode) {
+      duesPaidFilter = mode;
+      window.setDuesPaidFilter = setDuesPaidFilter;
+      const map = { 'all': 'btn-dues-paid-all', 'paid': 'btn-dues-paid-yes', 'unpaid': 'btn-dues-paid-no' };
+      Object.entries(map).forEach(([k, id]) => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.className = k === mode ? 'py-1.5 rounded-lg bg-slate-800 text-white transition'
+          : (k === 'paid' ? 'py-1.5 rounded-lg bg-slate-100 text-emerald-700 transition'
+            : (k === 'unpaid' ? 'py-1.5 rounded-lg bg-slate-100 text-rose-600 transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition'));
+      });
+      renderDues();
+    }
+    window.setDuesPaidFilter = setDuesPaidFilter;
+
+    document.getElementById('input-dues-filter-period').addEventListener('input', renderDues);
+
+    function openEditDueModal(dueId) {
+      const club = getActiveClub();
+      const d = (club.monthlyDues || []).find(x => x.id === dueId);
+      if (!d) return;
+      populateDropdowns();
+      document.getElementById('due-modal-title').textContent = '회비 내역 수정';
+      document.getElementById('input-due-edit-id').value = d.id;
+      const cat = d.note === '연회비' ? '연회비' : ((d.note || '').includes('찬조') || (d.note || '').includes('경조사') ? '찬조/부조' : '월회비');
+      setDueCategory(cat);
+      document.getElementById('input-due-month').value = d.yearMonth || todayStr().slice(0, 7);
+      document.getElementById('input-due-paid-date').value = d.paidDate || todayStr();
+      document.getElementById('input-due-member').value = d.memberId || '';
+      document.getElementById('input-due-amount').value = d.amount || '';
+      document.getElementById('input-due-is-paid').checked = !!d.isPaid;
+      document.getElementById('modal-add-due').classList.remove('hidden');
+    }
+    window.openEditDueModal = openEditDueModal;
+
     document.getElementById('btn-open-add-due').addEventListener('click', () => {
       const club = getActiveClub();
+      document.getElementById('due-modal-title').textContent = '회비 납부 기록';
+      document.getElementById('input-due-edit-id').value = '';
       document.getElementById('input-due-paid-date').value = todayStr();
       document.getElementById('input-due-amount').value = club.lastDueAmount ? String(club.lastDueAmount) : '';
       setDueCategory('월회비');
@@ -3613,11 +3819,20 @@
         note: cat === '월회비' ? '' : (cat === '찬조/부조' ? '경조사/찬조' : '연회비')
       };
 
-      club.monthlyDues.unshift(newDue);
+      const editId = document.getElementById('input-due-edit-id').value;
+      if (editId) {
+        const idx = club.monthlyDues.findIndex(x => x.id === editId);
+        if (idx !== -1) {
+          club.monthlyDues[idx] = { ...club.monthlyDues[idx], ...newDue, id: editId };
+        }
+        showToast("회비 기록이 수정되었습니다!");
+      } else {
+        club.monthlyDues.unshift(newDue);
+        showToast("회비 기록이 추가되었습니다!");
+      }
       saveState();
       document.getElementById('modal-add-due').classList.add('hidden');
       renderDues();
-      showToast("회비 기록이 추가되었습니다!");
     });
 
     // 공지문 복사 모달
