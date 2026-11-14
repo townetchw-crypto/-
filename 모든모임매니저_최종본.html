@@ -619,7 +619,7 @@
       </div>
       <div class="flex space-x-2 pt-2">
         <button id="btn-cancel-add-expense" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
-        <button id="btn-submit-add-expense" class="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition">1/N 등록</button>
+        <button id="btn-submit-add-expense" class="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition">등록</button>
       </div>
     </div>
   </div>
@@ -2076,7 +2076,7 @@
 
       if (club.activeSubGroupId === "all") {
         titleEl.innerHTML = `<span>${esc(club.icon)}</span><span>${esc(club.name)}</span>`;
-        statsEl.textContent = `${appState.clubs.length}개 모임 보유`;
+        statsEl.textContent = `회원 ${club.members.length}명`;
       } else {
         titleEl.innerHTML = `<span>${esc(activeSub.icon)}</span><span>${esc(activeSub.name)}</span>`;
         const count = club.members.filter(m => m.subGroupId === activeSub.id).length;
@@ -2461,35 +2461,6 @@
             <p class="text-[11px] font-extrabold text-indigo-800">잔액</p>
             <p class="text-sm font-extrabold ${balance < 0 ? 'text-rose-600' : 'text-indigo-950'} mt-0.5">${balance.toLocaleString()}원</p>
             <p class="text-[10px] text-indigo-700 mt-0.5">1인당 ${perPerson.toLocaleString()}원</p>
-          </div>
-        </div>
-
-        <!-- 회원목록 연동 참석자 체크박스 (약 5명 높이 스크롤 박스) -->
-        <div class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
-          <div class="flex items-center justify-between">
-            <span class="text-xs font-extrabold text-slate-800">👥 참석자 체크 (${count} / ${allMembersSorted.length}명)</span>
-            <div class="space-x-1.5 text-[11px] font-bold">
-              <button type="button" onclick="settleSelectAllAttendees('${activeMeeting.id}', true)" class="px-2 py-0.5 bg-indigo-50 text-indigo-700 rounded border border-indigo-200">전체선택</button>
-              <button type="button" onclick="settleSelectAllAttendees('${activeMeeting.id}', false)" class="px-2 py-0.5 bg-slate-100 text-slate-600 rounded border border-slate-200">해제</button>
-            </div>
-          </div>
-          <div class="max-h-[210px] overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
-            ${allMembersSorted.length === 0
-              ? '<div class="p-4 text-center text-xs text-slate-400">회원목록에 등록된 회원이 없습니다.</div>'
-              : allMembersSorted.map(m => {
-                  const isAtt = activeMeeting.attendees && activeMeeting.attendees[m.id] === '참석';
-                  return `
-                    <label class="flex items-center justify-between px-3 py-2 cursor-pointer hover:bg-slate-50">
-                      <div class="flex items-center space-x-2.5 min-w-0">
-                        <input type="checkbox" onchange="toggleSettlementAttendee('${activeMeeting.id}', '${m.id}', this.checked)" class="w-4 h-4 text-indigo-600 rounded shrink-0" ${isAtt ? 'checked' : ''}>
-                        <span class="text-xs font-bold text-slate-900 whitespace-nowrap">${esc(m.name)}</span>
-                        ${m.affiliation ? `<span class="text-[11px] px-1.5 py-0.5 rounded bg-indigo-50 text-indigo-700 font-bold truncate max-w-[100px]">${esc(m.affiliation)}</span>` : ''}
-                      </div>
-                      <span class="text-[11px] font-bold ${isAtt ? 'text-indigo-600' : 'text-slate-300'} shrink-0">${isAtt ? '참석' : '미참석'}</span>
-                    </label>
-                  `;
-                }).join('')
-            }
           </div>
         </div>
       `;
@@ -4117,139 +4088,52 @@
 
       const r = computeReportData();
 
+      // 결산서 양식: 입금내역(성명/내역/금액) | 지출내역(내역/금액)
+      const fm = n => Number(n).toLocaleString();
+      const incRows = [];
+      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount }));
+      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id }));
+      const expRows = [];
+      r.meetingExpenses.forEach(e => expRows.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
+      r.extraExpenses.forEach(x => expRows.push({ name: x.title, amt: x.amount, id: x.id }));
+      const nRows = Math.max(10, incRows.length, expRows.length);
+      const incSum = r.totalIncome - r.carryOver;
+      const diff = incSum - r.totalExpense;
+      const bd = 'border border-slate-800';
+      let bodyRows = '';
+      for (let i = 0; i < nRows; i++) {
+        const a = incRows[i], e = expRows[i];
+        const ac = a && a.id ? ` onclick="openEditReportEntry('${a.id}')" style="cursor:pointer"` : '';
+        const ec = e && e.id ? ` onclick="openEditReportEntry('${e.id}')" style="cursor:pointer"` : '';
+        bodyRows += `<tr class="h-7">
+          <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.name) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.memo) : ''}</td>
+          <td class="${bd} px-1 text-right"${ac}>${a ? fm(a.amt) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ec}>${e ? esc(e.name) : ''}</td>
+          <td class="${bd} px-1 text-right"${ec}>${e ? fm(e.amt) : ''}</td>
+        </tr>`;
+      }
       area.innerHTML = `
-        <div class="border-b-2 border-slate-800 pb-3 flex items-end justify-between">
-          <div>
-            <span class="text-[11px] font-bold text-indigo-600">모모(MOMO) 자동 결산보고서</span>
-            <h3 class="text-lg font-extrabold text-slate-900 leading-tight mt-0.5">${esc(r.title)}</h3>
-          </div>
-          <span class="text-[11px] text-slate-500 font-medium">작성일: ${todayStr()}</span>
+        <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.title)}</h3>
+        <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
+          <span>${todayStr().replace(/-/g, '.')}</span>
+          <span>${esc(r.periodText)}</span>
         </div>
-
-        <div class="grid grid-cols-2 gap-1.5 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
-          <div><span class="text-slate-400">모임:</span> <strong class="text-slate-800">${esc(r.club.name)}</strong></div>
-          
-          <div><span class="text-slate-400">기간:</span> <strong class="text-slate-800">${esc(r.periodText)}</strong></div>
-          <div><span class="text-slate-400">보고자:</span> <strong class="text-slate-800">${esc(r.secretary)}</strong></div>
-        </div>
-
-        <!-- 3단 자동 요약 카드 -->
-        <div class="grid grid-cols-3 gap-2 text-center">
-          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
-            <p class="text-[11px] text-emerald-700 font-bold">총 수입 (A)</p>
-            <p class="text-sm font-extrabold text-emerald-900 mt-0.5">${r.totalIncome.toLocaleString()}원</p>
-          </div>
-          <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5">
-            <p class="text-[11px] text-rose-700 font-bold">총 지출 (B)</p>
-            <p class="text-sm font-extrabold text-rose-900 mt-0.5">${r.totalExpense.toLocaleString()}원</p>
-          </div>
-          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
-            <p class="text-[11px] text-indigo-700 font-bold">이월 잔액</p>
-            <p class="text-sm font-extrabold ${r.balance < 0 ? 'text-rose-600' : 'text-indigo-900'} mt-0.5">${r.balance.toLocaleString()}원</p>
-          </div>
-        </div>
-
-        <!-- 1. 수입 내역 -->
-        <div class="space-y-1.5">
-          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-emerald-600 pl-2">1. 수입 내역 (회비 · 경조사 · 찬조 · 이월금)</h4>
-          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-800 text-white text-[11px]">
-                <tr>
-                  <th class="p-2">항목</th>
-                  <th class="p-2 text-right">금액</th>
-                  <th class="p-2 text-right w-14 no-print">관리</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                ${r.carryOver > 0 ? `
-                  <tr>
-                    <td class="p-2 font-medium text-slate-700">전월(전기) 이월 잔액</td>
-                    <td class="p-2 text-right font-bold text-slate-900">${r.carryOver.toLocaleString()}원</td>
-                    <td class="p-2 text-right no-print"><button onclick="openReportConfigModal()" class="text-indigo-600 text-[11px] font-bold">수정</button></td>
-                  </tr>
-                ` : ''}
-                ${r.duesGroups.map(g => `
-                  <tr>
-                    <td class="p-2 font-medium text-slate-700">${esc(g.label)} 수납 <span class="text-[11px] text-slate-400">(${g.count}건 완납)</span></td>
-                    <td class="p-2 text-right font-bold text-emerald-700">${g.amount.toLocaleString()}원</td>
-                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
-                  </tr>
-                `).join('')}
-                ${r.extraIncomes.map(x => `
-                  <tr>
-                    <td class="p-2">
-                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
-                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
-                    </td>
-                    <td class="p-2 text-right font-bold text-emerald-700">${x.amount.toLocaleString()}원</td>
-                    <td class="p-2 text-right no-print space-x-1">
-                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
-                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
-                    </td>
-                  </tr>
-                `).join('')}
-                ${r.carryOver === 0 && r.duesGroups.length === 0 && r.extraIncomes.length === 0 ? `
-                  <tr><td colspan="3" class="p-3 text-center text-slate-400">수입 내역이 없습니다.</td></tr>
-                ` : ''}
-                <tr class="bg-emerald-50/70 font-extrabold text-emerald-900">
-                  <td class="p-2">수입 합계 (A)</td>
-                  <td class="p-2 text-right">${r.totalIncome.toLocaleString()}원</td>
-                  <td class="p-2 no-print"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
-
-        <!-- 2. 지출 내역 -->
-        <div class="space-y-1.5">
-          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-rose-600 pl-2">2. 지출 내역 (모임 정산 · 운영 경비)</h4>
-          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
-            <table class="w-full text-left border-collapse">
-              <thead class="bg-slate-800 text-white text-[11px]">
-                <tr>
-                  <th class="p-2">항목</th>
-                  <th class="p-2 text-right">금액</th>
-                  <th class="p-2 text-right w-14 no-print">관리</th>
-                </tr>
-              </thead>
-              <tbody class="divide-y divide-slate-100">
-                ${r.meetingExpenses.map(e => `
-                  <tr>
-                    <td class="p-2">
-                      <div class="font-medium text-slate-800">${esc(e.title)}</div>
-                      <div class="text-[10px] text-slate-400">${esc(e.date)} · ${esc(e.note)}</div>
-                    </td>
-                    <td class="p-2 text-right font-bold text-rose-700">${e.amount.toLocaleString()}원</td>
-                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
-                  </tr>
-                `).join('')}
-                ${r.extraExpenses.map(x => `
-                  <tr>
-                    <td class="p-2">
-                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
-                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
-                    </td>
-                    <td class="p-2 text-right font-bold text-rose-700">${x.amount.toLocaleString()}원</td>
-                    <td class="p-2 text-right no-print space-x-1">
-                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
-                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
-                    </td>
-                  </tr>
-                `).join('')}
-                ${r.meetingExpenses.length === 0 && r.extraExpenses.length === 0 ? `
-                  <tr><td colspan="3" class="p-3 text-center text-slate-400">지출 내역이 없습니다.</td></tr>
-                ` : ''}
-                <tr class="bg-rose-50/70 font-extrabold text-rose-900">
-                  <td class="p-2">지출 합계 (B)</td>
-                  <td class="p-2 text-right">${r.totalExpense.toLocaleString()}원</td>
-                  <td class="p-2 no-print"></td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
-        </div>
+        <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed">
+          <colgroup><col style="width:22%"><col style="width:12%"><col style="width:21%"><col style="width:27%"><col style="width:18%"></colgroup>
+          <thead>
+            <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
+            <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">성명</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
+          </thead>
+          <tbody>${bodyRows}</tbody>
+          <tfoot class="font-extrabold">
+            <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(incSum)}</td><td class="${bd} text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(r.totalExpense)}</td></tr>
+            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${diff < 0 ? '- ' + fm(-diff) : fm(diff)}</td></tr>
+            <tr class="h-8"><td colspan="3" class="${bd}"></td><td class="${bd} text-center">전월이월금</td><td class="${bd} px-1 text-right">${fm(r.carryOver)}</td></tr>
+            <tr class="h-11"><td colspan="3" class="${bd}"></td><td class="${bd} text-center text-sm">합 계</td><td class="${bd} px-1 text-right text-sm ${r.balance < 0 ? 'text-rose-600' : ''}">${r.balance < 0 ? '- ' + fm(-r.balance) : fm(r.balance)}</td></tr>
+          </tfoot>
+        </table>
+        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 전월이월금은 ⚙️ 설정에서 입력합니다.</p>
 
         <!-- 3. 보관 계좌 & 확인 서명란 -->
         <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
