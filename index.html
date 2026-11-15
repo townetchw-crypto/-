@@ -3506,6 +3506,7 @@
     function normalizeBatchText(raw, fromOcr) {
       let t = String(raw || '').normalize('NFKC');           // 전각 숫자·쉼표 → 반각
       t = t.replace(/[|¦│┃｜]/g, ' ').replace(/[\t\u00A0]+/g, ' ');
+      t = t.replace(/[\p{Extended_Pictographic}\uFE0F\u200D]/gu, ' '); // 하트 등 이모지 제거
       const fixNum = tok => {
         const core = tok.replace(/[,.]+$/, '');
         const tail = tok.slice(core.length);
@@ -3516,6 +3517,7 @@
       };
       t = t.split(/\r?\n/).map(line => {
         line = line.replace(/\S+/g, fixNum);
+        line = line.replace(/^(\d+[.)]\s*)?[A-Za-z]+(?=[가-힣])/, '$1'); // 'pink하주희' 같은 앞 영문 별명 떼기
         line = line.replace(/^(\d+[.)]\s*)?나\s+(?=[가-힣]{2,4}(?:\s|$))/, '$1'); // 카톡 명단에서 '나'(내 표시) 떼기
         if (fromOcr) {
           // "홍 길 동", "김 철수"처럼 글자 사이가 벌어진 이름 붙이기
@@ -3550,6 +3552,8 @@
         return false;
       }
 
+      const korNameRe0 = /^[가-힣]{2,4}$/;
+
       function parsePureAmount(line) {
         const mMan = line.match(/^(\d+)만\s*원?$/);
         if (mMan) return (parseInt(mMan[1], 10) || 0) * 10000;
@@ -3576,8 +3580,10 @@
         }
         const tokens = work.split(/\s+/).filter(Boolean);
         if (tokens.length === 0) return null;
+        let leadBirth = '';
+        if (tokens.length >= 2 && /^(19[3-9]\d|20[0-2]\d|[3-9]\d)$/.test(tokens[0])) leadBirth = tokens.shift(); // "65 차은숙"
 
-        const orgHintRe = /^(\(주\)|주식회사)|(?:초|중|고|대|회|법인|테크|통신|산업|시스템|전자|정보|엔씨|엔씨에스|아이엔씨|모임|동문|클럽|라이온스|일동|회의|회장|총무|대표)$/i;
+        const orgHintRe = /^(\(주\)|주식회사|정회원|준회원|신입회원|신입|고문|이사|감사|총무|회장|부회장)$|^(\(주\)|주식회사)|(?:초|중|고|대|회|법인|테크|통신|산업|시스템|전자|정보|엔씨|엔씨에스|아이엔씨|모임|동문|클럽|라이온스|일동|회의|회장|총무|대표)$/i;
         const nonNameLastRe = /^(일동|형수|형님|아우|후배|친구|선배|총무|회장|부회장|감사|화환|조화|원우회|대표회의|대표|영고|한얼|은초|한체|한체복|한체복교|한체복싱|골사|골사총무|실로|칠팔|칠팔회|팔인|팔인회|아산|오리온|제주형님|일봉후배|일봉친구)$/;
         const korNameRe = /^[가-힣]{2,4}(?:,[가-힣]{2,4})*$/;
 
@@ -3612,11 +3618,11 @@
         }
 
         // 소속 끝에 붙은 출생년도(61, 1961, 61년생) 따로 빼기
-        let birth = '';
-        const bm = affiliation.match(/(?:^|\s)(?:(19[3-9]\d|20[0-2]\d|[3-9]\d)|(\d{2,4})년생?)$/);
+        let birth = leadBirth;
+        const bm = affiliation.match(/(?:^|\s)(?:(19[3-9]\d|20[0-2]\d|[3-9]\d)|(\d{2,4})년생?)(?=\s|$)/);
         if (bm) {
-          birth = bm[1] || bm[2];
-          affiliation = affiliation.slice(0, bm.index).trim();
+          if (!birth) birth = bm[1] || bm[2];
+          affiliation = (affiliation.slice(0, bm.index) + ' ' + affiliation.slice(bm.index + bm[0].length)).replace(/\s+/g, ' ').trim();
         }
         if (name && name.length >= 2 && name.length <= 30) return { name, phone, affiliation, birth, amount, note };
         return null;
@@ -3666,9 +3672,25 @@
 
       // 3단계: 일반 한 줄씩 해석 (쉼표/슬래시 다중 나열 포함)
       const results = [];
+      // 밴드 '상태 메시지'처럼 문장인 줄은 명단이 아니므로 제외
+      const looksLikeStatus = l => /[~!?.…^]+$/.test(l.replace(/[,]+$/, '').trim()) && l.split(/\s+/).length >= 2
+        || (l.match(/[A-Za-z]{2,}/g) || []).length >= 2 && !/[가-힣]/.test(l);
       for (const line of cleanLines) {
         if (pureAmountRegex.test(line)) continue;
+        // 밴드 별명처럼 '이름/지역/별명' 형태: 한 사람으로 읽기
+        if (line.includes('/') && !phoneRegex.test(line) && !manRegex.test(line) && !amountRegex.test(line)) {
+          const segs = line.split('/').map(x => x.trim()).filter(Boolean);
+          if (segs.length >= 2 && korNameRe0.test(segs[0].replace(/[\[\]]/g, ''))) {
+            let aff = segs.slice(1).join(' ').replace(/[\^~!]+/g, ' ').replace(/\s+/g, ' ').trim();
+            let birth = '';
+            const bm2 = aff.match(/(?:^|\s)([3-9]\d)(?=\s|$)/);
+            if (bm2) { birth = bm2[1]; aff = aff.replace(bm2[0], ' ').replace(/\s+/g, ' ').trim(); }
+            results.push({ name: segs[0].replace(/[\[\]]/g, ''), phone: '', affiliation: aff, birth, amount: 0, note: '' });
+            continue;
+          }
+        }
         const protectedLine = line.replace(/\d{1,3}(?:,\d{3})+/g, m => m.replace(/,/g, '\u0001'));
+        if (looksLikeStatus(line)) continue;
         // 금액이 한 번만 나오면(부부 등 함께 낸 한 줄) 나누지 않고 한 줄로 둔다
         const amtCount = (line.match(/(?:^|\s)(?:\d{1,3}(?:,\d{3})+|\d{4,})(?=\s|$|원)/g) || []).length + (line.match(/(?:^|\s)\d+만\s*원?(?=\s|$)/g) || []).length;
         if ((protectedLine.includes(',') || protectedLine.includes('/')) && amtCount === 1 && !phoneRegex.test(line)) {
@@ -3690,16 +3712,20 @@
       return results;
     }
 
+    let batchExcluded = new Set(), batchLastText = null;
     function updateBatchPreview() {
       const textarea = document.getElementById('textarea-batch-input');
+      if (textarea.value !== batchLastText) { batchExcluded = new Set(); batchLastText = textarea.value; }
       const countEl = document.getElementById('batch-parsed-count');
       const samplesEl = document.getElementById('batch-parsed-samples');
 
       const parsed = parseBatchText(textarea.value);
-      const totalAmt = parsed.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const okList = parsed.filter((_, i) => !batchExcluded.has(i));
+      const totalAmt = okList.reduce((sum, item) => sum + (item.amount || 0), 0);
+      const exTxt = batchExcluded.size ? ` (${batchExcluded.size}명 뺌)` : '';
       countEl.textContent = totalAmt > 0
-        ? `${parsed.length}명 · ${totalAmt.toLocaleString()}원`
-        : `${parsed.length}명 인식됨`;
+        ? `${okList.length}명 · ${totalAmt.toLocaleString()}원${exTxt}`
+        : `${okList.length}명 인식됨${exTxt}`;
 
       if (parsed.length === 0) {
         samplesEl.innerHTML = `<span class="text-slate-400">텍스트를 붙여넣으면 인식된 회원·금액 명단이 여기에 표시됩니다.</span>`;
@@ -3709,9 +3735,10 @@
           const amtText = m.amount > 0 ? `<span class="font-bold text-emerald-700">${m.amount.toLocaleString()}원</span>` : `<span class="text-slate-400">${esc(m.phone || '연락처 없음')}</span>`;
           const birthBadge = m.birth ? `<span class="text-xs text-slate-500 ml-1">${esc(m.birth)}년생</span>` : '';
           const noteBadge = m.note ? `<span class="text-xs text-amber-700 font-bold ml-1">[${esc(m.note)}]</span>` : '';
+          const off = batchExcluded.has(idx);
           return `
-            <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50">
-              <span class="font-bold text-slate-800 truncate">${idx + 1}. ${esc(m.name)}${birthBadge}${affBadge}${noteBadge}</span>
+            <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50 ${off ? 'opacity-40 line-through' : ''}">
+              <label class="flex items-center min-w-0"><input type="checkbox" class="mr-1.5 shrink-0" ${off ? '' : 'checked'} onchange="toggleBatchRow(${idx})"><span class="font-bold text-slate-800 truncate">${idx + 1}. ${esc(m.name)}${birthBadge}${affBadge}${noteBadge}</span></label>
               <span class="text-xs shrink-0 ml-2">${amtText}</span>
             </div>
           `;
@@ -3719,6 +3746,7 @@
       }
     }
 
+    window.toggleBatchRow = function(i) { if (batchExcluded.has(i)) batchExcluded.delete(i); else batchExcluded.add(i); updateBatchPreview(); };
     document.getElementById('btn-open-batch-import').addEventListener('click', () => {
       requireAdminClub('회원 일괄 가져오기', () => {
       const club = getActiveClub();
@@ -3869,7 +3897,8 @@
       const syncDues = document.getElementById('checkbox-batch-sync-dues').checked;
       const duesLabel = document.getElementById('input-batch-dues-label').value.trim() || todayStr().slice(0, 7);
       const textarea = document.getElementById('textarea-batch-input');
-      const parsed = parseBatchText(textarea.value);
+      updateBatchPreview(); // 글이 바뀌었으면 '뺀 사람' 표시 초기화
+      const parsed = parseBatchText(textarea.value).filter((_, i) => !batchExcluded.has(i));
 
       if (parsed.length === 0) {
         showToast("인식된 회원이 없습니다. 명단을 확인해주세요.");
