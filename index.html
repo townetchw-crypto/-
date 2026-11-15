@@ -684,9 +684,15 @@
             <input id="input-member-affiliation" type="text" placeholder="예: 65골, 한얼, 은초" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
           </div>
         </div>
-        <div>
-          <label class="block font-semibold text-slate-700 mb-1">연락처</label>
-          <input id="input-member-phone" type="text" placeholder="예: 010-1234-5678" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">연락처</label>
+            <input id="input-member-phone" type="text" placeholder="예: 010-1234-5678" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">출생년도</label>
+            <input id="input-member-birth" type="text" inputmode="numeric" placeholder="예: 61" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
         </div>
         <div>
           <label class="block font-semibold text-slate-700 mb-1">주소 / 거주지</label>
@@ -1501,7 +1507,7 @@
           const id = sid(m.id || ('m_' + ci + '_' + mi));
           if (club.members.some(x => x.id === id)) return;
           club.members.push({ id, subGroupId: gid(m.subGroupId), name: str(m.name, '이름없음'), affiliation: str(m.affiliation),
-            phone: str(m.phone), address: str(m.address), memo: str(m.memo), role: ROLES.includes(m.role) ? m.role : '일반회원' });
+            phone: str(m.phone), birth: str(m.birth), address: str(m.address), memo: str(m.memo), role: ROLES.includes(m.role) ? m.role : '일반회원' });
         });
         (Array.isArray(c.meetings) ? c.meetings : []).forEach((mt, ti) => {
           if (!mt || typeof mt !== 'object') return;
@@ -2914,7 +2920,7 @@
               </div>
               <div>
                 <div class="flex items-center space-x-1.5 flex-nowrap overflow-hidden">
-                  <h4 class="font-bold text-slate-900 text-sm whitespace-nowrap shrink-0">${esc(m.name)}</h4>
+                  <h4 class="font-bold text-slate-900 text-sm whitespace-nowrap shrink-0">${esc(m.name)}${m.birth ? `<span class="text-[11px] font-semibold text-slate-400 ml-1">${esc(m.birth)}년생</span>` : ''}</h4>
                   ${m.affiliation ? `<span class="text-xs px-2 py-0.5 rounded-full font-bold border bg-indigo-50 text-indigo-700 border-indigo-200 truncate max-w-[125px] inline-block" title="${esc(m.affiliation)}">${esc(m.affiliation)}</span>` : ""}
                   ${m.role && m.role !== '일반회원' ? `<span class="text-xs px-2 py-0.5 rounded-full font-bold border whitespace-nowrap shrink-0 ${badgeClass}">${roleIcon}${esc(m.role)}</span>` : ''}
                 </div>
@@ -3510,6 +3516,7 @@
       };
       t = t.split(/\r?\n/).map(line => {
         line = line.replace(/\S+/g, fixNum);
+        line = line.replace(/^(\d+[.)]\s*)?나\s+(?=[가-힣]{2,4}(?:\s|$))/, '$1'); // 카톡 명단에서 '나'(내 표시) 떼기
         if (fromOcr) {
           // "홍 길 동", "김 철수"처럼 글자 사이가 벌어진 이름 붙이기
           line = line.replace(/^\s*(?:\d+[.)]\s*)?([가-힣]) ([가-힣]) ([가-힣])(?= |$)/, (m0, a, b, c) => m0.replace(a + ' ' + b + ' ' + c, a + b + c));
@@ -3604,7 +3611,14 @@
           affiliation = affParts.join(' ').replace(/[\[\]]/g, '').trim();
         }
 
-        if (name && name.length >= 2 && name.length <= 30) return { name, phone, affiliation, amount, note };
+        // 소속 끝에 붙은 출생년도(61, 1961, 61년생) 따로 빼기
+        let birth = '';
+        const bm = affiliation.match(/(?:^|\s)(?:(19[3-9]\d|20[0-2]\d|[3-9]\d)|(\d{2,4})년생?)$/);
+        if (bm) {
+          birth = bm[1] || bm[2];
+          affiliation = affiliation.slice(0, bm.index).trim();
+        }
+        if (name && name.length >= 2 && name.length <= 30) return { name, phone, affiliation, birth, amount, note };
         return null;
       }
 
@@ -3693,10 +3707,11 @@
         samplesEl.innerHTML = parsed.map((m, idx) => {
           const affBadge = m.affiliation ? `<span class="text-xs px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 ml-1">${esc(m.affiliation)}</span>` : '';
           const amtText = m.amount > 0 ? `<span class="font-bold text-emerald-700">${m.amount.toLocaleString()}원</span>` : `<span class="text-slate-400">${esc(m.phone || '연락처 없음')}</span>`;
+          const birthBadge = m.birth ? `<span class="text-xs text-slate-500 ml-1">${esc(m.birth)}년생</span>` : '';
           const noteBadge = m.note ? `<span class="text-xs text-amber-700 font-bold ml-1">[${esc(m.note)}]</span>` : '';
           return `
             <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50">
-              <span class="font-bold text-slate-800 truncate">${idx + 1}. ${esc(m.name)}${affBadge}${noteBadge}</span>
+              <span class="font-bold text-slate-800 truncate">${idx + 1}. ${esc(m.name)}${birthBadge}${affBadge}${noteBadge}</span>
               <span class="text-xs shrink-0 ml-2">${amtText}</span>
             </div>
           `;
@@ -3872,6 +3887,7 @@
           name: item.name,
           phone: item.phone || "",
           affiliation: item.affiliation || "",
+          birth: item.birth || "",
           role: "일반회원"
         };
         club.members.push(mem);
@@ -3924,6 +3940,7 @@
         document.getElementById('input-member-name').value = m.name || '';
         document.getElementById('input-member-affiliation').value = m.affiliation || '';
         document.getElementById('input-member-phone').value = m.phone || '';
+        document.getElementById('input-member-birth').value = m.birth || '';
         document.getElementById('input-member-address').value = m.address || '';
         document.getElementById('input-member-memo').value = m.memo || '';
         document.getElementById('modal-add-member').classList.remove('hidden');
@@ -3938,6 +3955,7 @@
         document.getElementById('input-member-name').value = '';
         document.getElementById('input-member-affiliation').value = '';
         document.getElementById('input-member-phone').value = '';
+        document.getElementById('input-member-birth').value = '';
         document.getElementById('input-member-address').value = '';
         document.getElementById('input-member-memo').value = '';
         document.getElementById('modal-add-member').classList.remove('hidden');
@@ -3956,6 +3974,7 @@
       const name = document.getElementById('input-member-name').value.trim();
       const affiliation = document.getElementById('input-member-affiliation').value.trim();
       const phone = document.getElementById('input-member-phone').value.trim();
+      const birth = document.getElementById('input-member-birth').value.trim();
       const address = document.getElementById('input-member-address').value.trim();
       const memo = document.getElementById('input-member-memo').value.trim();
       const role = document.getElementById('input-member-role').value;
@@ -3972,6 +3991,7 @@
           target.name = name;
           target.affiliation = affiliation;
           target.phone = phone;
+          target.birth = birth;
           target.address = address;
           target.memo = memo;
           target.role = role;
@@ -3984,6 +4004,7 @@
           name,
           affiliation,
           phone,
+          birth,
           address,
           memo,
           role
