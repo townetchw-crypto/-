@@ -2506,7 +2506,7 @@
         const a = it.k >= 0 ? incs[it.k] : undefined, e = it.k >= 0 ? exps[it.k] : undefined;
         const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '';
         const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '';
-        rowsHtml += `<tr class="h-7">
+        rowsHtml += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ta}>${a ? fm(a.amount) : ''}</td>
@@ -2517,10 +2517,10 @@
       container.innerHTML = carryBarHtml() + `
         <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
           <div class="flex items-center justify-between gap-1.5"><div class="flex gap-1.5"><button onclick="openSettleEntry('income')" class="shrink-0 px-3 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-lg">+ 수입</button><button onclick="openSettleEntry('expense')" class="shrink-0 px-3 py-2 bg-rose-100 text-rose-900 border border-rose-300 text-xs font-bold rounded-lg">+ 지출</button></div><button onclick="settleSaveA4()" class="shrink-0 px-3 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg">🖼️ 사진 저장 (A4)</button></div>
-          <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(activeMeeting.title)} 결산</h3>
+          <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(club.name)}</h3>
           <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
-            <span class="truncate mr-2">${esc(club.name)}</span>
-            <span>${esc(fmtMeetingWhen(activeMeeting))}</span>
+            <span class="mr-2">${esc(fmtMeetingWhen(activeMeeting))}</span>
+            <span class="truncate">${esc(activeMeeting.title)} 결산</span>
           </div>
           <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
             ${lay.colgroup}
@@ -2532,7 +2532,7 @@
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} lbl text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(totalIncome)}</td><td class="${bd} lbl text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
-              <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">이 월 금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
+              <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">전월이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
               <tr class="h-11"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
             </tfoot>
           </table>
@@ -2681,7 +2681,7 @@
 
     // A4 한 장 분량 계산: 합계까지 들어가는 마지막 장 23줄, 그 앞 장은 28줄
     function a4Plan(n, capFull, capLast) {
-      capFull = capFull || 28; capLast = capLast || 23;
+      capFull = capFull || 23; capLast = capLast || 18;
       const pages = []; let i = 0;
       while (n - i > capLast) {
         let e = Math.min(n, i + capFull);
@@ -2695,7 +2695,7 @@
       const plan = a4Plan(n), out = [];
       plan.forEach(([a, b], pi) => {
         if (pi > 0) out.push({ sep: pi + 1 });
-        const R = pi === plan.length - 1 ? 23 : b - a;
+        const R = pi === plan.length - 1 ? 18 : b - a;
         for (let r = 0; r < R; r++) out.push({ k: a + r < b ? a + r : -1 });
       });
       return out;
@@ -2706,9 +2706,9 @@
       const PW = 794, PH = 1123, K = 3.125, M = 48;
       const cols = [90, 170, 120, 198, 120];
       const X = [M]; cols.forEach(w => X.push(X[X.length - 1] + w));
-      const Y0 = 150, H1 = 34, H2 = 28, ROW = 30, FOOT = [36, 36, 36, 44], FH = 152;
+      const Y0 = 150, H1 = 36, H2 = 30, ROW = 36, FOOT = [36, 36, 36, 44], FH = 152;
       const bodyTop = Y0 + H1 + H2, limit = PH - 56;
-      const capFull = Math.floor((limit - bodyTop) / ROW), capLast = Math.floor((limit - bodyTop - FH) / ROW);
+      const capFull = Math.floor((limit - bodyTop) / ROW), capLast = 18;
       const fam = getComputedStyle(document.body).fontFamily;
       const fm = n => Number(n).toLocaleString();
       const sgn = n => n < 0 ? '- ' + fm(-n) : fm(n);
@@ -2723,7 +2723,7 @@
         g.fillStyle = '#fff'; g.fillRect(0, 0, PW, PH);
         const txt = (t, x1, x2, ym, o) => {
           t = String(t == null ? '' : t); if (!t) return;
-          o = o || {}; let size = o.size || 13;
+          o = o || {}; let size = o.size || 14;
           const setF = z => { g.font = `${o.weight || 400} ${z}px ${fam}`; };
           setF(size);
           try { g.letterSpacing = (o.ls || 0) + 'px'; } catch (e) {}
@@ -2753,7 +2753,7 @@
           const y = bodyTop + r * ROW, ym = y + ROW / 2, k = a + r;
           for (let c = 0; c < 5; c++) box(X[c], y, X[c + 1], y + ROW);
           const A = k < b ? spec.inc[k] : null, E = k < b ? spec.exp[k] : null;
-          if (A) { txt(A.name, X[0], X[1], ym); txt(A.memo, X[1], X[2], ym, { size: 10.5 }); txt(fm(A.amt), X[2], X[3], ym, { align: 'right' }); }
+          if (A) { txt(A.name, X[0], X[1], ym); txt(A.memo, X[1], X[2], ym, { size: 11.5 }); txt(fm(A.amt), X[2], X[3], ym, { align: 'right' }); }
           if (E) { txt(E.name, X[3], X[4], ym); txt(fm(E.amt), X[4], X[5], ym, { align: 'right' }); }
         }
         let yEnd = bodyTop + R * ROW;
@@ -2766,7 +2766,7 @@
           txt('지 출 계', X[3], X[4], y + FOOT[0] / 2, { size: 14, weight: 800 });
           txt(fm(f.expTotal), X[4], X[5], y + FOOT[0] / 2, { weight: 800, align: 'right' });
           y += FOOT[0];
-          [['(입금)-(지출)', f.diff, FOOT[1], true], ['이 월 금', f.carry, FOOT[2], false], ['합 계', f.grand, FOOT[3], true]].forEach(([lb, v, h, neg]) => {
+          [['(입금)-(지출)', f.diff, FOOT[1], true], ['전월이월금', f.carry, FOOT[2], false], ['합 계', f.grand, FOOT[3], true]].forEach(([lb, v, h, neg]) => {
             box(X[0], y, X[2], y + h); box(X[2], y, X[4], y + h); box(X[4], y, X[5], y + h);
             txt(lb, X[2], X[4], y + h / 2, { size: 14, weight: 800 });
             txt(sgn(v), X[4], X[5], y + h / 2, { weight: 800, align: 'right', color: (neg && v < 0) ? red : '#0f172a' });
@@ -2802,7 +2802,7 @@
       const inc = (mt.incomes || []).map(x => ({ name: x.name, memo: x.memo, amt: x.amount }));
       const exp = (mt.expenses || []).map(x => ({ name: x.title, amt: x.amount }));
       const si = inc.reduce((t, x) => t + x.amt, 0), se = exp.reduce((t, x) => t + x.amt, 0), cy = settleCarryFor(mt);
-      saveA4Pages({ title: `${mt.title} 결산`, left: club.name, right: fmtMeetingWhen(mt), inc, exp, name: '정산',
+      saveA4Pages({ title: club.name, left: fmtMeetingWhen(mt), right: `${mt.title} 결산`, inc, exp, name: '정산',
         foot: { incTotal: si, expTotal: se, diff: si - se, carry: cy, grand: si - se + cy } });
     };
     window.reportSaveA4 = function() {
@@ -2816,7 +2816,7 @@
       r.meetingExpenses.forEach(e => exp.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
       r.extraExpenses.forEach(x => exp.push({ name: x.title, amt: x.amount }));
       const incSum = r.totalIncome - r.carryOver;
-      saveA4Pages({ title: r.title, left: todayStr().replace(/-/g, '.'), right: r.periodText, inc, exp, name: '결산보고',
+      saveA4Pages({ title: r.club.name, left: r.periodText, right: '결산보고서', inc, exp, name: '결산보고',
         foot: { incTotal: incSum, expTotal: r.totalExpense, diff: incSum - r.totalExpense, carry: r.carryOver, grand: r.balance } });
     };
 
@@ -4468,7 +4468,7 @@
         const a = it.k >= 0 ? incRows[it.k] : undefined, e = it.k >= 0 ? expRows[it.k] : undefined;
         const ac = a && a.id ? ` onclick="openEditReportEntry('${a.id}')" style="cursor:pointer"` : '';
         const ec = e && e.id ? ` onclick="openEditReportEntry('${e.id}')" style="cursor:pointer"` : '';
-        bodyRows += `<tr class="h-7">
+        bodyRows += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ac}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ac}>${a ? fm(a.amt) : ''}</td>
@@ -4477,10 +4477,10 @@
         </tr>`;
       }
       area.innerHTML = carryBarHtml() + `
-        <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.title)}</h3>
+        <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.club.name)}</h3>
         <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
-          <span>${todayStr().replace(/-/g, '.')}</span>
           <span>${esc(r.periodText)}</span>
+          <span>결산보고서</span>
         </div>
         <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
           ${lay.colgroup}
@@ -4492,7 +4492,7 @@
           <tfoot class="font-extrabold">
             <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} lbl text-center text-sm">입 금 계</td><td class="${bd} px-1 text-right">${fm(incSum)}</td><td class="${bd} lbl text-center text-sm">지 출 계</td><td class="${bd} px-1 text-right">${fm(r.totalExpense)}</td></tr>
             <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
-            <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">이 월 금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
+            <tr class="h-9"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">전월이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
             <tr class="h-11"><td colspan="2" class="${bd}"></td><td colspan="2" class="${bd} lbl text-center text-sm">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
           </tfoot>
         </table>
