@@ -1572,6 +1572,7 @@
     const IDB_NAME = 'MomoLargeDB';
     const IDB_STORE = 'appData';
     let idbReady = false;
+    let userMutated = false;
 
     function openMomoDB() {
       return new Promise((resolve, reject) => {
@@ -1612,7 +1613,10 @@
       try {
         const stored = await idbGet('main');
         idbReady = true;
-        if (stored && typeof stored === 'object' && Array.isArray(stored.clubs)) {
+        if (userMutated) {
+          // 불러오는 사이 사용자가 먼저 입력했으면 그 자료를 지키고 저장소에 덮어쓴다
+          await idbSet('main', JSON.parse(JSON.stringify(appState)));
+        } else if (stored && typeof stored === 'object' && Array.isArray(stored.clubs)) {
           appState = normalizeState(stored);
           renderAll();
         } else if (appState && Array.isArray(appState.clubs) && appState.clubs.length > 0) {
@@ -1626,6 +1630,7 @@
 
     let saveWarned = false;
     function saveState() {
+      if (!idbReady) userMutated = true;
       try { dailySnapshot(); } catch (e) {}
       let idbSaved = false;
       if (window.indexedDB) {
@@ -5130,15 +5135,16 @@
       saveState();
       document.getElementById('modal-batch-rsvp').classList.add('hidden');
       renderAll();
-    initLargeStorage();
       showToast(`✅ 참석자 ${Object.keys(newAtt).length}명이 확정되었습니다.`);
     });
 
 
     // 초기 구동
+    initLargeStorage();
     applyLayers();
     fitStickyBars();
     startupReminder();
+    userMutated = false;
   
     // 금액 입력칸: 쉼표 자동 표시 (값을 코드로 넣어도 자동으로 쉼표가 붙음)
     (function () {
