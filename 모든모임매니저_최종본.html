@@ -2549,7 +2549,7 @@
       }
       container.innerHTML = carryBarHtml() + cards + `
         <div id="settle-table-card" class="bg-white rounded-2xl border border-slate-200 p-3 shadow-sm space-y-2">
-          <div class="flex justify-end"><button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button></div>
+          <div class="flex justify-end gap-1.5"><button onclick="settleSaveImage()" class="shrink-0 px-2 py-1 bg-emerald-500 text-white text-[11px] font-bold rounded-lg">🖼️ 사진 저장</button><button onclick="settleCopySummary('${mid}')" class="shrink-0 px-2 py-1 bg-amber-400 text-amber-950 text-[11px] font-bold rounded-lg">📋 결산 복사</button></div>
           <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(activeMeeting.title)} 결산</h3>
           <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
             <span class="truncate mr-2">${esc(club.name)}</span>
@@ -2723,6 +2723,69 @@
       if (v !== null) document.getElementById('settle-entry-amount').value = v;
     });
 
+    // 정산표를 화면 모양 그대로 사진(PNG)으로 저장
+    window.settleSaveImage = async function() {
+      const card = document.getElementById('settle-table-card');
+      if (!card) return;
+      const h3 = card.querySelector('h3'), info = h3 && h3.nextElementSibling, table = card.querySelector('table');
+      if (!h3 || !table) return;
+      const cr = card.getBoundingClientRect();
+      const top = h3.getBoundingClientRect().top - 10, bottom = table.getBoundingClientRect().bottom + 14;
+      const W = cr.width, H = bottom - top, K = 3;
+      const cv = document.createElement('canvas');
+      cv.width = Math.round(W * K); cv.height = Math.round(H * K);
+      const g = cv.getContext('2d');
+      g.scale(K, K); g.fillStyle = '#ffffff'; g.fillRect(0, 0, W, H);
+      const drawText = (el, text, rect) => {
+        if (!text) return;
+        const cs = getComputedStyle(el);
+        let size = parseFloat(cs.fontSize) || 12;
+        const setF = z => { g.font = `${cs.fontWeight} ${z}px ${cs.fontFamily}`; };
+        setF(size);
+        try { g.letterSpacing = cs.letterSpacing === 'normal' ? '0px' : cs.letterSpacing; } catch (e) {}
+        const maxW = rect.width - 6;
+        while (g.measureText(text).width > maxW && size > 6) { size -= 0.5; setF(size); }
+        g.fillStyle = cs.color; g.textBaseline = 'middle';
+        const al = cs.textAlign;
+        const y = rect.top - top + rect.height / 2;
+        if (al === 'right' || al === 'end') { g.textAlign = 'right'; g.fillText(text, rect.right - cr.left - 4, y); }
+        else if (al === 'left' || al === 'start') { g.textAlign = 'left'; g.fillText(text, rect.left - cr.left + 4, y); }
+        else { g.textAlign = 'center'; g.fillText(text, rect.left - cr.left + rect.width / 2, y); }
+        try { g.letterSpacing = '0px'; } catch (e) {}
+      };
+      drawText(h3, h3.textContent.trim(), h3.getBoundingClientRect());
+      if (info) Array.from(info.children).forEach(sp => {
+        const r = sp.getBoundingClientRect(), t = sp.textContent.trim();
+        const cs = getComputedStyle(sp);
+        g.font = `${cs.fontWeight} ${cs.fontSize} ${cs.fontFamily}`; g.fillStyle = cs.color; g.textBaseline = 'middle';
+        const left = sp === info.firstElementChild;
+        g.textAlign = left ? 'left' : 'right';
+        g.fillText(t, left ? r.left - cr.left : r.right - cr.left, r.top - top + r.height / 2);
+      });
+      table.querySelectorAll('th,td').forEach(c => {
+        const r = c.getBoundingClientRect(), cs = getComputedStyle(c);
+        const x = r.left - cr.left, y = r.top - top;
+        if (cs.backgroundColor && cs.backgroundColor !== 'rgba(0, 0, 0, 0)') { g.fillStyle = cs.backgroundColor; g.fillRect(x, y, r.width, r.height); }
+        g.strokeStyle = '#1e293b'; g.lineWidth = 0.8; g.strokeRect(x, y, r.width, r.height);
+        drawText(c, c.textContent.replace(/\s+/g, ' ').trim(), r);
+      });
+      const tr = table.getBoundingClientRect();
+      g.strokeStyle = '#0f172a'; g.lineWidth = 2; g.strokeRect(tr.left - cr.left, tr.top - top, tr.width, tr.height);
+      const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+      if (!blob) { showToast('사진 만들기에 실패했어요.'); return; }
+      const name = `정산_${todayStr()}.png`;
+      const file = new File([blob], name, { type: 'image/png' });
+      try {
+        if (navigator.canShare && navigator.canShare({ files: [file] })) {
+          await navigator.share({ files: [file] });
+          showToast("공유창에서 '이미지 저장'을 누르면 사진첩에 저장돼요.");
+          return;
+        }
+      } catch (e) { if (e && e.name === 'AbortError') return; }
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name;
+      document.body.appendChild(a); a.click(); a.remove();
+      showToast('사진 파일로 내려받았어요.');
+    };
     window.settleCopySummary = function(meetingId) {
       const mt = getActiveClub().meetings.find(x => x.id === meetingId);
       if (!mt) return;
