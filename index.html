@@ -3654,6 +3654,12 @@
       for (const line of cleanLines) {
         if (pureAmountRegex.test(line)) continue;
         const protectedLine = line.replace(/\d{1,3}(?:,\d{3})+/g, m => m.replace(/,/g, '\u0001'));
+        // 금액이 한 번만 나오면(부부 등 함께 낸 한 줄) 나누지 않고 한 줄로 둔다
+        const amtCount = (line.match(/(?:^|\s)(?:\d{1,3}(?:,\d{3})+|\d{4,})(?=\s|$|원)/g) || []).length + (line.match(/(?:^|\s)\d+만\s*원?(?=\s|$)/g) || []).length;
+        if ((protectedLine.includes(',') || protectedLine.includes('/')) && amtCount === 1 && !phoneRegex.test(line)) {
+          const one = parseOne(line.replace(/\s*\/\s*/g, ','));
+          if (one) { results.push(one); continue; }
+        }
         if (protectedLine.includes(',') || protectedLine.includes('/')) {
           protectedLine.split(/[,/]+/).forEach(p => {
             p = p.replace(/\u0001/g, ',').trim().replace(/^[0-9]+[.\)]\s*/, '');
