@@ -72,7 +72,7 @@
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
 
   <!-- 최상위 네비게이션 헤더 (클럽 전환 드롭다운 포함) -->
-  <header id="app-header" class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between">
+  <header id="app-header" class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between">
     <!-- 모임 선택 트리거 버튼 -->
     <button id="btn-open-club-selector" class="flex items-center min-w-0 space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
       <div id="header-club-icon-box" class="hidden w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 text-base">
@@ -403,7 +403,7 @@
   </main>
 
   <!-- 모바일 하단 네비게이션 탭 바 -->
-  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg">
     <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
       <button id="nav-btn-meetings" class="flex flex-col items-center justify-center space-y-1 text-indigo-600 font-semibold transition-colors">
         <span class="text-lg">📅</span>
@@ -431,7 +431,7 @@
   <!-- ============================================== -->
   <!-- [모달 0] 최상위 모임/클럽 선택 및 전환 바텀시트 모달 -->
   <!-- ============================================== -->
-  <div id="modal-select-club" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+  <div id="modal-select-club" class="fixed inset-0 z-50 bg-black/60 hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
     <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <div>
@@ -455,7 +455,7 @@
   <!-- ============================================== -->
   <!-- [모달 0-1] 새 최상위 모임/클럽 개설 모달 -->
   <!-- ============================================== -->
-  <div id="modal-create-club" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-create-club" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-bold text-slate-900 text-base">새 모임/클럽 개설</h3>
@@ -560,7 +560,7 @@
   <!-- ============================================== -->
   <!-- [모달 1-1] 참석자 일괄 체크박스 모달 -->
   <!-- ============================================== -->
-  <div id="modal-batch-rsvp" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-batch-rsvp" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[88vh] flex flex-col">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <div>
@@ -590,7 +590,7 @@
   <!-- [모달 2] 지출 내역 추가 모달 -->
   <!-- ============================================== -->
   <!-- [모달] 모임 수입/지출 항목 입력 -->
-  <div id="modal-settle-entry" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-settle-entry" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 id="settle-entry-title" class="font-bold text-slate-900 text-base">수입 입력</h3>
@@ -622,7 +622,7 @@
     </div>
   </div>
 
-  <div id="modal-add-expense" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-add-expense" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-bold text-slate-900 text-base">지출 항목 등록</h3>
@@ -660,7 +660,7 @@
   <!-- ============================================== -->
   <!-- [모달 3] 회원 등록 및 상세정보 수정 모달 -->
   <!-- ============================================== -->
-  <div id="modal-add-member" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-add-member" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 id="member-modal-title" class="font-bold text-slate-900 text-base">신규 회원 등록</h3>
@@ -716,7 +716,7 @@
   <!-- ============================================== -->
   <!-- [모달 3-1] 회원 일괄 가져오기 모달 (밴드/카톡 텍스트 붙여넣기) -->
   <!-- ============================================== -->
-  <div id="modal-batch-import" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-batch-import" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[92vh] overflow-y-auto animate-in fade-in zoom-in-95 duration-200">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <div>
@@ -782,7 +782,7 @@
   <!-- ============================================== -->
   <!-- [모달 4] 월회비 납부 기록 모달 -->
   <!-- ============================================== -->
-  <div id="modal-add-due" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-add-due" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 id="due-modal-title" class="font-bold text-slate-900 text-base">회비 납부 기록</h3>
@@ -847,7 +847,7 @@
   <!-- ============================================== -->
   <!-- [모달 5] 신규 하위 기수 / 소그룹 추가 모달 -->
   <!-- ============================================== -->
-  <div id="modal-add-subgroup" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-add-subgroup" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-bold text-slate-900 text-base">새 소모임 추가</h3>
@@ -873,7 +873,7 @@
   <!-- ============================================== -->
   <!-- [모달 6-1] 결산보고서 기본 설정 및 서명란 수정 모달 -->
   <!-- ============================================== -->
-  <div id="modal-report-config" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-report-config" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-bold text-slate-900 text-base">⚙️ 결산보고서 설정</h3>
@@ -924,7 +924,7 @@
   <!-- ============================================== -->
   <!-- [모달 6-2] 결산 추가 수입/지출 항목 등록·수정 모달 -->
   <!-- ============================================== -->
-  <div id="modal-report-entry" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-report-entry" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 id="report-entry-modal-title" class="font-bold text-slate-900 text-base">수입·지출 항목 등록</h3>
@@ -970,7 +970,7 @@
   <!-- ============================================== -->
   <!-- [모달 7] 운영진 인증 및 권한 전환 모달 -->
   <!-- ============================================== -->
-  <div id="modal-admin-auth" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-admin-auth" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <div class="flex items-center space-x-1.5">
@@ -1018,7 +1018,7 @@
   <!-- ============================================== -->
   <!-- [모달 6] 삭제 확인 팝업 모달 -->
   <!-- ============================================== -->
-  <div id="modal-confirm-delete" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-confirm-delete" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
       <div class="text-center space-y-2">
         <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto">
@@ -1041,7 +1041,7 @@
   </div>
 
   <!-- 카톡 공지문 복사 확인 모달 -->
-  <div id="modal-copy-notice" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-copy-notice" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-bold text-slate-900 text-base">📢 카카오톡 정산 공지문</h3>
@@ -1058,7 +1058,7 @@
 
   <!-- ============================================== -->
   <!-- [모달] 백업 / 복원 -->
-  <div id="modal-backup" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+  <div id="modal-backup" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
         <h3 class="font-extrabold text-slate-900 text-base">💾 백업 / 복원</h3>
@@ -2491,11 +2491,6 @@
       const balance = totalIncome - totalSpent;
       const carry = settleCarryFor(activeMeeting);
       const grand = balance + carry;
-      const rcfg = club.reportConfig || {};
-      const roleName = role => { const m = (club.members || []).find(x => x.role === role); return m ? m.name : ''; };
-      const sigSec = rcfg.secretary || roleName('총무') || '-';
-      const sigAud = rcfg.auditor || roleName('부회장') || roleName('운영진') || '-';
-      const sigPre = rcfg.president || roleName('회장') || '-';
       const fm = n => Number(n).toLocaleString();
       const bd = 'border border-slate-800';
       const mid = activeMeeting.id;
@@ -2505,10 +2500,10 @@
         [...exps.map(x => fm(x.amount)), fm(totalSpent), sgn(balance), sgn(carry), sgn(grand)]
       );
 
-      const nRows = Math.max(10, incs.length, exps.length);
       let rowsHtml = '';
-      for (let i = 0; i < nRows; i++) {
-        const a = incs[i], e = exps[i];
+      for (const it of a4Rows(Math.max(incs.length, exps.length))) {
+        if (it.sep) { rowsHtml += a4SepRow(it.sep); continue; }
+        const a = it.k >= 0 ? incs[it.k] : undefined, e = it.k >= 0 ? exps[it.k] : undefined;
         const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '';
         const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '';
         rowsHtml += `<tr class="h-7">
@@ -2542,17 +2537,6 @@
             </tfoot>
           </table>
           <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 앞선 모임들의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈이 있으면 수입란에 적어 주세요.</p>
-          <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
-            <div class="flex items-center justify-between">
-              <span class="font-bold text-slate-600">보관 계좌</span>
-              <span class="font-bold text-slate-800">${esc(rcfg.bankAccount || '미등록 (결산보고 ⚙️ 설정에서 입력)')}</span>
-            </div>
-            <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 text-center">
-              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">작성 (총무)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigSec)}</p></div>
-              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">확인 (감사/부회장)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigAud)}</p></div>
-              <div class="bg-white border border-slate-200 rounded-lg p-2"><p class="text-[10px] text-slate-400">승인 (회장)</p><p class="font-bold text-slate-800 mt-0.5">${esc(sigPre)}</p></div>
-            </div>
-          </div>
         </div>
       `;
     }
@@ -2695,6 +2679,28 @@
       if (v !== null) document.getElementById('settle-entry-amount').value = v;
     });
 
+    // A4 한 장 분량 계산: 합계까지 들어가는 마지막 장 23줄, 그 앞 장은 28줄
+    function a4Plan(n, capFull, capLast) {
+      capFull = capFull || 28; capLast = capLast || 23;
+      const pages = []; let i = 0;
+      while (n - i > capLast) {
+        let e = Math.min(n, i + capFull);
+        if (e === n) e = n - 5;
+        pages.push([i, e]); i = e;
+      }
+      pages.push([i, n]);
+      return pages;
+    }
+    function a4Rows(n) {
+      const plan = a4Plan(n), out = [];
+      plan.forEach(([a, b], pi) => {
+        if (pi > 0) out.push({ sep: pi + 1 });
+        const R = pi === plan.length - 1 ? 23 : b - a;
+        for (let r = 0; r < R; r++) out.push({ k: a + r < b ? a + r : -1 });
+      });
+      return out;
+    }
+    function a4SepRow(p) { return `<tr class="no-print"><td colspan="5" class="text-center text-[10px] font-bold text-slate-500 bg-slate-100 py-1">─ ${p}쪽 ─</td></tr>`; }
     // ---- A4 사진 저장: 표를 A4 크기로 그리고, 줄이 많으면 여러 장으로 나눔 ----
     window.saveA4Pages = async function(spec) {
       const PW = 794, PH = 1123, K = 3.125, M = 48;
@@ -2707,9 +2713,7 @@
       const fm = n => Number(n).toLocaleString();
       const sgn = n => n < 0 ? '- ' + fm(-n) : fm(n);
       const n = Math.max(spec.inc.length, spec.exp.length);
-      const pages = []; let i = 0;
-      while (n - i > capLast) { const e = Math.min(n, i + capFull); pages.push([i, e]); i = e; }
-      pages.push([i, n]);
+      const pages = a4Plan(n, capFull, capLast);
       const files = [];
       for (let pi = 0; pi < pages.length; pi++) {
         const [a, b] = pages[pi], last = pi === pages.length - 1;
@@ -2744,7 +2748,7 @@
           box(X[c], Y0 + H1, X[c + 1], Y0 + H1 + H2, '#f8fafc');
           txt(t, X[c], X[c + 1], Y0 + H1 + H2 / 2, { size: 12.5, weight: 800 });
         });
-        const R = last ? Math.max(b - a, 12) : b - a;
+        const R = last ? capLast : b - a;
         for (let r = 0; r < R; r++) {
           const y = bodyTop + r * ROW, ym = y + ROW / 2, k = a + r;
           for (let c = 0; c < 5; c++) box(X[c], y, X[c + 1], y + ROW);
@@ -4450,7 +4454,6 @@
       const expRows = [];
       r.meetingExpenses.forEach(e => expRows.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
       r.extraExpenses.forEach(x => expRows.push({ name: x.title, amt: x.amount, id: x.id }));
-      const nRows = Math.max(10, incRows.length, expRows.length);
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
       const bd = 'border border-slate-800';
@@ -4460,8 +4463,9 @@
         [...expRows.map(x => fm(x.amt)), fm(r.totalExpense), sgn(diff), sgn(r.carryOver), sgn(r.balance)]
       );
       let bodyRows = '';
-      for (let i = 0; i < nRows; i++) {
-        const a = incRows[i], e = expRows[i];
+      for (const it of a4Rows(Math.max(incRows.length, expRows.length))) {
+        if (it.sep) { bodyRows += a4SepRow(it.sep); continue; }
+        const a = it.k >= 0 ? incRows[it.k] : undefined, e = it.k >= 0 ? expRows[it.k] : undefined;
         const ac = a && a.id ? ` onclick="openEditReportEntry('${a.id}')" style="cursor:pointer"` : '';
         const ec = e && e.id ? ` onclick="openEditReportEntry('${e.id}')" style="cursor:pointer"` : '';
         bodyRows += `<tr class="h-7">
