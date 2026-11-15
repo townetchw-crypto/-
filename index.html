@@ -3533,6 +3533,7 @@
       function isNoiseLine(line) {
         const compact = line.replace(/\s+/g, '');
         if (/^(賻儀|부의|축의|부의금|축의금|과목|금액|성명|이름|비고|번호|순번|연락처|전화번호|합계|소계|총계|작성일|결산기간)$/i.test(compact)) return true;
+        if (/회사명\s*[:：]|인원\s*[:：]|[:：/]\s*\d+\s*명\s*$|^[:：/]?\s*\d+\s*명$/.test(line)) return true; // 손글씨·머리글이 섞인 줄 (회사명 : …, 원:/37명)
         if (/^(합계|소계|총계|총액|합\s*계)[\s:：]*[\d,]*원?$/.test(line.replace(/\s+/g,' '))) return true; // 합계 450,000
         if (/^\d{4}[년\-.\/]\s*\d{1,2}[월\-.\/]/.test(line)) return true; // 2014년 12월 15일 현재 등
         if (/^(회사명|모임명|총무|회장|인원|합계|총액|총계|기간|일자)\s*[:：]/.test(compact)) return true;
