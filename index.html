@@ -2867,9 +2867,10 @@
       const r = computeReportData();
       if (!r.club.id) { showToast('먼저 모임을 만들어 주세요.'); return; }
       const inc = [];
-      r.duesGroups.forEach(g => inc.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount }));
-      r.extraIncomes.forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount }));
-      (r.meetingIncomes || []).forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount }));
+      r.duesGroups.forEach(g => inc.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date }));
+      r.extraIncomes.forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      (r.meetingIncomes || []).forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      inc.sort(byDateAsc);
       const exp = [];
       r.meetingExpenses.forEach(e => exp.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
       r.extraExpenses.forEach(x => exp.push({ name: x.title, amt: x.amount }));
@@ -4500,6 +4501,11 @@
 
 
     // --- [자동화 결산보고서 엔진] ---
+    // 입금 줄 정렬: 날짜 빠른 순 (날짜 없는 줄은 맨 뒤), 같은 날짜는 입력 순서 유지
+    function byDateAsc(a, b) {
+      const x = String(a.date || '').slice(0, 10) || '9999-99-99', y = String(b.date || '').slice(0, 10) || '9999-99-99';
+      return x < y ? -1 : (x > y ? 1 : 0);
+    }
     function computeReportData() {
       const club = getActiveClub();
       const fromEl = document.getElementById('report-from'), toEl = document.getElementById('report-to');
@@ -4527,7 +4533,9 @@
       const duesGroups = {};
       paidDues.forEach(d => {
         const key = d.yearMonth || '기타';
-        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0 };
+        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0, date: '' };
+        const dd = normD(dueDate(d));
+        if (dd && (!duesGroups[key].date || dd < duesGroups[key].date)) duesGroups[key].date = dd;
         duesGroups[key].count += 1;
         duesGroups[key].amount += d.amount;
       });
@@ -4537,7 +4545,7 @@
         if (x.type !== 'income' || !matchSub(x.subGroupId)) return false;
         if (!inRange(x.date)) return false;
         return true;
-      });
+      }).sort((a, b) => String(a.date || '').localeCompare(String(b.date || '')));
 
       // 3) 모임 1/N 지출 자동 집계
       const meetingExpenses = [];
@@ -4633,9 +4641,10 @@
       // 결산서 양식: 입금내역(항목/내역/금액) | 지출내역(내역/금액)
       const fm = n => Number(n).toLocaleString();
       const incRows = [];
-      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount }));
-      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id }));
-      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount }));
+      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date }));
+      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date }));
+      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      incRows.sort(byDateAsc);
       const expRows = [];
       r.meetingExpenses.forEach(e => expRows.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
       r.extraExpenses.forEach(x => expRows.push({ name: x.title, amt: x.amount, id: x.id }));
