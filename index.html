@@ -1485,6 +1485,7 @@
           icon: str(c.icon, '👥'), subtitle: str(c.subtitle), activeSubGroupId: sid(c.activeSubGroupId || 'all'),
           subGroups: [], members: [], meetings: [], monthlyDues: [], formerMembers: {},
           extraLedger: [],
+          lastDueAmount: Math.max(0, toInt(c.lastDueAmount)),
           reportConfig: {
             title: str(c.reportConfig && c.reportConfig.title),
             period: str(c.reportConfig && c.reportConfig.period),
@@ -4458,7 +4459,7 @@
     try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist().catch(() => {}); } catch (e) {}
 
     // 백업 알림 배너: 자료가 있는데 백업한 지 7일 이상(또는 한 번도 안 함)이면 표시
-    function hasAnyData() { return (appState.clubs || []).some(c => (c.meetings || []).length || (c.members || []).length || (c.monthlyDues || []).length); }
+    function hasAnyData() { return (appState.clubs || []).some(c => (c.meetings || []).length || (c.members || []).length || (c.monthlyDues || []).length || (c.extraLedger || []).length); }
     function renderBackupBanner() {
       const el = document.getElementById('backup-banner'); if (!el) return;
       let show = false, msg = '';
