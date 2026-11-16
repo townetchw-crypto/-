@@ -530,7 +530,7 @@
             <input id="input-meeting-repeat-count" type="number" value="6" min="2" max="60" class="w-20 border border-slate-300 rounded-lg p-2 outline-none">
             <span>회 만들기</span>
           </div>
-          <p id="meeting-repeat-preview" class="text-[11px] text-indigo-600 font-semibold"></p>
+          <p id="meeting-repeat-preview" class="text-[11px] text-indigo-600 font-semibold whitespace-pre-line"></p>
         </div>
         <p id="meeting-series-note" class="hidden text-[11px] text-slate-500 bg-slate-50 border border-slate-200 rounded-lg p-2">🔁 반복 일정의 일부입니다. 수정은 이 일정 하나에만 적용돼요.</p>
         <div class="hidden">
@@ -4924,6 +4924,15 @@
       }
       return out;
     }
+    // 반복 모임 제목에 월(매월 반복) / 연도(매년 반복)를 자동으로 붙임: "정기월례회" → "11월 정기월례회"
+    function repeatTitle(title, kind, d) {
+      const monthly = kind === 'monthly-date' || kind === 'monthly-nth' || kind === 'lunar-monthly';
+      const yearly = kind === 'yearly-date' || kind === 'lunar-yearly';
+      if (!monthly && !yearly) return title;
+      const p = ymdParts(d); if (!p) return title;
+      if (monthly) { const base = title.replace(/^\s*\d{1,2}월\s*/, '').trim() || title; return `${p[1]}월 ${base}`; }
+      const base = title.replace(/^\s*\d{4}\s*년?\s*/, '').trim() || title; return `${p[0]}년 ${base}`;
+    }
     function monthlyNthLabel(ymd) {
       const p = ymdParts(ymd); if (!p) return '매월 같은 요일';
       const isLast = p[2] + 7 > daysInMonth(p[0], p[1]);
@@ -4963,6 +4972,8 @@
         const fmtD = d => (kind === 'lunar-yearly' || kind === 'yearly-date') ? d.slice(2).replace(/-/g, '/') : d.slice(5).replace('-', '/');
         const show = ds.slice(0, 4).map(fmtD).join(', ');
         rpv.textContent = `총 ${ds.length}회${isLunar ? ' (양력 날짜)' : ''}: ${show}${ds.length > 4 ? ' … ' + fmtD(ds[ds.length - 1]) : ''}`;
+        const tt = (document.getElementById('input-meeting-title').value || '').trim();
+        if (tt && repeatTitle(tt, kind, ds[0]) !== tt) rpv.textContent += `\n제목은 자동으로 "${repeatTitle(tt, kind, ds[0])}", "${repeatTitle(tt, kind, ds[1] || ds[0])}" … 처럼 붙어요.`;
       } else rpv.textContent = '';
     }
     function syncAllDayUI() {
@@ -5021,6 +5032,7 @@
     document.getElementById('input-meeting-date').addEventListener('change', () => { refreshRepeatOptions(); updateMeetingFormPreview(); });
     document.getElementById('input-meeting-allday').addEventListener('change', syncAllDayUI);
     document.getElementById('input-meeting-repeat').addEventListener('change', updateMeetingFormPreview);
+    document.getElementById('input-meeting-title').addEventListener('input', updateMeetingFormPreview);
     document.getElementById('input-meeting-repeat-count').addEventListener('input', updateMeetingFormPreview);
     document.getElementById('input-meeting-end').addEventListener('input', () => { meetingEndTouched = true; });
     document.getElementById('input-meeting-start').addEventListener('change', () => {
@@ -5070,10 +5082,11 @@
       dates.forEach(d => {
         const ds = allDay ? d : `${d} ${start}`;
         // 똑같은 모임(이름+날짜+소모임)을 두 번 만드는 실수만 막음 (같은 이름의 월례회는 매달 OK)
-        const dup = club.meetings.some(x => x.title.trim().toLowerCase() === title.toLowerCase() && mtYmd(x) === d && x.subGroupId === subGroupId);
+        const tTitle = dates.length > 1 ? repeatTitle(title, kind, d) : title;
+        const dup = club.meetings.some(x => x.title.trim().toLowerCase() === tTitle.toLowerCase() && mtYmd(x) === d && x.subGroupId === subGroupId);
         if (dup) { skipped++; return; }
         club.meetings.push({
-          id: uid('meet'), subGroupId, meetingType: type, title, dateStr: ds, endTime: end, location: location || '장소 미정',
+          id: uid('meet'), subGroupId, meetingType: type, title: tTitle, dateStr: ds, endTime: end, location: location || '장소 미정',
           maxCapacity: cap, attendees: {}, expenses: [], remind: remindVal, seriesId: seriesId, repeat: kind === 'none' ? '' : kind
         });
         made++;
