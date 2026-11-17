@@ -287,6 +287,8 @@
         </div>
       </div>
 
+      <button id="btn-open-bulk-msg" type="button" onclick="openBulkMsg()" class="w-full py-2.5 bg-sky-50 hover:bg-sky-100 text-sky-800 text-xs font-extrabold rounded-xl border border-sky-200 transition">💬 일괄 문자 보내기 (전체 · 선택)</button>
+
       <!-- 기수/소모임별 인원 요약 칩 바 -->
       <div id="group-stats-breakdown" class="grid grid-cols-3 gap-2">
         <!-- 동적 주입 -->
@@ -929,6 +931,31 @@
   <!-- ============================================== -->
   <!-- [모달 6-2] 결산 추가 수입/지출 항목 등록·수정 모달 -->
   <!-- ============================================== -->
+  <div id="modal-bulk-msg" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-3">
+    <div class="bg-white rounded-2xl w-full max-w-md p-4 space-y-2.5 shadow-2xl max-h-[92vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">💬 일괄 문자 보내기</h3>
+        <button type="button" onclick="closeBulkMsg()" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="grid grid-cols-2 gap-1.5 text-xs font-extrabold">
+        <button type="button" id="btn-bulk-mode-all" onclick="bulkSetMode('all')" class="py-2 rounded-lg">일괄 전체</button>
+        <button type="button" id="btn-bulk-mode-sel" onclick="bulkSetMode('sel')" class="py-2 rounded-lg">일괄 선택</button>
+      </div>
+      <div id="bulk-dyn" class="space-y-2"></div>
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between">
+          <label class="text-xs font-bold text-slate-700">보낼 내용</label>
+          <button type="button" onclick="bulkInsertMeeting()" class="text-[11px] font-bold text-indigo-700 bg-indigo-50 border border-indigo-200 rounded-lg px-2 py-1">📅 다음 모임 내용 넣기</button>
+        </div>
+        <textarea id="bulk-msg-text" rows="6" placeholder="보낼 내용을 적어 주세요." class="w-full border border-slate-300 rounded-lg p-2.5 text-sm focus:ring-2 focus:ring-indigo-500 outline-none"></textarea>
+      </div>
+      <textarea id="bulk-nums" class="hidden" readonly></textarea>
+      <button type="button" onclick="bulkSendSms()" class="w-full py-3 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-extrabold">📱 문자 앱으로 보내기</button>
+      <button type="button" onclick="bulkCopyNums()" class="w-full py-2 rounded-xl bg-slate-50 border border-slate-300 text-slate-600 text-[11px] font-bold">문자 앱이 안 열리면: 📋 전화번호 복사</button>
+      <p class="text-[10px] text-slate-400 leading-snug">문자 앱이 열리면 받는 사람과 내용이 채워져 있어요. 확인하고 보내기만 누르세요. 문자 앱 설정에 따라 단체 문자 또는 한 명씩 개별 문자로 나가요.</p>
+    </div>
+  </div>
+
   <div id="modal-report-entry" class="fixed inset-0 z-50 bg-black/60 hidden flex items-center justify-center p-4">
     <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
       <div class="flex items-center justify-between border-b border-slate-100 pb-2">
@@ -4278,6 +4305,82 @@
       }
       return ok;
     }
+    // ---------- 일괄 문자 (전체 / 선택) ----------
+    var bulkMode = 'all', bulkSel = new Set();
+    function bulkBase() {
+      const club = getActiveClub();
+      return (club.members || []).filter(m => club.activeSubGroupId === 'all' || m.subGroupId === club.activeSubGroupId)
+        .slice().sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+    }
+    function bulkPhone(m) { const d = String(m.phone || '').replace(/[^\d]/g, ''); return /^0\d{8,10}$/.test(d) ? d : ''; }
+    function bulkTargets() {
+      const base = bulkBase();
+      const list = bulkMode === 'all' ? base : base.filter(m => bulkSel.has(m.id));
+      const withTel = list.filter(m => bulkPhone(m));
+      return { list, withTel, noTel: list.length - withTel.length, nums: withTel.map(bulkPhone) };
+    }
+    window.openBulkMsg = function() {
+      const club = getActiveClub();
+      if (!club.id) { showToast('먼저 모임을 만들어 주세요.'); return; }
+      bulkMode = 'all'; bulkSel = new Set();
+      renderBulkMsg();
+      document.getElementById('modal-bulk-msg').classList.remove('hidden');
+    };
+    window.closeBulkMsg = function() { document.getElementById('modal-bulk-msg').classList.add('hidden'); };
+    window.bulkSetMode = function(m) { bulkMode = m; renderBulkMsg(); };
+    window.bulkToggle = function(id) { if (bulkSel.has(id)) bulkSel.delete(id); else bulkSel.add(id); renderBulkMsg(); };
+    window.bulkSelectAll = function(on) { bulkSel = new Set(on ? bulkBase().map(m => m.id) : []); renderBulkMsg(); };
+    function renderBulkMsg() {
+      const on = 'py-2 rounded-lg bg-indigo-600 text-white', off = 'py-2 rounded-lg bg-slate-100 text-slate-600';
+      document.getElementById('btn-bulk-mode-all').className = bulkMode === 'all' ? on : off;
+      document.getElementById('btn-bulk-mode-sel').className = bulkMode === 'sel' ? on : off;
+      const base = bulkBase(), t = bulkTargets();
+      let html = '';
+      if (bulkMode === 'sel') {
+        html += `<div class="flex items-center justify-between gap-2"><button type="button" onclick="bulkSelectAll(true)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-indigo-50 text-indigo-700 border border-indigo-200">모두 선택</button><button type="button" onclick="bulkSelectAll(false)" class="flex-1 py-1.5 text-[11px] font-bold rounded-lg bg-slate-50 text-slate-600 border border-slate-200">모두 해제</button></div>`;
+        html += `<div class="border border-slate-200 rounded-xl max-h-52 overflow-y-auto divide-y divide-slate-100">` + (base.length ? base.map(m => {
+          const tel = bulkPhone(m);
+          return `<label class="flex items-center gap-2.5 px-3 py-2.5 text-sm"><input type="checkbox" class="w-5 h-5" ${bulkSel.has(m.id) ? 'checked' : ''} onchange="bulkToggle('${esc(m.id)}')"><span class="font-bold text-slate-900">${esc(m.name)}</span><span class="ml-auto text-[11px] ${tel ? 'text-slate-400' : 'text-rose-500 font-bold'}">${tel ? esc(m.phone) : '번호 없음'}</span></label>`;
+        }).join('') : `<div class="p-4 text-center text-xs text-slate-400">회원이 없어요.</div>`) + `</div>`;
+      } else {
+        const names = t.list.slice(0, 8).map(m => esc(m.name)).join(', ');
+        html += `<div class="text-xs text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-2.5">${names}${t.list.length > 8 ? ` 외 ${t.list.length - 8}명` : ''}</div>`;
+      }
+      html += `<p class="text-xs font-extrabold ${t.withTel.length ? 'text-indigo-700' : 'text-rose-600'}">받는 사람 ${t.withTel.length}명${t.noTel ? ` <span class="text-rose-500">(번호 없는 ${t.noTel}명 빠짐)</span>` : ''}</p>`;
+      document.getElementById('bulk-dyn').innerHTML = html;
+    }
+    window.bulkInsertMeeting = function() {
+      const club = getActiveClub(), today = todayStr();
+      const up = (club.meetings || []).filter(m => mtYmd(m) >= today).sort((a, b) => (mtYmd(a) + mtStartHM(a)).localeCompare(mtYmd(b) + mtStartHM(b)))[0];
+      if (!up) { showToast('앞으로 잡힌 모임이 없어요.'); return; }
+      const txt = `[${club.name}]\n${up.title}\n일시: ${fmtMeetingWhen(up)}\n장소: ${up.location || '미정'}\n참석 여부 알려 주세요.`;
+      const ta = document.getElementById('bulk-msg-text');
+      ta.value = ta.value.trim() ? ta.value.trim() + '\n\n' + txt : txt;
+    };
+    window.bulkSendSms = function() {
+      const t = bulkTargets(), body = document.getElementById('bulk-msg-text').value.trim();
+      if (!t.nums.length) { showToast(bulkMode === 'sel' ? '받는 사람을 먼저 골라 주세요.' : '연락처가 있는 회원이 없어요.'); return; }
+      if (!body) { showToast('보낼 내용을 적어 주세요.'); return; }
+      const ios = /iPhone|iPad|iPod/i.test(navigator.userAgent);
+      const uri = ios ? `sms:/open?addresses=${t.nums.join(',')}&body=${encodeURIComponent(body)}` : `sms:${t.nums.join(',')}?body=${encodeURIComponent(body)}`;
+      if (t.nums.length > 40) showToast('인원이 많아요. 문자 앱이 안 열리면 [전화번호 복사]를 쓰세요.');
+      window.location.href = uri;
+    };
+    window.bulkCopyMsg = async function() {
+      const ta = document.getElementById('bulk-msg-text');
+      if (!ta.value.trim()) { showToast('보낼 내용을 적어 주세요.'); return; }
+      const ok = await copyText(ta.value, ta);
+      showToast(ok ? '📋 내용이 복사됐어요. 카톡에 붙여넣으세요.' : '복사에 실패했어요. 글을 길게 눌러 직접 복사해 주세요.');
+    };
+    window.bulkCopyNums = async function() {
+      const t = bulkTargets();
+      if (!t.nums.length) { showToast('받는 사람이 없어요.'); return; }
+      const ta = document.getElementById('bulk-nums'); ta.value = t.nums.join(', ');
+      ta.classList.remove('hidden');
+      const ok = await copyText(ta.value, ta);
+      ta.classList.add('hidden');
+      showToast(ok ? `📋 전화번호 ${t.nums.length}개가 복사됐어요.` : '복사에 실패했어요.');
+    };
     document.getElementById('btn-do-copy-notice').addEventListener('click', async () => {
       const textarea = document.getElementById('notice-text-content');
       const ok = await copyText(textarea.value, textarea);
