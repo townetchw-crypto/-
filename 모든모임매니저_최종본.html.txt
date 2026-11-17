@@ -1,0 +1,3236 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>모모 - 모든모임 통합 매니저</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              100: '#e0e7ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    html { font-size: 17px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Pretendard", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .no-scrollbar::-webkit-scrollbar {
+      display: none;
+    }
+    .no-scrollbar {
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    @media print {
+      body { background: #ffffff !important; padding: 0 !important; margin: 0 !important; }
+      #app-header, #subgroup-bar, #active-group-banner, #admin-notice-bar, nav,
+      #report-action-bar, #report-filter-bar, .no-print, #toast-container,
+      [id^="modal-"] { display: none !important; }
+      main { max-width: 100% !important; padding: 0 !important; margin: 0 !important; }
+      #tab-report-view { display: block !important; }
+      #report-printable-area {
+        border: none !important;
+        box-shadow: none !important;
+        padding: 0 !important;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
+
+  <!-- 최상위 네비게이션 헤더 (클럽 전환 드롭다운 포함) -->
+  <header id="app-header" class="sticky top-0 z-30 bg-white/95 backdrop-blur border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between">
+    <!-- 모임 선택 트리거 버튼 -->
+    <button id="btn-open-club-selector" class="flex items-center space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
+      <div id="header-club-icon-box" class="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 text-base">
+        🏛️
+      </div>
+      <div>
+        <div class="flex items-center space-x-1">
+          <h1 class="text-sm sm:text-base font-extrabold text-slate-900 leading-tight" id="club-title-text">한국체대 총동문회</h1>
+          <span class="text-xs text-slate-400">▼</span>
+        </div>
+        <p class="text-xs text-slate-500 font-medium" id="club-subtitle-text">터치하여 다른 모임으로 전환</p>
+      </div>
+    </button>
+
+    <div class="flex items-center space-x-1.5">
+      <!-- 운영진 모드 토글 버튼 -->
+      <button id="btn-toggle-admin-mode" class="px-2 py-1 text-xs font-bold rounded-lg border transition flex items-center space-x-1 bg-amber-50 text-amber-900 border-amber-300 shadow-2xs">
+        <span id="admin-badge-icon">👑</span>
+        <span id="admin-badge-text">운영진 모드</span>
+      </button>
+      <button id="btn-open-backup" class="px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
+        💾 백업
+      </button>
+      <button id="btn-open-create-club" class="px-2 py-1 text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg border border-indigo-200 transition">
+        + 모임 추가
+      </button>
+
+    </div>
+  </header>
+
+  <!-- 하위 기수 / 소모임 전환 탭 바 (선택된 클럽 내 기수/소그룹 연동) -->
+  <div id="subgroup-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
+    <div class="max-w-lg mx-auto flex items-center justify-between gap-1.5">
+      <div class="flex items-center space-x-1 overflow-x-auto no-scrollbar py-0.5 flex-1" id="subgroup-chip-container">
+        <!-- 동적 하위 기수/소모임 칩 주입 -->
+      </div>
+      <button id="btn-open-add-subgroup" class="shrink-0 px-2 py-1 text-xs font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 rounded-lg border border-indigo-200 transition">
+        + 소모임 추가
+      </button>
+    </div>
+  </div>
+
+  <!-- 메인 뷰 컨테이너 (모바일 최적화 폭) -->
+  <main class="flex-1 w-full max-w-lg mx-auto p-4 space-y-4">
+
+    <!-- 토스트 알림창 -->
+    <div id="toast-container" class="fixed top-24 left-1/2 -translate-x-1/2 z-50 w-[90%] max-w-sm pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
+      <div id="toast-msg" class="bg-slate-900/90 text-white text-xs sm:text-sm font-medium px-4 py-3 rounded-xl shadow-xl backdrop-blur flex items-center justify-center space-x-2 text-center">
+        <!-- 알림 메시지 주입 -->
+      </div>
+    </div>
+
+    <!-- 현재 선택된 모임 & 하위 컨텍스트 배너 -->
+    <div id="active-group-banner" class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white p-3.5 rounded-2xl shadow-sm flex items-center justify-between">
+      <div>
+        <span class="text-xs text-indigo-300 font-semibold tracking-wider block" id="banner-club-category">동문회 · 기수 연동</span>
+        <h2 class="text-sm font-bold text-white flex items-center space-x-1.5 mt-0.5" id="banner-group-title">
+          <span>🏛️</span>
+          <span>한국체대 총동문회 (전체 통합)</span>
+        </h2>
+      </div>
+      <button onclick="openClubSelectorModal()" class="text-xs bg-white/10 hover:bg-white/20 px-2.5 py-1 rounded-full text-indigo-200 font-medium transition flex items-center space-x-1">
+        <span id="banner-group-stats">3개 모임 보유</span>
+        <span>⇄</span>
+      </button>
+    </div>
+
+    <!-- 운영진 권한 알림 바 (일반 회원 모드일 때 안내 표시) -->
+    <div id="admin-notice-bar" class="hidden bg-amber-50 border border-amber-200 text-amber-900 px-3.5 py-2.5 rounded-xl text-xs flex items-center justify-between shadow-2xs">
+      <div class="flex items-center space-x-2">
+        <span class="text-base">👁️</span>
+        <div>
+          <span class="font-bold">일반회원 열람 모드</span>
+          <p class="text-xs text-amber-700">모임 개설, 정산, 회비 수정은 회장·부회장·총무 등 운영진만 가능합니다.</p>
+        </div>
+      </div>
+      <button onclick="openAdminAuthModal()" class="px-2 py-1 bg-amber-200/80 hover:bg-amber-300 text-amber-900 font-extrabold rounded-lg text-xs shrink-0 transition">
+        운영진 전환
+      </button>
+    </div>
+
+    <!-- [섹션 1] 모임 일정 & 출결 탭 -->
+    <div id="tab-meetings-view" class="space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>📅</span>
+          <span id="meetings-section-title">모임 일정</span>
+          <span id="meeting-count-badge" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 font-bold">0</span>
+        </h2>
+        <button id="btn-open-create-meeting" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-200 transition flex items-center space-x-1">
+          <span>+</span>
+          <span>모임 개설</span>
+        </button>
+      </div>
+
+      <!-- 모임 목록 카드 영역 -->
+      <div id="meetings-list-container" class="space-y-3">
+        <!-- 동적으로 카드 렌더링 -->
+      </div>
+    </div>
+
+    <!-- [섹션 2] 1/N 정산 및 송금 탭 -->
+    <div id="tab-settlement-view" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>💰</span>
+          <span>1/N 정산 & 송금</span>
+        </h2>
+        <button id="btn-open-add-expense" class="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg shadow-sm shadow-emerald-200 transition flex items-center space-x-1">
+          <span>+</span>
+          <span>지출 등록</span>
+        </button>
+      </div>
+
+      <!-- 정산 대상 모임 셀렉터 -->
+      <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm space-y-2">
+        <label class="block text-xs font-semibold text-slate-600">정산할 모임 선택</label>
+        <select id="settlement-meeting-select" class="w-full text-sm bg-slate-50 border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 font-medium">
+          <!-- 동적 주입 -->
+        </select>
+      </div>
+
+      <!-- 정산 상세 카드 -->
+      <div id="settlement-detail-container" class="space-y-3">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- [섹션 3] 회원 관리 탭 -->
+    <div id="tab-members-view" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>👥</span>
+          <span id="members-section-title">회원 명부</span>
+          <span id="member-count-badge" class="ml-1 text-xs px-2 py-0.5 rounded-full bg-slate-200 text-slate-700 font-bold">0명</span>
+        </h2>
+        <div class="flex items-center space-x-1.5">
+          <button id="btn-open-batch-import" class="px-2.5 py-1.5 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 text-xs font-bold rounded-lg border border-indigo-200 transition flex items-center space-x-1">
+            <span>📋</span>
+            <span>일괄 가져오기</span>
+          </button>
+          <button id="btn-open-add-member" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm shadow-indigo-200 transition flex items-center space-x-1">
+            <span>+</span>
+            <span>회원 추가</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 기수/소모임별 인원 요약 칩 바 -->
+      <div id="group-stats-breakdown" class="grid grid-cols-3 gap-2">
+        <!-- 동적 주입 -->
+      </div>
+
+      <!-- 회원 검색창 -->
+      <div class="relative">
+        <input id="input-member-search" type="text" placeholder="🔍 이름, 소속, 주소, 연락처로 검색..." class="w-full bg-white border border-slate-200 rounded-xl pl-3.5 pr-8 py-2 text-xs focus:ring-2 focus:ring-indigo-500 outline-none shadow-2xs">
+      </div>
+
+      <!-- 회원 목록 리스트 -->
+      <div id="members-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- [섹션 4] 회비 장부 탭 -->
+    <div id="tab-dues-view" class="hidden space-y-4">
+      <div class="flex items-center justify-between">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>📒</span>
+          <span id="dues-section-title">회비 출납 장부</span>
+        </h2>
+        <button id="btn-open-add-due" class="px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm transition flex items-center space-x-1">
+          <span>+</span>
+          <span>회비 기록</span>
+        </button>
+      </div>
+
+      <!-- 누적 요약 카드 -->
+      <div class="bg-gradient-to-br from-indigo-700 via-indigo-800 to-slate-900 text-white p-4 rounded-2xl shadow-md space-y-2">
+        <p class="text-xs text-indigo-200 font-medium" id="dues-summary-label">총 누적 수납액</p>
+        <p class="text-2xl font-extrabold tracking-tight" id="total-dues-amount">0원</p>
+        <div class="flex items-center justify-between pt-2 border-t border-indigo-500/40 text-xs text-indigo-100">
+          <span id="paid-members-ratio">완납률 0%</span>
+          <span id="dues-standard-text">기준: 모임별 정기 회비</span>
+        </div>
+      </div>
+
+      <!-- 회비 내역 목록 -->
+      <div id="dues-list-container" class="bg-white rounded-xl border border-slate-200 shadow-sm divide-y divide-slate-100 overflow-hidden">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- [섹션 5] 자동화 결산보고서 탭 (모모 핵심 기능) -->
+    <div id="tab-report-view" class="hidden space-y-4">
+      <div id="report-action-bar" class="flex items-center justify-between gap-2">
+        <h2 class="text-base font-bold text-slate-900 flex items-center space-x-1.5">
+          <span>📊</span>
+          <span>자동 결산보고서</span>
+        </h2>
+        <div class="flex items-center space-x-1.5">
+          <button id="btn-open-report-config" class="px-2.5 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold rounded-lg border border-slate-300 transition">
+            ⚙️ 설정/서명
+          </button>
+          <button id="btn-open-add-report-entry" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-lg shadow-sm transition">
+            + 수입·지출
+          </button>
+        </div>
+      </div>
+
+      <!-- 기간/구분 필터 & SNS 출력 버튼 바 -->
+      <div id="report-filter-bar" class="bg-white p-3 rounded-2xl border border-slate-200 shadow-sm space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <label class="text-xs font-bold text-slate-600 shrink-0">결산 구분</label>
+          <select id="report-period-select" class="flex-1 text-xs bg-slate-50 border border-slate-300 rounded-lg px-2.5 py-2 font-bold outline-none focus:ring-2 focus:ring-indigo-500">
+            <option value="ALL">전체 기간 통합</option>
+          </select>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <button id="btn-report-print-pdf" class="py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition flex items-center justify-center space-x-1.5">
+            <span>🖨️</span>
+            <span>PDF 저장 / 인쇄</span>
+          </button>
+          <button id="btn-report-share-sns" class="py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-bold shadow-sm transition flex items-center justify-center space-x-1.5">
+            <span>📢</span>
+            <span>밴드·카톡 공유</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- 실제 보고서 영역 (인쇄/PDF 출력 대상) -->
+      <div id="report-printable-area" class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 space-y-4">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 모바일 하단 네비게이션 탭 바 -->
+  <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur border-t border-slate-200 shadow-lg">
+    <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
+      <button id="nav-btn-meetings" class="flex flex-col items-center justify-center space-y-1 text-indigo-600 font-semibold transition-colors">
+        <span class="text-lg">📅</span>
+        <span class="text-[11px]">모임일정</span>
+      </button>
+      <button id="nav-btn-settlement" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+        <span class="text-lg">💰</span>
+        <span class="text-[11px]">1/N 정산</span>
+      </button>
+      <button id="nav-btn-members" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+        <span class="text-lg">👥</span>
+        <span class="text-[11px]">회원목록</span>
+      </button>
+      <button id="nav-btn-dues" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+        <span class="text-lg">📒</span>
+        <span class="text-[11px]">회비장부</span>
+      </button>
+      <button id="nav-btn-report" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+        <span class="text-lg">📊</span>
+        <span class="text-[11px]">결산보고</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- ============================================== -->
+  <!-- [모달 0] 최상위 모임/클럽 선택 및 전환 바텀시트 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-select-club" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-end sm:items-center justify-center p-0 sm:p-4">
+    <div class="bg-white rounded-t-3xl sm:rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-base">내 모임 목록</h3>
+          <p class="text-xs text-slate-500">관리할 모임을 선택하거나 새로 개설하세요.</p>
+        </div>
+        <button id="btn-close-club-selector" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+
+      <div id="club-selection-list" class="space-y-2">
+        <!-- 동적 모임 리스트 주입 -->
+      </div>
+
+      <button id="btn-trigger-add-club" class="w-full py-3 rounded-xl bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs border border-indigo-200 transition flex items-center justify-center space-x-1.5">
+        <span>+</span>
+        <span>새로운 모임/클럽 만들기</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 0-1] 새 최상위 모임/클럽 개설 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-create-club" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">새 모임/클럽 개설</h3>
+        <button id="btn-close-create-club-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">모임명</label>
+          <input id="input-newclub-name" type="text" placeholder="예: 65년 골프사랑, 등산가자" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">모임 성격/분류</label>
+          <input id="input-newclub-category" type="text" placeholder="예: 스포츠/골프, 산행/동호회, 동문회" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">대표 이모지</label>
+          <input id="input-newclub-icon" type="text" value="⛳" placeholder="예: ⛳, ⛰️, 🏃, 📚, 🤝" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">한 줄 설명</label>
+          <input id="input-newclub-subtitle" type="text" placeholder="예: 주말 정기 라운딩 및 스크린 모임" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-create-club" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-create-club" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">개설하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 1] 새 모임 일정 개설 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-create-meeting" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">새 모임 일정 개설</h3>
+        <button id="btn-close-meeting-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">소속 소모임 / 기수</label>
+          <select id="input-meeting-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 font-medium outline-none">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">모임명</label>
+          <input id="input-meeting-title" type="text" placeholder="예: 11월 정기 월례 라운딩" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">일시</label>
+          <input id="input-meeting-date" type="text" placeholder="예: 2026-11-20 07:30" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">장소</label>
+          <input id="input-meeting-loc" type="text" placeholder="예: 가평 베네스트 GC" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">최대 정원 (선착순)</label>
+          <input id="input-meeting-cap" type="number" value="8" min="2" max="200" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-create-meeting" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-create-meeting" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">개설하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 2] 지출 내역 추가 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-add-expense" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">지출 항목 등록</h3>
+        <button id="btn-close-expense-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">적용 대상 모임</label>
+          <select id="input-expense-meeting" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">지출 항목명</label>
+          <input id="input-expense-title" type="text" placeholder="예: 그린피/카트비, 식사비, 대관료" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">지출 총액 (원)</label>
+          <input id="input-expense-amount" type="number" placeholder="예: 150000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-emerald-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">선결제한 회원</label>
+          <select id="input-expense-payer" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-add-expense" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-add-expense" class="flex-1 py-2.5 rounded-lg bg-emerald-600 text-white font-semibold text-xs hover:bg-emerald-700 transition">1/N 등록</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 3] 회원 등록 및 상세정보 수정 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-add-member" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 id="member-modal-title" class="font-bold text-slate-900 text-base">신규 회원 등록</h3>
+        <button id="btn-close-member-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <input type="hidden" id="input-member-edit-id" value="">
+      <div class="space-y-2.5 text-xs sm:text-sm">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">소속 소모임</label>
+            <select id="input-member-subgroup" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 outline-none font-medium text-xs">
+              <!-- 동적 주입 -->
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">직책 / 역할</label>
+            <select id="input-member-role" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 outline-none font-medium text-xs">
+              <option value="일반회원">일반 회원</option>
+              <option value="회장">👑 회장 (운영진)</option>
+              <option value="부회장">🎖️ 부회장 (운영진)</option>
+              <option value="총무">💰 총무 (운영진)</option>
+              <option value="운영진">⭐ 운영진 / 감사</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">이름 *</label>
+            <input id="input-member-name" type="text" placeholder="예: 홍길동" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">세부 소속/관계</label>
+            <input id="input-member-affiliation" type="text" placeholder="예: 65골, 한얼, 은초" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">연락처</label>
+          <input id="input-member-phone" type="text" placeholder="예: 010-1234-5678" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">주소 / 거주지</label>
+          <input id="input-member-address" type="text" placeholder="예: 경기도 성남시 분당구 운중동 ..." class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">비고 / 메모 (답례품, 핸디, 특이사항 등)</label>
+          <input id="input-member-memo" type="text" placeholder="예: 답례품 발송 완료, 생일 5월" class="w-full border border-slate-300 rounded-lg p-2 focus:ring-2 focus:ring-indigo-500 outline-none text-xs">
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-add-member" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-add-member" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 3-1] 회원 일괄 가져오기 모달 (밴드/카톡 텍스트 붙여넣기) -->
+  <!-- ============================================== -->
+  <div id="modal-batch-import" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3.5 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div>
+          <h3 class="font-extrabold text-slate-900 text-base">📋 회원 명단 일괄 가져오기</h3>
+          <p class="text-xs text-slate-500">밴드나 카톡 공지 명단을 복사해 붙여넣으세요.</p>
+        </div>
+        <button id="btn-close-batch-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">배정할 소모임 / 기수</label>
+          <select id="input-batch-subgroup" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium text-xs">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">명단 텍스트 붙여넣기</label>
+          <textarea id="textarea-batch-input" rows="5" placeholder="밴드·카톡·경조사 명단을 그대로 붙여넣으세요.&#10;&#10;[지원 형식]&#10;하주희 65골 150,000&#10;허기주 한체복교 200,000 화환&#10;홍길동 010-1234-5678 / 홍길동, 이순신" class="w-full border border-slate-300 rounded-xl p-3 focus:ring-2 focus:ring-indigo-500 outline-none text-xs leading-relaxed resize-none"></textarea>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 items-center bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <label class="flex items-center space-x-1.5 text-xs font-bold text-slate-700 cursor-pointer">
+            <input id="checkbox-batch-sync-dues" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
+            <span>금액 장부 동시 등록</span>
+          </label>
+          <input id="input-batch-dues-label" type="text" value="경조사/찬조" placeholder="구분 (예: 2026-11, 경조사)" class="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-indigo-500">
+        </div>
+
+        <!-- 인식 결과 실시간 프리뷰 -->
+        <div id="batch-preview-box" class="bg-indigo-50/70 border border-indigo-100 rounded-xl p-2.5 text-xs text-slate-700 space-y-1">
+          <div class="flex items-center justify-between font-bold text-indigo-900">
+            <span>🔍 자동 파싱 결과</span>
+            <span id="batch-parsed-count" class="text-indigo-600 font-extrabold">0명 인식됨</span>
+          </div>
+          <div id="batch-parsed-samples" class="text-xs text-slate-500 max-h-24 overflow-y-auto no-scrollbar space-y-0.5">
+            텍스트를 붙여넣으면 인식된 회원·금액 명단이 여기에 표시됩니다.
+          </div>
+        </div>
+      </div>
+
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-batch-import" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-batch-import" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">일괄 등록하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 4] 월회비 납부 기록 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-add-due" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">회비 납부 기록</h3>
+        <button id="btn-close-due-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">해당 년월</label>
+          <input id="input-due-month" type="text" value="2026-11" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">회원 선택</label>
+          <select id="input-due-member" class="w-full border border-slate-300 rounded-lg p-2.5 bg-slate-50 outline-none font-medium">
+            <!-- 동적 주입 -->
+          </select>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">금액 (원)</label>
+          <input id="input-due-amount" type="number" value="30000" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div class="flex items-center space-x-2 pt-1">
+          <input id="input-due-is-paid" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
+          <label for="input-due-is-paid" class="text-xs text-slate-700 font-semibold cursor-pointer">즉시 완납 처리</label>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-add-due" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-add-due" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 5] 신규 하위 기수 / 소그룹 추가 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-add-subgroup" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">새 소모임 추가</h3>
+        <button id="btn-close-subgroup-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-3 text-xs sm:text-sm">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">소모임 / 기수 명칭</label>
+          <input id="input-subgroup-name" type="text" placeholder="예: 91학번, 주말A팀, 초보트레킹" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">대표 이모지</label>
+          <input id="input-subgroup-icon" type="text" value="🏃" placeholder="예: 🏃, 🏌️, 🥾, ⛳" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-add-subgroup" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50 transition">취소</button>
+        <button id="btn-submit-add-subgroup" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700 transition">추가하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 6-1] 결산보고서 기본 설정 및 서명란 수정 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-report-config" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">⚙️ 결산보고서 설정</h3>
+        <button id="btn-close-report-config" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <div class="space-y-2.5 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">보고서 제목</label>
+          <input id="input-rep-title" type="text" placeholder="예: 2026년 11월 정기 결산보고서" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">결산 기간 표시</label>
+            <input id="input-rep-period" type="text" placeholder="예: 2026.11.01 ~ 11.30" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">전월(전기) 이월금 (원)</label>
+            <input id="input-rep-carryover" type="number" value="0" min="0" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">보관 계좌 (은행 / 계좌번호 / 예금주)</label>
+          <input id="input-rep-bank" type="text" placeholder="예: 국민 123-456-7890 (홍길동)" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-3 gap-1.5">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">총무 (작성)</label>
+            <input id="input-rep-secretary" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">감사/부회장</label>
+            <input id="input-rep-auditor" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">회장 (승인)</label>
+            <input id="input-rep-president" type="text" placeholder="성명" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-report-config" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50">취소</button>
+        <button id="btn-submit-report-config" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 6-2] 결산 추가 수입/지출 항목 등록·수정 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-report-entry" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 id="report-entry-modal-title" class="font-bold text-slate-900 text-base">수입·지출 항목 등록</h3>
+        <button id="btn-close-report-entry" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <input type="hidden" id="input-entry-edit-id" value="">
+      <div class="space-y-2.5 text-xs">
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">구분</label>
+            <select id="input-entry-type" class="w-full border border-slate-300 rounded-lg p-2 bg-slate-50 font-bold outline-none">
+              <option value="expense">💸 지출 (경비·화환·답례품)</option>
+              <option value="income">💰 수입 (찬조·기타수입)</option>
+            </select>
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">일자</label>
+            <input id="input-entry-date" type="text" placeholder="2026-11-14" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">항목명 *</label>
+          <input id="input-entry-title" type="text" placeholder="예: 경조사 화환, 답례품 제작, 회장 찬조금" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+        </div>
+        <div class="grid grid-cols-2 gap-2">
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
+            <input id="input-entry-amount" type="number" min="0" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          </div>
+          <div>
+            <label class="block font-semibold text-slate-700 mb-1">비고</label>
+            <input id="input-entry-note" type="text" placeholder="예: 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+          </div>
+        </div>
+      </div>
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-cancel-report-entry" class="flex-1 py-2.5 rounded-lg border border-slate-300 text-slate-600 font-semibold text-xs hover:bg-slate-50">취소</button>
+        <button id="btn-submit-report-entry" class="flex-1 py-2.5 rounded-lg bg-indigo-600 text-white font-semibold text-xs hover:bg-indigo-700">저장하기</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 7] 운영진 인증 및 권한 전환 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-admin-auth" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <div class="flex items-center space-x-1.5">
+          <span class="text-xl">🔐</span>
+          <h3 class="font-extrabold text-slate-900 text-base">운영진 권한 인증</h3>
+        </div>
+        <button id="btn-close-admin-auth-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+
+      <div class="space-y-3 text-xs sm:text-sm">
+        <p class="text-xs text-slate-500 leading-relaxed">
+          회장, 부회장, 총무 등 <strong>운영진</strong>만 모임 개설, 지출 등록, 회비 관리 등 핵심 자료를 수정할 수 있습니다.
+        </p>
+
+        <div id="admin-auth-input-section" class="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <label class="block font-bold text-slate-700 text-xs">운영진 비밀번호</label>
+          <input id="input-admin-pin" type="password" inputmode="numeric" maxlength="6" placeholder="비밀번호 입력 (설정 안 했으면 비워두고 인증)" class="w-full border border-slate-300 rounded-lg p-2.5 text-sm font-mono tracking-widest text-center focus:ring-2 focus:ring-amber-500 outline-none bg-white">
+          <p id="admin-default-pin-warn" class="hidden text-xs text-rose-600 font-bold">⚠️ 예전 기본 비밀번호(1234)를 쓰고 있어요. 아래에서 꼭 바꿔주세요.</p>
+        </div>
+
+        <div id="admin-current-status-box" class="p-2.5 rounded-xl text-center text-xs font-bold bg-amber-50 text-amber-900 border border-amber-200">
+          현재 상태: <span id="auth-status-text">운영진 모드 (수정 가능)</span>
+        </div>
+        <div class="space-y-2 bg-slate-50 p-3 rounded-xl border border-slate-200">
+          <label class="block font-bold text-slate-700 text-xs">비밀번호 설정 / 변경 (숫자 4~6자리, 비우고 저장하면 해제)</label>
+          <div class="flex space-x-2">
+            <input id="input-new-pin" type="password" inputmode="numeric" maxlength="6" placeholder="새 비밀번호" class="flex-1 min-w-0 border border-slate-300 rounded-lg p-2 text-sm font-mono tracking-widest text-center outline-none bg-white">
+            <button id="btn-save-pin" class="px-3 rounded-lg bg-slate-700 hover:bg-slate-800 text-white text-xs font-bold">저장</button>
+          </div>
+          <p class="text-xs text-slate-500 leading-relaxed">※ 이 비밀번호는 실수로 고치는 것을 막는 <strong>잠금</strong>일 뿐, 보안 장치가 아닙니다. 폰을 가진 사람은 풀 수 있어요. 중요한 자료는 💾 백업으로 보관하세요.</p>
+        </div>
+      </div>
+
+      <div class="flex space-x-2 pt-1">
+        <button id="btn-switch-to-member" class="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50 transition">
+          일반회원 모드로
+        </button>
+        <button id="btn-submit-admin-auth" class="flex-1 py-2.5 rounded-xl bg-amber-500 hover:bg-amber-600 text-amber-950 font-extrabold text-xs shadow-md transition">
+          운영진 인증
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달 6] 삭제 확인 팝업 모달 -->
+  <!-- ============================================== -->
+  <div id="modal-confirm-delete" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-200">
+      <div class="text-center space-y-2">
+        <div class="w-12 h-12 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center text-2xl mx-auto">
+          ⚠️
+        </div>
+        <h3 class="font-bold text-slate-900 text-base" id="delete-modal-title">정말 삭제하시겠습니까?</h3>
+        <p class="text-xs text-slate-500 leading-relaxed" id="delete-modal-desc">
+          삭제된 데이터는 복구할 수 없습니다.<br>계속 진행하시겠습니까?
+        </p>
+      </div>
+      <div class="flex space-x-2 pt-2">
+        <button id="btn-cancel-delete" class="flex-1 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-semibold text-xs hover:bg-slate-50 transition">
+          취소
+        </button>
+        <button id="btn-confirm-delete" class="flex-1 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-md shadow-rose-200 transition">
+          삭제하기
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 카톡 공지문 복사 확인 모달 -->
+  <div id="modal-copy-notice" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-bold text-slate-900 text-base">📢 카카오톡 정산 공지문</h3>
+        <button id="btn-close-notice-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-500">아래 텍스트를 복사하여 모임 단톡방에 바로 붙여넣으세요.</p>
+      <textarea id="notice-text-content" readonly class="w-full h-44 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-3 focus:outline-none resize-none text-slate-700 leading-relaxed"></textarea>
+      <button id="btn-do-copy-notice" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs shadow-sm transition flex items-center justify-center space-x-1.5">
+        <span>📋</span>
+        <span>텍스트 클립보드에 복사</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- ============================================== -->
+  <!-- [모달] 백업 / 복원 -->
+  <div id="modal-backup" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-2xl w-full max-w-sm p-5 space-y-3 shadow-2xl max-h-[90vh] overflow-y-auto">
+      <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+        <h3 class="font-extrabold text-slate-900 text-base">💾 백업 / 복원</h3>
+        <button id="btn-close-backup-modal" class="text-slate-400 hover:text-slate-600 p-1 text-lg font-bold">✕</button>
+      </div>
+      <p class="text-xs text-slate-600 leading-relaxed">자료는 <strong>이 폰의 브라우저 안에만</strong> 저장됩니다. 폰을 바꾸거나 브라우저 데이터를 지우면 사라지니 가끔 백업해 두세요.</p>
+      <div id="backup-last" class="text-xs font-bold text-slate-500 bg-slate-50 rounded-lg p-2 text-center"></div>
+      <button id="btn-backup-download" class="w-full py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm">📥 백업 파일로 저장</button>
+      <button id="btn-backup-copy" class="w-full py-2.5 rounded-xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs shadow-sm">📋 백업 내용 복사 (카톡 '나와의 채팅'에 붙여두기)</button>
+      <div class="border-t border-slate-100 pt-3 space-y-2">
+        <p class="text-xs font-bold text-slate-700">복원하기 (현재 자료를 덮어씁니다)</p>
+        <input id="input-backup-file" type="file" accept=".json,application/json" class="block w-full text-xs text-slate-600">
+        <textarea id="textarea-backup-paste" placeholder="복사해 둔 백업 내용을 여기에 붙여넣기" class="w-full h-20 text-xs font-mono bg-slate-50 border border-slate-200 rounded-xl p-2 outline-none resize-none"></textarea>
+        <button id="btn-backup-paste-restore" class="w-full py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold text-xs hover:bg-slate-50">붙여넣은 내용으로 복원</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- [자바스크립트 앱 로직] -->
+  <!-- ============================================== -->
+  <script>
+    const STORAGE_KEY = 'all_meetings_multi_club_v3';
+
+    // 최상위 모임들(한국체대, 65년골프사랑, 등산가자) 및 각 하위 소모임 프리셋
+    const SAMPLE_STATE = {
+      isAdminMode: true, // 기본값: 운영진 모드 활성화 (회장/총무)
+      adminPin: "1234",   // 기본 운영진 비밀번호
+      activeClubId: "club_knsu",
+      clubs: [
+        {
+          id: "club_knsu",
+          name: "한국체대 총동문회",
+          category: "동문회",
+          icon: "🏛️",
+          subtitle: "88학번 · 89학번 · 90학번 기수 연동",
+          activeSubGroupId: "all",
+          subGroups: [
+            { id: "all", name: "전체 동문 통합", icon: "🏛️" },
+            { id: "sub_88", name: "88학번", icon: "🏃" },
+            { id: "sub_89", name: "89학번", icon: "🥋" },
+            { id: "sub_90", name: "90학번", icon: "🏊" }
+          ],
+          members: [
+            { id: "m1", name: "김민수", phone: "010-1234-5678", subGroupId: "sub_88", role: "회장" },
+            { id: "m2", name: "이지은", phone: "010-9876-5432", subGroupId: "sub_88", role: "총무" },
+            { id: "m3", name: "박현우", phone: "010-5555-4444", subGroupId: "sub_88", role: "일반회원" },
+            { id: "m4", name: "최수진", phone: "010-7777-8888", subGroupId: "sub_89", role: "회장" },
+            { id: "m5", name: "정도윤", phone: "010-3333-2222", subGroupId: "sub_89", role: "총무" },
+            { id: "m6", name: "강태양", phone: "010-4444-1111", subGroupId: "sub_90", role: "회장" }
+          ],
+          meetings: [
+            {
+              id: "meet_all_1",
+              subGroupId: "all",
+              title: "2026 한국체대 총동문 정기총회 & 송년의 밤",
+              dateStr: "2026-12-12 (토) 18:00",
+              location: "올림픽파크텔 1층 아테네홀",
+              maxCapacity: 100,
+              attendees: { "m1": "참석", "m2": "참석", "m3": "참석", "m4": "참석", "m6": "참석" },
+              expenses: [
+                {
+                  id: "exp_all_1",
+                  title: "총동문 만찬 및 행사장 대관",
+                  amount: 500000,
+                  payerId: "m1",
+                  splitMemberIds: ["m1", "m2", "m3", "m4", "m6"],
+                  paidMemberIds: ["m1", "m2", "m3", "m4", "m6"]
+                }
+              ]
+            },
+            {
+              id: "meet_88_1",
+              subGroupId: "sub_88",
+              title: "88학번 가을 동기 골프 & 저녁식사",
+              dateStr: "2026-11-14 (토) 13:00",
+              location: "남여주 골프클럽 & 인근 한우식당",
+              maxCapacity: 4,
+              attendees: { "m1": "참석", "m2": "참석", "m3": "참석" },
+              expenses: [
+                {
+                  id: "exp_88_1",
+                  title: "동기 저녁식사 및 음료",
+                  amount: 150000,
+                  payerId: "m2",
+                  splitMemberIds: ["m1", "m2", "m3"],
+                  paidMemberIds: ["m1", "m2"]
+                }
+              ]
+            }
+          ],
+          monthlyDues: [
+            { id: "due_1", yearMonth: "2026-11", memberId: "m1", subGroupId: "sub_88", amount: 30000, isPaid: true, paidDate: "2026-11-01" },
+            { id: "due_2", yearMonth: "2026-11", memberId: "m2", subGroupId: "sub_88", amount: 30000, isPaid: true, paidDate: "2026-11-02" },
+            { id: "due_3", yearMonth: "2026-11", memberId: "m3", subGroupId: "sub_88", amount: 30000, isPaid: false, paidDate: "" },
+            { id: "due_4", yearMonth: "2026-11", memberId: "m4", subGroupId: "sub_89", amount: 30000, isPaid: true, paidDate: "2026-11-03" }
+          ]
+        },
+        {
+          id: "club_golf",
+          name: "65년 골프사랑",
+          category: "스포츠/골프",
+          icon: "⛳",
+          subtitle: "65년생 월례 라운딩 & 스크린 골프 모임",
+          activeSubGroupId: "all",
+          subGroups: [
+            { id: "all", name: "전체 통합", icon: "⛳" },
+            { id: "sub_round", name: "정기 월례회", icon: "🏌️" },
+            { id: "sub_screen", name: "스크린 번개", icon: "🎮" }
+          ],
+          members: [
+            { id: "g1", name: "오영석", phone: "010-2222-3333", subGroupId: "sub_round", role: "회장" },
+            { id: "g2", name: "정명훈", phone: "010-4444-5555", subGroupId: "sub_round", role: "총무" },
+            { id: "g3", name: "임도현", phone: "010-6666-7777", subGroupId: "sub_round", role: "일반회원" },
+            { id: "g4", name: "한승우", phone: "010-8888-9999", subGroupId: "sub_screen", role: "일반회원" }
+          ],
+          meetings: [
+            {
+              id: "meet_g1",
+              subGroupId: "sub_round",
+              title: "11월 정기 월례 라운딩 (가평 베네스트)",
+              dateStr: "2026-11-15 (일) 07:30",
+              location: "가평 베네스트 GC (단풍 코스)",
+              maxCapacity: 4,
+              attendees: { "g1": "참석", "g2": "참석", "g3": "참석", "g4": "대기" },
+              expenses: [
+                {
+                  id: "exp_g1",
+                  title: "1조 그린피 & 카트비 선결제",
+                  amount: 880000,
+                  payerId: "g2",
+                  splitMemberIds: ["g1", "g2", "g3"],
+                  paidMemberIds: ["g1", "g2"]
+                }
+              ]
+            }
+          ],
+          monthlyDues: [
+            { id: "gdue_1", yearMonth: "2026-11", memberId: "g1", subGroupId: "sub_round", amount: 50000, isPaid: true, paidDate: "2026-11-01" },
+            { id: "gdue_2", yearMonth: "2026-11", memberId: "g2", subGroupId: "sub_round", amount: 50000, isPaid: true, paidDate: "2026-11-01" },
+            { id: "gdue_3", yearMonth: "2026-11", memberId: "g3", subGroupId: "sub_round", amount: 50000, isPaid: false, paidDate: "" }
+          ]
+        },
+        {
+          id: "club_hiking",
+          name: "등산가자",
+          category: "취미/산행",
+          icon: "⛰️",
+          subtitle: "주말 명산 트레킹 & 백패킹 동호회",
+          activeSubGroupId: "all",
+          subGroups: [
+            { id: "all", name: "전체 통합", icon: "⛰️" },
+            { id: "sub_mountain", name: "정기 주말산행", icon: "🥾" },
+            { id: "sub_trekking", name: "초보 둘레길팀", icon: "🌲" }
+          ],
+          members: [
+            { id: "h1", name: "배성진", phone: "010-1111-9999", subGroupId: "sub_mountain", role: "회장" },
+            { id: "h2", name: "신유나", phone: "010-3333-7777", subGroupId: "sub_mountain", role: "총무" },
+            { id: "h3", name: "고동현", phone: "010-5555-8888", subGroupId: "sub_mountain", role: "일반회원" },
+            { id: "h4", name: "서지훈", phone: "010-7777-6666", subGroupId: "sub_trekking", role: "일반회원" }
+          ],
+          meetings: [
+            {
+              id: "meet_h1",
+              subGroupId: "sub_mountain",
+              title: "북한산 백운대 가을 단풍 산행 & 하산 뒤풀이",
+              dateStr: "2026-11-07 (토) 08:30",
+              location: "북한산우이역 2번출구 앞 집결",
+              maxCapacity: 8,
+              attendees: { "h1": "참석", "h2": "참석", "h3": "참석", "h4": "참석" },
+              expenses: [
+                {
+                  id: "exp_h1",
+                  title: "하산 후 오리백숙 뒤풀이",
+                  amount: 140000,
+                  payerId: "h2",
+                  splitMemberIds: ["h1", "h2", "h3", "h4"],
+                  paidMemberIds: ["h1", "h2", "h3", "h4"]
+                }
+              ]
+            }
+          ],
+          monthlyDues: [
+            { id: "hdue_1", yearMonth: "2026-11", memberId: "h1", subGroupId: "sub_mountain", amount: 10000, isPaid: true, paidDate: "2026-11-01" },
+            { id: "hdue_2", yearMonth: "2026-11", memberId: "h2", subGroupId: "sub_mountain", amount: 10000, isPaid: true, paidDate: "2026-11-01" },
+            { id: "hdue_3", yearMonth: "2026-11", memberId: "h3", subGroupId: "sub_mountain", amount: 10000, isPaid: true, paidDate: "2026-11-02" },
+            { id: "hdue_4", yearMonth: "2026-11", memberId: "h4", subGroupId: "sub_trekking", amount: 10000, isPaid: false, paidDate: "" }
+          ]
+        }
+      ]
+    };
+
+    const defaultState = { isAdminMode: true, adminPin: "", activeClubId: null, clubs: [] };
+
+    // --- 공통 도우미 ---
+    function esc(v) {
+      return String(v == null ? '' : v).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+    // 한국 시간(KST) 기준 오늘 날짜 'YYYY-MM-DD'
+    function todayStr() {
+      return new Date(Date.now() + 9 * 3600 * 1000).toISOString().slice(0, 10);
+    }
+    let uidCounter = 0;
+    function uid(prefix) {
+      return `${prefix}_${Date.now().toString(36)}${(++uidCounter).toString(36)}${Math.random().toString(36).slice(2, 6)}`;
+    }
+    function toInt(v) {
+      const n = parseInt(String(v == null ? '' : v).replace(/[^\d-]/g, ''), 10);
+      return isNaN(n) ? 0 : n;
+    }
+    // 1/N 정산: 나머지 원 단위는 결제자가 부담(결제자가 대상이 아니면 앞사람부터 1원씩)
+    function splitInfo(exp) {
+      const n = exp.splitMemberIds.length;
+      if (n === 0) return { base: 0, rem: 0, payerIn: false, payerShare: 0, shareOf: () => 0 };
+      const base = Math.floor(exp.amount / n);
+      const rem = exp.amount - base * n;
+      const payerIn = exp.splitMemberIds.includes(exp.payerId);
+      return {
+        base, rem, payerIn, payerShare: base + rem,
+        shareOf: (id) => {
+          if (payerIn) return id === exp.payerId ? base + rem : base;
+          return base + (exp.splitMemberIds.indexOf(id) < rem ? 1 : 0);
+        }
+      };
+    }
+
+    // --- 저장 데이터 정리(깨진/구버전 데이터 방어, id 안전문자화) ---
+    function sid(v) { return String(v == null ? '' : v).replace(/[^\w\-]/g, '_'); }
+    function str(v, d) { return v == null ? (d || '') : String(v); }
+    const ROLES = ["회장", "부회장", "총무", "운영진", "일반회원"];
+    function normalizeState(raw) {
+      const s = (raw && typeof raw === 'object') ? raw : {};
+      const out = {
+        isAdminMode: s.isAdminMode !== false,
+        adminPin: typeof s.adminPin === 'string' ? s.adminPin : '',
+        activeClubId: s.activeClubId ? sid(s.activeClubId) : null,
+        lastBackup: str(s.lastBackup),
+        clubs: []
+      };
+      (Array.isArray(s.clubs) ? s.clubs : []).forEach((c, ci) => {
+        if (!c || typeof c !== 'object') return;
+        const club = {
+          id: sid(c.id || ('club_' + ci)), name: str(c.name, '이름없는 모임'), category: str(c.category, '일반모임'),
+          icon: str(c.icon, '👥'), subtitle: str(c.subtitle), activeSubGroupId: sid(c.activeSubGroupId || 'all'),
+          subGroups: [], members: [], meetings: [], monthlyDues: [], formerMembers: {},
+          extraLedger: [],
+          reportConfig: {
+            title: str(c.reportConfig && c.reportConfig.title),
+            period: str(c.reportConfig && c.reportConfig.period),
+            carryOver: Math.max(0, toInt(c.reportConfig && c.reportConfig.carryOver)),
+            bankAccount: str(c.reportConfig && c.reportConfig.bankAccount),
+            secretary: str(c.reportConfig && c.reportConfig.secretary),
+            auditor: str(c.reportConfig && c.reportConfig.auditor),
+            president: str(c.reportConfig && c.reportConfig.president)
+          }
+        };
+        const sgs = Array.isArray(c.subGroups) ? c.subGroups : [];
+        const allG = sgs.find(g => g && sid(g.id) === 'all');
+        club.subGroups.push({ id: 'all', name: str(allG && allG.name, '전체 통합'), icon: str(allG && allG.icon, club.icon) });
+        sgs.forEach((g, gi) => {
+          if (!g || typeof g !== 'object') return;
+          const id = sid(g.id || ('sub_' + gi));
+          if (id === 'all' || club.subGroups.some(x => x.id === id)) return;
+          club.subGroups.push({ id, name: str(g.name, '소모임'), icon: str(g.icon, '🏃') });
+        });
+        if (!club.subGroups.some(g => g.id === club.activeSubGroupId)) club.activeSubGroupId = 'all';
+        const gid = v => { const id = sid(v || 'all'); return club.subGroups.some(g => g.id === id) ? id : 'all'; };
+        (Array.isArray(c.members) ? c.members : []).forEach((m, mi) => {
+          if (!m || typeof m !== 'object') return;
+          const id = sid(m.id || ('m_' + ci + '_' + mi));
+          if (club.members.some(x => x.id === id)) return;
+          club.members.push({ id, subGroupId: gid(m.subGroupId), name: str(m.name, '이름없음'), affiliation: str(m.affiliation),
+            phone: str(m.phone), address: str(m.address), memo: str(m.memo), role: ROLES.includes(m.role) ? m.role : '일반회원' });
+        });
+        (Array.isArray(c.meetings) ? c.meetings : []).forEach((mt, ti) => {
+          if (!mt || typeof mt !== 'object') return;
+          const att = {};
+          Object.keys(mt.attendees && typeof mt.attendees === 'object' ? mt.attendees : {}).forEach(k => {
+            const v = mt.attendees[k]; if (v === '참석' || v === '대기') att[sid(k)] = v;
+          });
+          const exps = [];
+          (Array.isArray(mt.expenses) ? mt.expenses : []).forEach((e, ei) => {
+            if (!e || typeof e !== 'object') return;
+            exps.push({ id: sid(e.id || ('exp_' + ci + '_' + ti + '_' + ei)), title: str(e.title, '지출'), amount: Math.max(0, toInt(e.amount)),
+              payerId: sid(e.payerId), splitMemberIds: (Array.isArray(e.splitMemberIds) ? e.splitMemberIds : []).map(sid),
+              paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
+          });
+          club.meetings.push({ id: sid(mt.id || ('meet_' + ci + '_' + ti)), subGroupId: gid(mt.subGroupId), title: str(mt.title, '모임'),
+            dateStr: str(mt.dateStr), location: str(mt.location, '장소 미정'), maxCapacity: Math.max(1, toInt(mt.maxCapacity) || 8), attendees: att, expenses: exps });
+        });
+        (Array.isArray(c.monthlyDues) ? c.monthlyDues : []).forEach((d, di) => {
+          if (!d || typeof d !== 'object') return;
+          club.monthlyDues.push({ id: sid(d.id || ('due_' + ci + '_' + di)), subGroupId: gid(d.subGroupId), yearMonth: str(d.yearMonth),
+            memberId: sid(d.memberId), amount: Math.max(0, toInt(d.amount)), isPaid: !!d.isPaid, paidDate: str(d.paidDate), note: str(d.note) });
+        });
+        if (c.formerMembers && typeof c.formerMembers === 'object') {
+          Object.keys(c.formerMembers).forEach(k => { club.formerMembers[sid(k)] = str(c.formerMembers[k]); });
+        }
+        (Array.isArray(c.extraLedger) ? c.extraLedger : []).forEach((x, xi) => {
+          if (!x || typeof x !== 'object') return;
+          club.extraLedger.push({
+            id: sid(x.id || ('ex_' + ci + '_' + xi)),
+            subGroupId: gid(x.subGroupId),
+            type: x.type === 'income' ? 'income' : 'expense',
+            date: str(x.date),
+            title: str(x.title, '항목'),
+            amount: Math.max(0, toInt(x.amount)),
+            note: str(x.note)
+          });
+        });
+        if (!out.clubs.some(x => x.id === club.id)) out.clubs.push(club);
+      });
+      if (!out.clubs.some(c => c.id === out.activeClubId)) out.activeClubId = out.clubs.length ? out.clubs[0].id : null;
+      return out;
+    }
+
+    function loadState() {
+      let saved = null;
+      try {
+        saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) return normalizeState(JSON.parse(saved));
+      } catch (e) {
+        console.warn("로컬스토리지 로드 실패, 기본값 사용", e);
+        // 깨진 원본은 지워지지 않게 따로 보관
+        try { if (saved) localStorage.setItem(STORAGE_KEY + '_corrupt', saved); } catch (e2) {}
+      }
+      return normalizeState(JSON.parse(JSON.stringify(defaultState)));
+    }
+
+    let saveWarned = false;
+    function saveState() {
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(appState));
+      } catch (e) {
+        console.warn("로컬스토리지 저장 실패", e);
+        if (!saveWarned) { saveWarned = true; showToast("⚠️ 저장에 실패했습니다. 💾 백업을 먼저 해 두세요."); }
+      }
+    }
+
+    window.loadSampleData = function() {
+      const sample = normalizeState(JSON.parse(JSON.stringify(SAMPLE_STATE)));
+      appState.clubs = sample.clubs;
+      appState.activeClubId = sample.activeClubId;
+      saveState();
+      renderAll();
+      showToast("샘플 데이터를 불러왔습니다. (체험용 — 지우고 시작하려면 모임 삭제)");
+    };
+
+    let appState = loadState();
+
+    function showToast(msg) {
+      const container = document.getElementById('toast-container');
+      const msgBox = document.getElementById('toast-msg');
+      msgBox.textContent = msg;
+      container.classList.remove('opacity-0', 'translate-y-[-10px]');
+      container.classList.add('opacity-100', 'translate-y-0');
+      setTimeout(() => {
+        container.classList.remove('opacity-100', 'translate-y-0');
+        container.classList.add('opacity-0', 'translate-y-[-10px]');
+      }, 2300);
+    }
+
+    // 현재 활성화된 클럽 객체 반환 (0개일 때도 안전하게 처리)
+    function getActiveClub() {
+      if (!appState.clubs || appState.clubs.length === 0) {
+        return {
+          id: null,
+          name: "모임 없음",
+          category: "새 모임을 추가하세요",
+          icon: "📋",
+          subtitle: "상단 '+ 모임 추가'를 눌러 시작하세요",
+          activeSubGroupId: "all",
+          subGroups: [{ id: "all", name: "전체 통합", icon: "📋" }],
+          members: [],
+          meetings: [],
+          monthlyDues: []
+        };
+      }
+      let club = appState.clubs.find(c => c.id === appState.activeClubId);
+      if (!club) {
+        club = appState.clubs[0];
+        appState.activeClubId = club.id;
+      }
+      return club;
+    }
+
+    function getSubGroup(id) {
+      const club = getActiveClub();
+      return club.subGroups.find(g => g.id === id) || { id: "sub_etc", name: "소속미정", icon: "📌" };
+    }
+
+    function getMember(memberId) {
+      const club = getActiveClub();
+      const found = club.members.find(m => m.id === memberId);
+      if (found) return found;
+      const fn = (club.formerMembers || {})[memberId];
+      return { id: memberId, name: fn ? `${fn} (탈퇴)` : "(삭제된 회원)", role: "일반회원", subGroupId: "all", gone: true };
+    }
+
+    // --- 최상위 클럽 전환 로직 ---
+    function switchClub(clubId) {
+      appState.activeClubId = clubId;
+      saveState();
+      closeClubSelectorModal();
+      renderAll();
+      const club = getActiveClub();
+      showToast(`${club.icon} '${club.name}'(으)로 전환되었습니다.`);
+    }
+
+    // --- 기수 / 소그룹 전환 로직 ---
+    function setActiveSubGroup(groupId) {
+      const club = getActiveClub();
+      club.activeSubGroupId = groupId;
+      saveState();
+      renderAll();
+      const g = getSubGroup(groupId);
+      showToast(`${g.icon} ${g.name} 모드로 전환`);
+    }
+
+    // --- 탭 전환 네비게이션 ---
+    const tabs = [
+      { btnId: 'nav-btn-meetings', viewId: 'tab-meetings-view' },
+      { btnId: 'nav-btn-settlement', viewId: 'tab-settlement-view' },
+      { btnId: 'nav-btn-members', viewId: 'tab-members-view' },
+      { btnId: 'nav-btn-dues', viewId: 'tab-dues-view' },
+      { btnId: 'nav-btn-report', viewId: 'tab-report-view' },
+    ];
+
+    function switchTab(targetViewId) {
+      tabs.forEach(t => {
+        const view = document.getElementById(t.viewId);
+        const btn = document.getElementById(t.btnId);
+        if (t.viewId === targetViewId) {
+          view.classList.remove('hidden');
+          btn.className = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-bold transition-colors";
+        } else {
+          view.classList.add('hidden');
+          btn.className = "flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors";
+        }
+      });
+      renderAll();
+    }
+
+    tabs.forEach(t => {
+      document.getElementById(t.btnId).addEventListener('click', () => switchTab(t.viewId));
+    });
+
+    // --- 렌더링 총괄 ---
+    
+    // --- [운영진 권한 및 모드 관리] ---
+    if (appState.isAdminMode === undefined) appState.isAdminMode = true;
+    if (typeof appState.adminPin !== "string") appState.adminPin = "";
+
+    function requireAdmin(actionName, callback) {
+      if (appState.isAdminMode) {
+        callback();
+      } else {
+        showToast(`🔒 '${actionName}'은(는) 회장·부회장·총무 등 운영진만 수정할 수 있습니다.`);
+        openAdminAuthModal();
+      }
+    }
+
+    // 모임이 하나도 없을 때는 먼저 모임부터 만들도록 안내
+    function requireAdminClub(actionName, callback) {
+      requireAdmin(actionName, () => {
+        if (!getActiveClub().id) {
+          showToast("먼저 '+ 모임 추가'로 모임을 만들어 주세요.");
+          document.getElementById('modal-create-club').classList.remove('hidden');
+          return;
+        }
+        callback();
+      });
+    }
+
+    function updateAdminUI() {
+      const iconEl = document.getElementById('admin-badge-icon');
+      const textEl = document.getElementById('admin-badge-text');
+      const btn = document.getElementById('btn-toggle-admin-mode');
+      const noticeBar = document.getElementById('admin-notice-bar');
+      const statusText = document.getElementById('auth-status-text');
+
+      if (appState.isAdminMode) {
+        iconEl.textContent = '👑';
+        textEl.textContent = '운영진 모드';
+        btn.className = "px-2 py-1 text-xs font-extrabold rounded-lg border transition flex items-center space-x-1 bg-amber-100 text-amber-900 border-amber-300 shadow-2xs hover:bg-amber-200";
+        if (noticeBar) noticeBar.classList.add('hidden');
+        if (statusText) statusText.textContent = '👑 운영진 모드 (모든 편집 권한 보유)';
+      } else {
+        iconEl.textContent = '👁️';
+        textEl.textContent = '일반회원';
+        btn.className = "px-2 py-1 text-xs font-bold rounded-lg border transition flex items-center space-x-1 bg-slate-100 text-slate-600 border-slate-300 shadow-2xs hover:bg-slate-200";
+        if (noticeBar) noticeBar.classList.remove('hidden');
+        if (statusText) statusText.textContent = '👁️ 일반회원 모드 (조회 및 참석 신청 전용)';
+      }
+    }
+
+    window.openAdminAuthModal = function() {
+      document.getElementById('input-admin-pin').value = '';
+      document.getElementById('input-new-pin').value = '';
+      document.getElementById('admin-default-pin-warn').classList.toggle('hidden', appState.adminPin !== '1234');
+      updateAdminUI();
+      document.getElementById('modal-admin-auth').classList.remove('hidden');
+    };
+
+    function closeAdminAuthModal() {
+      document.getElementById('modal-admin-auth').classList.add('hidden');
+    }
+
+    document.getElementById('btn-toggle-admin-mode').addEventListener('click', openAdminAuthModal);
+    document.getElementById('btn-close-admin-auth-modal').addEventListener('click', closeAdminAuthModal);
+    
+
+    document.getElementById('btn-switch-to-member').addEventListener('click', () => {
+      appState.isAdminMode = false;
+      saveState();
+      closeAdminAuthModal();
+      updateAdminUI();
+      renderAll();
+      showToast("👁️ 일반회원 모드로 전환되었습니다. (자료 조회/참석 전용)");
+    });
+
+    document.getElementById('btn-submit-admin-auth').addEventListener('click', () => {
+      const pin = document.getElementById('input-admin-pin').value.trim();
+      if (!appState.adminPin || pin === appState.adminPin) {
+        appState.isAdminMode = true;
+        saveState();
+        closeAdminAuthModal();
+        updateAdminUI();
+        renderAll();
+        showToast("👑 운영진(회장/총무) 인증 완료! 모든 편집 권한이 활성화되었습니다.");
+      } else {
+        showToast("❌ 비밀번호가 올바르지 않습니다.");
+      }
+    });
+
+    document.getElementById('btn-save-pin').addEventListener('click', () => {
+      if (!appState.isAdminMode) { showToast("먼저 운영진 인증을 해주세요."); return; }
+      const v = document.getElementById('input-new-pin').value.trim();
+      if (v && !/^\d{4,6}$/.test(v)) { showToast("비밀번호는 숫자 4~6자리로 입력해주세요."); return; }
+      appState.adminPin = v;
+      saveState();
+      document.getElementById('input-new-pin').value = '';
+      document.getElementById('admin-default-pin-warn').classList.add('hidden');
+      showToast(v ? "🔑 비밀번호가 저장되었습니다." : "비밀번호를 해제했습니다.");
+    });
+
+
+    function renderAll() {
+      updateAdminUI();
+      const club = getActiveClub();
+
+      // 헤더 업데이트
+      document.getElementById('header-club-icon-box').textContent = club.icon;
+      document.getElementById('club-title-text').textContent = club.name;
+      document.getElementById('club-subtitle-text').textContent = club.subtitle || "터치하여 다른 모임으로 전환";
+
+      renderHeaderBanner();
+      renderSubGroupChips();
+      renderMeetings();
+      renderSettlement();
+      renderMembers();
+      renderDues();
+      renderReport();
+      populateDropdowns();
+    }
+
+    // [상단 배너 렌더링]
+    function renderHeaderBanner() {
+      const club = getActiveClub();
+      const activeSub = getSubGroup(club.activeSubGroupId);
+      
+      document.getElementById('banner-club-category').textContent = `${club.category} · ${club.name}`;
+      
+      const titleEl = document.getElementById('banner-group-title');
+      const statsEl = document.getElementById('banner-group-stats');
+
+      if (club.activeSubGroupId === "all") {
+        titleEl.innerHTML = `<span>${esc(club.icon)}</span><span>${esc(club.name)} (전체 통합)</span>`;
+        statsEl.textContent = `${appState.clubs.length}개 모임 보유`;
+      } else {
+        titleEl.innerHTML = `<span>${esc(activeSub.icon)}</span><span>${esc(activeSub.name)}</span>`;
+        const count = club.members.filter(m => m.subGroupId === activeSub.id).length;
+        statsEl.innerHTML = `<span>${count}명 소속</span>`;
+      }
+    }
+
+    // [기수 / 소그룹 필터 칩 바 렌더링]
+    function renderSubGroupChips() {
+      const club = getActiveClub();
+      const container = document.getElementById('subgroup-chip-container');
+      
+      container.innerHTML = club.subGroups.map(g => {
+        const isActive = g.id === club.activeSubGroupId;
+        const memberCount = g.id === "all" ? club.members.length : club.members.filter(m => m.subGroupId === g.id).length;
+        const delBtn = (isActive && g.id !== "all")
+          ? `<span onclick="event.stopPropagation(); handleDeleteSubGroup('${g.id}')" class="ml-1.5 px-1 rounded bg-white/20 hover:bg-rose-500 text-white text-xs cursor-pointer" title="소모임 삭제">✕</span>`
+          : '';
+        
+        return `
+          <button onclick="setActiveSubGroup('${g.id}')" class="shrink-0 px-2.5 py-1 rounded-lg text-xs font-bold transition flex items-center space-x-1 border ${
+            isActive 
+              ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs' 
+              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border-slate-200'
+          }">
+            <span>${esc(g.icon)}</span>
+            <span>${esc(g.name)}</span>
+            <span class="text-xs ml-0.5 opacity-80">(${memberCount})</span>
+            ${delBtn}
+          </button>
+        `;
+      }).join('');
+    }
+
+    // [모임 일정 렌더링]
+    function renderMeetings() {
+      const club = getActiveClub();
+      const container = document.getElementById('meetings-list-container');
+      const badge = document.getElementById('meeting-count-badge');
+      const titleEl = document.getElementById('meetings-section-title');
+
+      const currentSub = getSubGroup(club.activeSubGroupId);
+      titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 일정` : `${currentSub.name} 모임 일정`;
+
+      const filteredMeetings = club.meetings.filter(m => {
+        if (club.activeSubGroupId === "all") return true;
+        return m.subGroupId === club.activeSubGroupId || m.subGroupId === "all";
+      });
+
+      badge.textContent = filteredMeetings.length;
+
+      if (!club.id) {
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl border border-indigo-200 text-center space-y-3 shadow-xs">
+            <span class="text-4xl block">✨</span>
+            <p class="text-sm font-bold text-slate-800">등록된 모임이 없습니다.</p>
+            <p class="text-xs text-slate-500">깨끗하게 비워졌습니다! 아래 버튼을 눌러 새 모임을 만들어 보세요.</p>
+            <button onclick="document.getElementById('modal-create-club').classList.remove('hidden')" class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+              + 첫 모임(클럽) 만들기
+            </button>
+            <button onclick="loadSampleData()" class="block mx-auto text-xs text-slate-500 underline pt-1">샘플 데이터로 먼저 체험해보기</button>
+          </div>
+        `;
+        return;
+      }
+      if (filteredMeetings.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+            <span class="text-3xl block mb-2">${esc(club.icon)}</span>
+            <p class="text-sm font-semibold">${esc(club.name)}에 등록된 모임 일정이 없습니다.</p>
+            <p class="text-xs mt-1">상단의 '+ 모임 개설'을 눌러 첫 모임을 열어보세요!</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filteredMeetings.map(meeting => {
+        const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
+        const waitingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "대기");
+        const isFull = attendingIds.length >= meeting.maxCapacity;
+        const groupInfo = getSubGroup(meeting.subGroupId);
+        const isOrgWide = meeting.subGroupId === "all";
+
+        return `
+          <div class="bg-white rounded-2xl border ${isOrgWide ? 'border-indigo-300 ring-1 ring-indigo-100' : 'border-slate-200'} shadow-sm p-4 space-y-3 transition-all hover:shadow-md">
+            <div class="flex items-start justify-between">
+              <div>
+                <div class="flex items-center space-x-1 mb-1">
+                  <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isOrgWide ? 'bg-indigo-100 text-indigo-800' : 'bg-slate-100 text-slate-700'}">
+                    ${isOrgWide ? `${esc(club.icon)} ${esc(club.name)} 전체` : `${esc(groupInfo.icon)} ${esc(groupInfo.name)}`}
+                  </span>
+                  <span class="inline-block text-xs font-bold px-2 py-0.5 rounded-full ${isFull ? 'bg-amber-100 text-amber-800' : 'bg-emerald-100 text-emerald-800'}">
+                    ${isFull ? '정원 마감 (대기 접수)' : '모집 중'}
+                  </span>
+                </div>
+                <h3 class="font-bold text-slate-900 text-base leading-snug">${esc(meeting.title)}</h3>
+              </div>
+              <button onclick="handleDeleteMeeting('${meeting.id}')" class="text-slate-300 hover:text-rose-500 p-1 text-xs transition" title="모임 삭제">
+                🗑️
+              </button>
+            </div>
+
+            <div class="text-xs text-slate-600 space-y-1 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+              <div class="flex items-center space-x-1.5">
+                <span class="text-slate-400">📅 일시:</span>
+                <span class="font-semibold text-slate-800">${esc(meeting.dateStr)}</span>
+              </div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-slate-400">📍 장소:</span>
+                <span class="font-medium text-slate-800">${esc(meeting.location)}</span>
+              </div>
+              <div class="flex items-center justify-between pt-1">
+                <span class="text-slate-400">👥 참석 현황:</span>
+                <span class="font-bold ${isFull ? 'text-amber-600' : 'text-indigo-600'}">
+                  ${attendingIds.length} / ${meeting.maxCapacity}명
+                </span>
+              </div>
+            </div>
+
+            <!-- 참석자 명단 -->
+            <div class="space-y-1.5 pt-1">
+              <div class="flex items-center justify-between text-xs text-slate-500 font-medium">
+                <span>참석 확정 (${attendingIds.length}명)</span>
+              </div>
+              <div class="flex flex-wrap gap-1.5">
+                ${attendingIds.length === 0 ? '<span class="text-xs text-slate-400">아직 참석 신청자가 없습니다.</span>' : ''}
+                ${attendingIds.map(id => {
+                  const m = getMember(id);
+                  const mGroup = getSubGroup(m.subGroupId);
+                  return `
+                    <span class="inline-flex items-center px-2 py-1 rounded-lg text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-100">
+                      ${m.role && m.role !== "일반회원" ? (m.role === "회장" ? "👑 " : (m.role === "총무" ? "💰 " : (m.role === "부회장" ? "🎖️ " : "⭐ "))) : ""}${esc(m.name)} <span class="text-xs text-indigo-400 ml-1">(${esc(mGroup.name)})</span>
+                      <button onclick="handleRsvpChange('${meeting.id}', '${id}', '취소')" class="ml-1 text-indigo-300 hover:text-rose-500 text-xs">✕</button>
+                    </span>
+                  `;
+                }).join('')}
+              </div>
+
+              ${waitingIds.length > 0 ? `
+                <div class="pt-2 text-xs text-amber-700 font-semibold flex items-center space-x-1">
+                  <span>⏳ 대기 중 (${waitingIds.length}명):</span>
+                  <span>${waitingIds.map(id => `${esc(getMember(id).name)}(${esc(getSubGroup(getMember(id).subGroupId).name)})`).join(', ')}</span>
+                </div>
+              ` : ''}
+            </div>
+
+            <!-- 참석 신청 액션 바 -->
+            <div class="pt-2 border-t border-slate-100 flex items-center justify-between">
+              <span class="text-xs font-semibold text-slate-700">참석 신청:</span>
+              <div class="flex items-center space-x-1">
+                <select id="rsvp-member-select-${meeting.id}" class="text-xs bg-slate-100 border border-slate-200 rounded-lg px-2 py-1.5 font-medium outline-none">
+                  ${[...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('')}
+                </select>
+                <button onclick="handleQuickRsvp('${meeting.id}', '참석')" class="px-2.5 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold rounded-lg shadow-sm">
+                  신청
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // [정산 탭 렌더링]
+    function renderSettlement() {
+      const club = getActiveClub();
+      const select = document.getElementById('settlement-meeting-select');
+      const container = document.getElementById('settlement-detail-container');
+
+      const filteredMeetings = club.meetings.filter(m => {
+        if (club.activeSubGroupId === "all") return true;
+        return m.subGroupId === club.activeSubGroupId || m.subGroupId === "all";
+      });
+
+      if (filteredMeetings.length === 0) {
+        select.innerHTML = '<option value="">선택 가능한 모임이 없습니다</option>';
+        container.innerHTML = `
+          <div class="bg-white p-8 rounded-2xl border border-slate-200 text-center text-slate-400">
+            <p class="text-sm font-semibold">${esc(club.name)}에 등록된 모임이 없습니다.</p>
+          </div>
+        `;
+        return;
+      }
+
+      const currentSelected = select.value || filteredMeetings[0].id;
+      select.innerHTML = filteredMeetings.map(m => `
+        <option value="${m.id}" ${m.id === currentSelected ? 'selected' : ''}>[${esc(getSubGroup(m.subGroupId).name)}] ${esc(m.title)}</option>
+      `).join('');
+
+      const activeMeeting = filteredMeetings.find(m => m.id === select.value) || filteredMeetings[0];
+      if (!activeMeeting) return;
+
+      const attendingIds = Object.keys(activeMeeting.attendees).filter(id => activeMeeting.attendees[id] === "참석");
+
+      if (activeMeeting.expenses.length === 0) {
+        container.innerHTML = `
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 text-center space-y-2">
+            <span class="text-3xl block">💳</span>
+            <p class="text-sm font-bold text-slate-700">등록된 지출 내역이 없습니다.</p>
+            <p class="text-xs text-slate-400">참석자 ${attendingIds.length}명에게 1/N 정산할 식비나 대관료를 등록해보세요.</p>
+            <button onclick="openExpenseModalForCurrent()" class="mt-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold rounded-xl shadow-sm transition">
+              + 첫 지출 항목 등록
+            </button>
+          </div>
+        `;
+        return;
+      }
+
+      const totalSpent = activeMeeting.expenses.reduce((sum, e) => sum + e.amount, 0);
+      const meetingGroup = getSubGroup(activeMeeting.subGroupId);
+
+      container.innerHTML = `
+        <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(meetingGroup.name)}</span>
+              <p class="text-xs text-slate-500 font-semibold mt-1">총 지출 금액</p>
+            </div>
+            <span class="text-xl font-extrabold text-slate-900">${totalSpent.toLocaleString()}원</span>
+          </div>
+          <button onclick="openNoticeModal('${activeMeeting.id}')" class="w-full py-2.5 bg-amber-400 hover:bg-amber-500 text-amber-950 text-xs font-bold rounded-xl shadow-sm transition flex items-center justify-center space-x-1.5">
+            <span>📢</span>
+            <span>카카오톡 정산 공지문 생성 & 복사</span>
+          </button>
+        </div>
+
+        <div class="space-y-2.5">
+          ${activeMeeting.expenses.map(exp => {
+            const payer = getMember(exp.payerId);
+            const sh = splitInfo(exp);
+            const perPerson = sh.base;
+            const remNote = sh.rem > 0 ? (sh.payerIn ? ` (결제자 ${sh.payerShare.toLocaleString()}원)` : ' (일부 +1원)') : '';
+            return `
+              <div class="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm space-y-3">
+                <div class="flex items-start justify-between">
+                  <div>
+                    <h4 class="font-bold text-slate-900 text-sm">${esc(exp.title)}</h4>
+                    <p class="text-xs text-slate-500">결제자: <span class="font-semibold text-slate-800">${esc(payer.name)}</span></p>
+                  </div>
+                  <div class="text-right">
+                    <p class="font-extrabold text-emerald-600 text-sm">${exp.amount.toLocaleString()}원</p>
+                    <p class="text-xs text-slate-400">1인당 ${perPerson.toLocaleString()}원${remNote}</p>
+                  </div>
+                </div>
+
+                <div class="pt-2 border-t border-slate-100 space-y-1.5">
+                  <p class="text-xs font-semibold text-slate-500">정산 대상자 송금 상태 (클릭하여 전환)</p>
+                  <div class="grid grid-cols-2 gap-1.5">
+                    ${exp.splitMemberIds.map(mId => {
+                      const m = getMember(mId);
+                      const isPaid = exp.paidMemberIds.includes(mId);
+                      const isPayer = mId === exp.payerId;
+                      return `
+                        <button onclick="togglePaymentStatus('${activeMeeting.id}', '${exp.id}', '${mId}')" class="flex items-center justify-between p-2 rounded-xl text-xs font-medium border transition ${isPaid ? 'bg-emerald-50 border-emerald-200 text-emerald-800' : 'bg-rose-50 border-rose-200 text-rose-800'}">
+                          <span class="truncate">${esc(m.name)} ${isPayer ? '(결제자)' : ''}</span>
+                          <span class="font-bold text-xs ml-1">${isPaid ? '✅ 완납' : '⏳ 미입금'}</span>
+                        </button>
+                      `;
+                    }).join('')}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      `;
+    }
+
+    // [회원 관리 렌더링]
+    function renderMembers() {
+      const club = getActiveClub();
+      const container = document.getElementById('members-list-container');
+      const badge = document.getElementById('member-count-badge');
+      const titleEl = document.getElementById('members-section-title');
+      const breakdownEl = document.getElementById('group-stats-breakdown');
+
+      const currentSub = getSubGroup(club.activeSubGroupId);
+      titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 회원` : `${currentSub.name} 회원 목록`;
+
+      const searchInput = document.getElementById('input-member-search');
+      const query = searchInput ? searchInput.value.trim().toLowerCase() : "";
+
+      const filteredMembers = club.members.filter(m => {
+        const matchGroup = club.activeSubGroupId === "all" || m.subGroupId === club.activeSubGroupId;
+        if (!matchGroup) return false;
+        if (!query) return true;
+        const hay = `${esc(m.name)} ${m.affiliation || ''} ${esc(m.phone || '')} ${m.address || ''} ${m.memo || ''} ${m.role || ''}`.toLowerCase();
+        return hay.includes(query);
+      }).sort((a, b) => a.name.localeCompare(b.name, 'ko-KR'));
+
+      badge.textContent = `${filteredMembers.length}명`;
+
+      // 전체 뷰일 때 각 소그룹별 요약 카드 표시
+      if (club.activeSubGroupId === "all") {
+        breakdownEl.classList.remove('hidden');
+        const activeSubGroups = club.subGroups.filter(g => g.id !== "all");
+        breakdownEl.innerHTML = activeSubGroups.map(g => {
+          const count = club.members.filter(m => m.subGroupId === g.id).length;
+          return `
+            <div onclick="setActiveSubGroup('${g.id}')" class="bg-white p-2.5 rounded-xl border border-slate-200 shadow-2xs text-center cursor-pointer hover:border-indigo-400 transition">
+              <span class="text-base">${esc(g.icon)}</span>
+              <p class="font-bold text-xs text-slate-800 mt-0.5 truncate">${esc(g.name)}</p>
+              <p class="text-xs text-indigo-600 font-extrabold">${count}명</p>
+            </div>
+          `;
+        }).join('');
+      } else {
+        breakdownEl.classList.add('hidden');
+      }
+
+      if (filteredMembers.length === 0) {
+        container.innerHTML = `<div class="p-8 text-center text-xs text-slate-400">등록된 회원이 없습니다.</div>`;
+        return;
+      }
+
+      container.innerHTML = filteredMembers.map(m => {
+        const group = getSubGroup(m.subGroupId);
+        const roleStyles = {
+          "회장": "bg-amber-100 text-amber-900 border-amber-300 font-extrabold shadow-2xs",
+          "부회장": "bg-sky-100 text-sky-800 border-sky-300 font-extrabold shadow-2xs",
+          "총무": "bg-emerald-100 text-emerald-800 border-emerald-300 font-extrabold shadow-2xs",
+          "운영진": "bg-purple-100 text-purple-800 border-purple-300 font-extrabold shadow-2xs",
+          "일반회원": "bg-slate-100 text-slate-600 border-slate-200 font-medium"
+        };
+        const roleIcons = {
+          "회장": "👑 ",
+          "부회장": "🎖️ ",
+          "총무": "💰 ",
+          "운영진": "⭐ ",
+          "일반회원": ""
+        };
+        const badgeClass = roleStyles[m.role] || roleStyles["일반회원"];
+        const roleIcon = roleIcons[m.role] || "";
+
+        return `
+          <div class="p-3.5 flex items-center justify-between hover:bg-slate-50 transition">
+            <div class="flex items-center space-x-3">
+              <div class="w-9 h-9 rounded-full bg-indigo-50 border border-indigo-100 flex items-center justify-center font-bold text-indigo-700 text-sm">
+                ${esc(Array.from(m.name)[0] || '')}
+              </div>
+              <div>
+                <div class="flex items-center space-x-1.5">
+                  <h4 class="font-bold text-slate-900 text-sm">${esc(m.name)}</h4>
+                  <span class="text-xs px-2 py-0.5 rounded-full font-bold border bg-slate-50 text-slate-600">${esc(group.name)}</span>${m.affiliation ? `<span class="text-xs px-2 py-0.5 rounded-full font-bold border bg-indigo-50 text-indigo-700 border-indigo-200">${esc(m.affiliation)}</span>` : ""}
+                  <span class="text-xs px-2 py-0.5 rounded-full font-bold border ${badgeClass}">${roleIcon}${esc(m.role)}</span>
+                </div>
+                <p class="text-xs text-slate-400 mt-0.5">${esc(m.phone || '연락처 미등록')}</p>
+                ${m.address ? `<p class="text-xs text-slate-500 mt-0.5">📍 ${esc(m.address)}</p>` : ''}
+                ${m.memo ? `<p class="text-xs text-indigo-600 mt-0.5">📝 ${esc(m.memo)}</p>` : ''}
+              </div>
+            </div>
+            <div class="flex items-center space-x-1 shrink-0">
+              <button onclick="openEditMemberModal('${m.id}')" class="text-slate-400 hover:text-indigo-600 p-1.5 transition text-xs" title="정보 수정/추가">
+                ✏️
+              </button>
+              <button onclick="handleDeleteMember('${m.id}')" class="text-slate-300 hover:text-rose-500 p-1.5 transition text-xs" title="삭제">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // [회비 장부 렌더링]
+    function renderDues() {
+      const club = getActiveClub();
+      const container = document.getElementById('dues-list-container');
+      const totalAmountEl = document.getElementById('total-dues-amount');
+      const ratioEl = document.getElementById('paid-members-ratio');
+      const labelEl = document.getElementById('dues-summary-label');
+      const titleEl = document.getElementById('dues-section-title');
+
+      const currentSub = getSubGroup(club.activeSubGroupId);
+      titleEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 전체 회비 장부` : `${currentSub.name} 회비 장부`;
+      labelEl.textContent = club.activeSubGroupId === "all" ? `${club.name} 누적 총수납액` : `${currentSub.name} 누적 회비`;
+
+      const filteredDues = club.monthlyDues.filter(d => {
+        if (club.activeSubGroupId === "all") return true;
+        return d.subGroupId === club.activeSubGroupId;
+      }).sort((a, b) => {
+        const dateA = a.paidDate || a.yearMonth || "";
+        const dateB = b.paidDate || b.yearMonth || "";
+        if (dateB !== dateA) {
+          return dateB.localeCompare(dateA);
+        }
+        return getMember(a.memberId).name.localeCompare(getMember(b.memberId).name, 'ko-KR');
+      });
+
+      const paidDues = filteredDues.filter(d => d.isPaid);
+      const totalAmount = paidDues.reduce((sum, d) => sum + d.amount, 0);
+      totalAmountEl.textContent = `${totalAmount.toLocaleString()}원`;
+
+      const ratio = filteredDues.length > 0 ? Math.round((paidDues.length / filteredDues.length) * 100) : 0;
+      ratioEl.textContent = `완납률 ${ratio}% (${paidDues.length}/${filteredDues.length}건)`;
+
+      if (filteredDues.length === 0) {
+        container.innerHTML = '<div class="p-6 text-center text-xs text-slate-400">등록된 회비 납부 내역이 없습니다.</div>';
+        return;
+      }
+
+      container.innerHTML = filteredDues.map(d => {
+        const m = getMember(d.memberId);
+        const g = getSubGroup(d.subGroupId || m.subGroupId);
+        return `
+          <div class="p-3.5 flex items-center justify-between hover:bg-slate-50 transition">
+            <div>
+              <div class="flex items-center space-x-1.5">
+                <span class="text-xs font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded">${esc(d.yearMonth)}</span>
+                <span class="text-xs text-slate-500 font-bold bg-slate-100 px-1.5 py-0.5 rounded">${esc(g.name)}</span>
+                <span class="text-sm font-bold text-slate-900">${esc(m.name)}</span>
+              </div>
+              <p class="text-xs text-slate-400 mt-0.5">${d.isPaid ? `납부일: ${esc(d.paidDate || '확인됨')}` : '납부 대기 중'}${d.note ? ` · <span class="text-amber-700 font-bold">${esc(d.note)}</span>` : ""}</p>
+            </div>
+            <div class="flex items-center space-x-2">
+              <span class="font-extrabold text-sm text-slate-800">${d.amount.toLocaleString()}원</span>
+              <button onclick="toggleDuePayment('${d.id}')" class="px-2 py-1 rounded-lg text-xs font-bold border transition ${d.isPaid ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'}">
+                ${d.isPaid ? '완납' : '미납'}
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function populateDropdowns() {
+      const club = getActiveClub();
+
+      // 모임 개설 모달 - 소속 기수 선택
+      const meetingGroupSelect = document.getElementById('input-meeting-subgroup');
+      meetingGroupSelect.innerHTML = club.subGroups.map(g => `
+        <option value="${g.id}">${esc(g.name)} ${g.id === 'all' ? '(전체 모임)' : '전용'}</option>
+      `).join('');
+      meetingGroupSelect.value = club.activeSubGroupId === "all" ? "all" : club.activeSubGroupId;
+
+      // 회원 등록 모달 - 소속 기수 선택
+      const memberGroupSelect = document.getElementById('input-member-subgroup');
+      memberGroupSelect.innerHTML = club.subGroups.map(g => `
+        <option value="${g.id}">${esc(g.name)}</option>
+      `).join('');
+      if (club.activeSubGroupId !== "all") {
+        memberGroupSelect.value = club.activeSubGroupId;
+      }
+
+      // 지출 모달 - 모임 선택
+      const meetingSelect = document.getElementById('input-expense-meeting');
+      meetingSelect.innerHTML = club.meetings.map(m => `<option value="${m.id}">[${esc(getSubGroup(m.subGroupId).name)}] ${esc(m.title)}</option>`).join('');
+
+      // 지출 모달 - 결제자 선택
+      const payerSelect = document.getElementById('input-expense-payer');
+      payerSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('');
+
+      // 회비 모달 - 회원 선택
+      const dueMemberSelect = document.getElementById('input-due-member');
+      dueMemberSelect.innerHTML = [...club.members].sort((a, b) => a.name.localeCompare(b.name, 'ko-KR')).map(m => `<option value="${m.id}">${esc(m.name)} (${esc(getSubGroup(m.subGroupId).name)})</option>`).join('');
+    }
+
+    // --- 최상위 클럽 선택 바텀시트 렌더링 ---
+    window.openClubSelectorModal = function() {
+      const container = document.getElementById('club-selection-list');
+      if (appState.clubs.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">등록된 모임이 없습니다. 아래 버튼을 눌러 새 모임을 만드세요.</div>`;
+        document.getElementById('modal-select-club').classList.remove('hidden');
+        return;
+      }
+      container.innerHTML = appState.clubs.map(c => {
+        const isCurrent = c.id === appState.activeClubId;
+        return `
+          <div onclick="switchClub('${c.id}')" class="p-3 rounded-2xl border transition flex items-center justify-between cursor-pointer ${
+            isCurrent ? 'bg-indigo-50 border-indigo-400 ring-2 ring-indigo-200' : 'bg-slate-50 border-slate-200 hover:bg-slate-100'
+          }">
+            <div class="flex items-center space-x-3 min-w-0">
+              <span class="text-2xl shrink-0">${esc(c.icon)}</span>
+              <div class="min-w-0">
+                <h4 class="font-extrabold text-sm text-slate-900 truncate">${esc(c.name)}</h4>
+                <p class="text-xs text-slate-500">${esc(c.category)} · ${c.members.length}명 회원</p>
+              </div>
+            </div>
+            <div class="flex items-center space-x-2 shrink-0 ml-2">
+              ${isCurrent ? '<span class="text-indigo-600 font-extrabold text-xs">✓ 선택됨</span>' : '<span class="text-xs text-slate-400 font-medium">전환</span>'}
+              <button onclick="event.stopPropagation(); handleDeleteClub('${c.id}')" class="p-1.5 text-slate-400 hover:text-rose-600 rounded-lg hover:bg-rose-50 transition text-xs" title="모임 삭제">
+                🗑️
+              </button>
+            </div>
+          </div>
+        `;
+      }).join('');
+      document.getElementById('modal-select-club').classList.remove('hidden');
+    };
+
+    function closeClubSelectorModal() {
+      document.getElementById('modal-select-club').classList.add('hidden');
+    }
+
+    // --- 이벤트 핸들러 및 액션 ---
+
+    // 참석 신청
+    window.handleQuickRsvp = function(meetingId, status) {
+      const club = getActiveClub();
+      const select = document.getElementById(`rsvp-member-select-${meetingId}`);
+      if (!select) return;
+      const memberId = select.value;
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      if (!meeting) return;
+
+      const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
+      const memberName = getMember(memberId).name;
+
+      if (status === "참석") {
+        if (attendingIds.length >= meeting.maxCapacity && meeting.attendees[memberId] !== "참석") {
+          meeting.attendees[memberId] = "대기";
+          showToast(`정원 초과로 ${memberName}님이 '대기'로 등록되었습니다.`);
+        } else {
+          meeting.attendees[memberId] = "참석";
+          showToast(`${memberName}님 참석 확정!`);
+        }
+      }
+      saveState();
+      renderAll();
+    };
+
+    window.handleRsvpChange = function(meetingId, memberId, newStatus) {
+      const club = getActiveClub();
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      if (!meeting) return;
+
+      const prevStatus = meeting.attendees[memberId];
+      if (newStatus === "취소") {
+        delete meeting.attendees[memberId];
+      } else {
+        meeting.attendees[memberId] = newStatus;
+      }
+
+      if (prevStatus === "참석") {
+        const waitingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "대기");
+        if (waitingIds.length > 0) {
+          const promotedId = waitingIds[0];
+          meeting.attendees[promotedId] = "참석";
+          showToast(`${getMember(promotedId).name}님이 대기자에서 참석자로 자동 승격되었습니다!`);
+        } else {
+          showToast("참석이 취소되었습니다.");
+        }
+      } else {
+        showToast("참석 상태가 변경되었습니다.");
+      }
+
+      saveState();
+      renderAll();
+    };
+
+    window.togglePaymentStatus = function(meetingId, expenseId, memberId) {
+      requireAdmin("입금 상태 확인", () => {
+      const club = getActiveClub();
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      if (!meeting) return;
+      const exp = meeting.expenses.find(e => e.id === expenseId);
+      if (!exp) return;
+
+      const idx = exp.paidMemberIds.indexOf(memberId);
+      const memberName = getMember(memberId).name;
+      if (idx > -1) {
+        exp.paidMemberIds.splice(idx, 1);
+        showToast(`${memberName}님 미입금으로 변경`);
+      } else {
+        exp.paidMemberIds.push(memberId);
+        showToast(`✅ ${memberName}님 입금 확인 완료!`);
+      }
+      saveState();
+      renderSettlement();
+      });
+    };
+
+    window.toggleDuePayment = function(dueId) {
+      requireAdmin("회비 납부 상태 변경", () => {
+      const club = getActiveClub();
+      const due = club.monthlyDues.find(d => d.id === dueId);
+      if (!due) return;
+      due.isPaid = !due.isPaid;
+      due.paidDate = due.isPaid ? todayStr() : "";
+      saveState();
+      renderDues();
+      showToast(`${getMember(due.memberId).name}님 회비 상태 변경`);
+      });
+    };
+
+    // 삭제 확인 모달 제어
+    let pendingDeleteAction = null;
+
+    function showDeleteConfirm(title, descHtml, onConfirm, label) {
+      document.getElementById('btn-confirm-delete').textContent = label || '삭제하기';
+      document.getElementById('delete-modal-title').textContent = title;
+      document.getElementById('delete-modal-desc').innerHTML = descHtml;
+      pendingDeleteAction = onConfirm;
+      document.getElementById('modal-confirm-delete').classList.remove('hidden');
+    }
+
+    function closeDeleteConfirm() {
+      document.getElementById('modal-confirm-delete').classList.add('hidden');
+      pendingDeleteAction = null;
+    }
+
+    document.getElementById('btn-cancel-delete').addEventListener('click', closeDeleteConfirm);
+    document.getElementById('btn-confirm-delete').addEventListener('click', () => {
+      if (typeof pendingDeleteAction === 'function') {
+        pendingDeleteAction();
+      }
+      closeDeleteConfirm();
+    });
+
+    window.handleDeleteClub = function(clubId) {
+      requireAdmin('모임(클럽) 삭제', () => {
+        const targetClub = appState.clubs.find(c => c.id === clubId);
+        if (!targetClub) return;
+        closeClubSelectorModal();
+        showDeleteConfirm(
+          "모임(클럽) 삭제 확인",
+          `'<strong>${esc(targetClub.icon)} ${esc(targetClub.name)}</strong>' 모임을 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">해당 모임의 회원 명부, 일정, 정산·회비 장부가 모두 삭제됩니다.</span>`,
+          () => {
+            appState.clubs = appState.clubs.filter(c => c.id !== clubId);
+            if (appState.activeClubId === clubId) {
+              appState.activeClubId = appState.clubs.length > 0 ? appState.clubs[0].id : null;
+            }
+            saveState();
+            renderAll();
+            showToast(`'${targetClub.name}' 모임이 삭제되었습니다.`);
+          }
+        );
+      });
+    };
+
+    window.handleDeleteSubGroup = function(subGroupId) {
+      requireAdmin('소모임 삭제', () => {
+        if (subGroupId === "all") return;
+        const club = getActiveClub();
+        const targetSub = club.subGroups.find(g => g.id === subGroupId);
+        if (!targetSub) return;
+        showDeleteConfirm(
+          "소모임 삭제 확인",
+          `'<strong>${esc(targetSub.icon)} ${esc(targetSub.name)}</strong>' 소모임을 삭제하시겠습니까?<br><span class="text-slate-600">소속된 회원과 내역은 삭제되지 않고 <strong>전체 통합</strong>으로 이동됩니다.</span>`,
+          () => {
+            club.subGroups = club.subGroups.filter(g => g.id !== subGroupId);
+            club.members.forEach(m => { if (m.subGroupId === subGroupId) m.subGroupId = "all"; });
+            club.meetings.forEach(mt => { if (mt.subGroupId === subGroupId) mt.subGroupId = "all"; });
+            club.monthlyDues.forEach(d => { if (d.subGroupId === subGroupId) d.subGroupId = "all"; });
+            if (club.activeSubGroupId === subGroupId) {
+              club.activeSubGroupId = "all";
+            }
+            saveState();
+            renderAll();
+            showToast(`'${targetSub.name}' 소모임이 삭제되었습니다.`);
+          }
+        );
+      });
+    };
+
+    window.handleDeleteMeeting = function(meetingId) {
+      requireAdmin("모임 삭제", () => {
+      const club = getActiveClub();
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      const title = meeting ? meeting.title : "이 모임";
+      showDeleteConfirm(
+        "모임 삭제 확인",
+        `'<strong>${esc(title)}</strong>' 모임을 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">참석 명단 및 정산 내역이 함께 삭제됩니다.</span>`,
+        () => {
+          club.meetings = club.meetings.filter(m => m.id !== meetingId);
+          saveState();
+          renderAll();
+          showToast("모임 일정이 안전하게 삭제되었습니다.");
+        }
+      );
+      });
+    };
+
+    window.handleDeleteMember = function(memberId) {
+      requireAdmin("회원 삭제", () => {
+      const club = getActiveClub();
+      const member = getMember(memberId);
+      showDeleteConfirm(
+        "회원 삭제 확인",
+        `'<strong>${esc(member.name)}</strong>' 님을 명부에서 정말 삭제하시겠습니까?<br><span class="text-rose-500 font-medium">삭제 후에는 명단에서 제외됩니다.</span>`,
+        () => {
+          club.formerMembers = club.formerMembers || {};
+          club.formerMembers[memberId] = member.name;
+          club.members = club.members.filter(m => m.id !== memberId);
+          saveState();
+          renderAll();
+          showToast(`'${member.name}' 회원이 삭제되었습니다.`);
+        }
+      );
+      });
+    };
+
+    window.openExpenseModalForCurrent = function() {
+      const select = document.getElementById('settlement-meeting-select');
+      if (select && select.value) {
+        document.getElementById('input-expense-meeting').value = select.value;
+      }
+      document.getElementById('modal-add-expense').classList.remove('hidden');
+    };
+
+    // 카톡 공지문 생성
+    window.openNoticeModal = function(meetingId) {
+      const club = getActiveClub();
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      if (!meeting) return;
+
+      const group = getSubGroup(meeting.subGroupId);
+      const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
+      const totalSpent = meeting.expenses.reduce((sum, e) => sum + e.amount, 0);
+
+      let text = `📢 [${club.name} - ${group.name}] ${meeting.title} 정산 안내\n`;
+      text += `• 일시: ${meeting.dateStr}\n`;
+      text += `• 장소: ${meeting.location}\n`;
+      text += `• 참석: ${attendingIds.length}명 (${attendingIds.map(id => getMember(id).name).join(', ')})\n`;
+      text += `------------------------------------\n`;
+      text += `💰 총 지출: ${totalSpent.toLocaleString()}원\n\n`;
+
+      const owed = {};      // 미입금 금액(미입금 항목만 합산, 결제자 본인은 제외)
+      const unpaidCnt = {};
+      meeting.expenses.forEach(exp => {
+        const sh = splitInfo(exp);
+        text += `▶ ${exp.title}: ${exp.amount.toLocaleString()}원 (결제자: ${getMember(exp.payerId).name})\n`;
+        text += `   1인당: ${sh.base.toLocaleString()}원${sh.rem > 0 ? (sh.payerIn ? ` (결제자 ${sh.payerShare.toLocaleString()}원)` : ' (일부 +1원)') : ''}\n`;
+        exp.splitMemberIds.forEach(mId => {
+          if (mId !== exp.payerId && !exp.paidMemberIds.includes(mId)) {
+            owed[mId] = (owed[mId] || 0) + sh.shareOf(mId);
+            unpaidCnt[mId] = (unpaidCnt[mId] || 0) + 1;
+          }
+        });
+      });
+
+      text += `\n[송금 확인 현황]\n`;
+      const involved = [...new Set([...attendingIds, ...meeting.expenses.flatMap(e => e.splitMemberIds)])];
+      involved.forEach(mId => {
+        const name = getMember(mId);
+        if (!unpaidCnt[mId]) {
+          text += `✅ ${name.name}: 송금 완료\n`;
+        } else {
+          text += `⏳ ${name.name}: ${owed[mId].toLocaleString()}원 미입금\n`;
+        }
+      });
+
+      text += `\n총무 계좌 또는 카카오페이/토스로 송금 부탁드립니다!`;
+
+      document.getElementById('notice-text-content').value = text;
+      document.getElementById('modal-copy-notice').classList.remove('hidden');
+    };
+
+    // --- 모달 이벤트 리스너 ---
+
+    // 클럽 선택 모달 열기/닫기
+    document.getElementById('btn-open-club-selector').addEventListener('click', openClubSelectorModal);
+    document.getElementById('btn-close-club-selector').addEventListener('click', closeClubSelectorModal);
+
+    // 새 클럽 만들기 모달
+    document.getElementById('btn-open-create-club').addEventListener('click', () => {
+      document.getElementById('modal-create-club').classList.remove('hidden');
+    });
+    document.getElementById('btn-trigger-add-club').addEventListener('click', () => {
+      closeClubSelectorModal();
+      document.getElementById('modal-create-club').classList.remove('hidden');
+    });
+    document.getElementById('btn-close-create-club-modal').addEventListener('click', () => {
+      document.getElementById('modal-create-club').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-create-club').addEventListener('click', () => {
+      document.getElementById('modal-create-club').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-create-club').addEventListener('click', () => {
+      const name = document.getElementById('input-newclub-name').value.trim();
+      const category = document.getElementById('input-newclub-category').value.trim() || '일반모임';
+      const icon = document.getElementById('input-newclub-icon').value.trim() || '👥';
+      const subtitle = document.getElementById('input-newclub-subtitle').value.trim();
+
+      if (!name) {
+        showToast("모임명을 입력해주세요.");
+        return;
+      }
+
+      if (appState.clubs.some(cl => cl.name.trim().toLowerCase() === name.toLowerCase())) {
+        showToast(`⚠️ 이미 '${name}' 모임이 등록되어 있습니다.`);
+        return;
+      }
+
+      const newClubId = uid('club');
+      const newClub = {
+        id: newClubId,
+        name,
+        category,
+        icon,
+        subtitle: subtitle || `${name} 공식 모임`,
+        activeSubGroupId: "all",
+        subGroups: [
+          { id: "all", name: "전체 통합", icon: icon }
+        ],
+        members: [],
+        meetings: [],
+        monthlyDues: []
+      };
+
+      appState.clubs.push(newClub);
+      appState.activeClubId = newClubId;
+      saveState();
+      document.getElementById('modal-create-club').classList.add('hidden');
+      document.getElementById('input-newclub-name').value = '';
+      document.getElementById('input-newclub-category').value = '';
+      document.getElementById('input-newclub-subtitle').value = '';
+      renderAll();
+      showToast(`🎉 새로운 모임 '${name}'이(가) 개설되었습니다!`);
+    });
+
+    // 새 하위 소그룹 추가 모달
+    document.getElementById('btn-open-add-subgroup').addEventListener('click', () => {
+      requireAdminClub('소모임 개설', () => {
+      document.getElementById('modal-add-subgroup').classList.remove('hidden');
+      });
+    });
+    document.getElementById('btn-close-subgroup-modal').addEventListener('click', () => {
+      document.getElementById('modal-add-subgroup').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-add-subgroup').addEventListener('click', () => {
+      document.getElementById('modal-add-subgroup').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-add-subgroup').addEventListener('click', () => {
+      const club = getActiveClub();
+      const name = document.getElementById('input-subgroup-name').value.trim();
+      const icon = document.getElementById('input-subgroup-icon').value.trim() || '🏃';
+
+      if (!name) {
+        showToast("소모임 또는 기수 명칭을 입력해주세요.");
+        return;
+      }
+
+      if (club.subGroups.some(g => g.name.trim().toLowerCase() === name.toLowerCase())) {
+        showToast(`⚠️ 이미 '${name}' 소모임이 존재합니다.`);
+        return;
+      }
+
+      const newId = uid('sub');
+      club.subGroups.push({ id: newId, name, icon });
+      club.activeSubGroupId = newId;
+      saveState();
+      document.getElementById('modal-add-subgroup').classList.add('hidden');
+      document.getElementById('input-subgroup-name').value = '';
+      renderAll();
+      showToast(`'${name}' 소그룹이 추가되었습니다!`);
+    });
+
+    // 새 모임 일정 모달
+    document.getElementById('btn-open-create-meeting').addEventListener('click', () => {
+      requireAdminClub('모임 개설', () => {
+      document.getElementById('modal-create-meeting').classList.remove('hidden');
+      });
+    });
+    document.getElementById('btn-close-meeting-modal').addEventListener('click', () => {
+      document.getElementById('modal-create-meeting').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-create-meeting').addEventListener('click', () => {
+      document.getElementById('modal-create-meeting').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-create-meeting').addEventListener('click', () => {
+      const club = getActiveClub();
+      const subGroupId = document.getElementById('input-meeting-subgroup').value;
+      const title = document.getElementById('input-meeting-title').value.trim();
+      const dateStr = document.getElementById('input-meeting-date').value.trim();
+      const location = document.getElementById('input-meeting-loc').value.trim();
+      const cap = Math.max(1, toInt(document.getElementById('input-meeting-cap').value) || 8);
+
+      if (!title || !dateStr) {
+        showToast("모임명과 일시를 입력해주세요.");
+        return;
+      }
+
+      if (club.meetings.some(mt => mt.title.trim().toLowerCase() === title.toLowerCase())) {
+        showToast(`⚠️ 이미 '${title}' 모임 일정이 존재합니다.`);
+        return;
+      }
+
+      const newMeeting = {
+        id: uid('meet'),
+        subGroupId,
+        title,
+        dateStr,
+        location: location || "장소 미정",
+        maxCapacity: cap,
+        attendees: {},
+        expenses: []
+      };
+
+      club.meetings.unshift(newMeeting);
+      saveState();
+      document.getElementById('modal-create-meeting').classList.add('hidden');
+      document.getElementById('input-meeting-title').value = '';
+      document.getElementById('input-meeting-date').value = '';
+      document.getElementById('input-meeting-loc').value = '';
+      renderAll();
+      showToast("새 모임 일정이 등록되었습니다!");
+    });
+
+    // 지출 추가 모달
+    document.getElementById('btn-open-add-expense').addEventListener('click', () => {
+      requireAdminClub('지출 등록', () => {
+      openExpenseModalForCurrent();
+      });
+    });
+    document.getElementById('btn-close-expense-modal').addEventListener('click', () => {
+      document.getElementById('modal-add-expense').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-add-expense').addEventListener('click', () => {
+      document.getElementById('modal-add-expense').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-add-expense').addEventListener('click', () => {
+      const club = getActiveClub();
+      const meetingId = document.getElementById('input-expense-meeting').value;
+      const title = document.getElementById('input-expense-title').value.trim();
+      const amount = toInt(document.getElementById('input-expense-amount').value);
+      const payerId = document.getElementById('input-expense-payer').value;
+
+      if (!title || amount <= 0) {
+        showToast("지출 항목과 올바른 금액을 입력하세요.");
+        return;
+      }
+
+      const meeting = club.meetings.find(m => m.id === meetingId);
+      if (!meeting) return;
+
+      const attendingIds = Object.keys(meeting.attendees).filter(id => meeting.attendees[id] === "참석");
+      if (attendingIds.length === 0) {
+        showToast("참석자가 없어 1/N 분담을 할 수 없습니다.");
+        return;
+      }
+
+      const newExpense = {
+        id: uid('exp'),
+        title,
+        amount,
+        payerId,
+        splitMemberIds: [...attendingIds],
+        paidMemberIds: [payerId]
+      };
+
+      meeting.expenses.push(newExpense);
+      saveState();
+      document.getElementById('modal-add-expense').classList.add('hidden');
+      document.getElementById('input-expense-title').value = '';
+      document.getElementById('input-expense-amount').value = '';
+      renderSettlement();
+      showToast("1/N 지출이 등록되었습니다!");
+    });
+
+
+    // --- 회원 일괄 가져오기 (밴드/카톡/경조사 스마트 파서) ---
+    function parseBatchText(rawText) {
+      if (!rawText || !rawText.trim()) return [];
+
+      const phoneRegex = /(01[016789]-?\d{3,4}-?\d{4})/;
+      // 금액 패턴: 50,000 / 1,000,000 / 150000 (천 단위 쉼표 포함 또는 4자리 이상 숫자)
+      const amountRegex = /(?:^|[\s ])(\d{1,3}(?:,\d{3})+|\d{4,})(?=$|[\s 원])/;
+      const manRegex = /(?:^|\s)(\d+)만\s*원?(?=\s|$)/;   // "5만원" / "10만"
+      const results = [];
+
+      // 한 사람 분량의 텍스트("홍길동 65골 50,000 화환")를 해석
+      function parseOne(text) {
+        const matchedPhone = text.match(phoneRegex);
+        const phone = matchedPhone ? matchedPhone[0] : "";
+        let work = text.replace(phoneRegex, ' ').trim();
+        let amount = 0;
+        let note = "";
+        const man = work.match(manRegex);
+        const amtMatch = man || work.match(amountRegex);
+        if (amtMatch) {
+          amount = man ? (parseInt(man[1], 10) || 0) * 10000 : (parseInt(amtMatch[1].replace(/,/g, ''), 10) || 0);
+          const idx = amtMatch.index;
+          const beforeAmt = work.slice(0, idx).trim();
+          const afterAmt = work.slice(idx + amtMatch[0].length).replace(/^원\s*/, '').trim();
+          work = beforeAmt;
+          note = afterAmt;
+        }
+        const tokens = work.split(/\s+/).filter(Boolean);
+        if (tokens.length === 0) return null;
+        const name = tokens[0].replace(/[()\[\]]/g, '').trim();
+        const affiliation = tokens.slice(1).join(' ').replace(/[()\[\]]/g, '').trim();
+        if (name && name.length >= 2 && name.length <= 20) return { name, phone, affiliation, amount, note };
+        return null;
+      }
+
+      const lines = rawText.split(/[\r\n]+/);
+      for (let rawLine of lines) {
+        let line = rawLine.replace(/ /g, ' ').trim();
+        if (!line) continue;
+        // 순번/불릿 제거 ('1. ', '1) ', '• ')
+        line = line.replace(/^[0-9]+[.\)]\s*|^[-*•·]\s*/, '').trim();
+        if (!line) continue;
+
+        // 금액의 천 단위 쉼표는 보호하고, 나머지 쉼표/슬래시로 여러 명이 나열된 경우 분리
+        const protectedLine = line.replace(/\d{1,3}(?:,\d{3})+/g, m => m.replace(/,/g, '\u0001'));
+        if (protectedLine.includes(',') || protectedLine.includes('/')) {
+          protectedLine.split(/[,/]+/).forEach(p => {
+            p = p.replace(/\u0001/g, ',').trim().replace(/^[0-9]+[.\)]\s*/, '');
+            if (!p) return;
+            const item = parseOne(p);
+            if (item) results.push(item);
+          });
+          continue;
+        }
+        const item = parseOne(line);
+        if (item) results.push(item);
+      }
+      return results;
+    }
+
+    function updateBatchPreview() {
+      const textarea = document.getElementById('textarea-batch-input');
+      const countEl = document.getElementById('batch-parsed-count');
+      const samplesEl = document.getElementById('batch-parsed-samples');
+
+      const parsed = parseBatchText(textarea.value);
+      const totalAmt = parsed.reduce((sum, item) => sum + (item.amount || 0), 0);
+      countEl.textContent = totalAmt > 0
+        ? `${parsed.length}명 · ${totalAmt.toLocaleString()}원`
+        : `${parsed.length}명 인식됨`;
+
+      if (parsed.length === 0) {
+        samplesEl.innerHTML = `<span class="text-slate-400">텍스트를 붙여넣으면 인식된 회원·금액 명단이 여기에 표시됩니다.</span>`;
+      } else {
+        samplesEl.innerHTML = parsed.map((m, idx) => {
+          const affBadge = m.affiliation ? `<span class="text-xs px-1.5 py-0.2 rounded bg-white border border-indigo-200 text-indigo-700 ml-1">${esc(m.affiliation)}</span>` : '';
+          const amtText = m.amount > 0 ? `<span class="font-bold text-emerald-700">${m.amount.toLocaleString()}원</span>` : `<span class="text-slate-400">${esc(m.phone || '연락처 없음')}</span>`;
+          const noteBadge = m.note ? `<span class="text-xs text-amber-700 font-bold ml-1">[${esc(m.note)}]</span>` : '';
+          return `
+            <div class="flex items-center justify-between py-0.5 border-b border-indigo-100/50">
+              <span class="font-bold text-slate-800 truncate">${idx + 1}. ${esc(m.name)}${affBadge}${noteBadge}</span>
+              <span class="text-xs shrink-0 ml-2">${amtText}</span>
+            </div>
+          `;
+        }).join('');
+      }
+    }
+
+    document.getElementById('btn-open-batch-import').addEventListener('click', () => {
+      requireAdminClub('회원 일괄 가져오기', () => {
+      const club = getActiveClub();
+      const select = document.getElementById('input-batch-subgroup');
+      select.innerHTML = club.subGroups.map(g => `<option value="${g.id}">${g.name}</option>`).join('');
+      select.value = club.activeSubGroupId || "all";
+      document.getElementById('textarea-batch-input').value = '';
+      updateBatchPreview();
+      document.getElementById('modal-batch-import').classList.remove('hidden');
+      });
+    });
+
+    document.getElementById('btn-close-batch-modal').addEventListener('click', () => {
+      document.getElementById('modal-batch-import').classList.add('hidden');
+    });
+
+    document.getElementById('btn-cancel-batch-import').addEventListener('click', () => {
+      document.getElementById('modal-batch-import').classList.add('hidden');
+    });
+
+    document.getElementById('textarea-batch-input').addEventListener('input', updateBatchPreview);
+
+    document.getElementById('btn-submit-batch-import').addEventListener('click', () => {
+      const club = getActiveClub();
+      const subGroupId = document.getElementById('input-batch-subgroup').value;
+      const syncDues = document.getElementById('checkbox-batch-sync-dues').checked;
+      const duesLabel = document.getElementById('input-batch-dues-label').value.trim() || todayStr().slice(0, 7);
+      const textarea = document.getElementById('textarea-batch-input');
+      const parsed = parseBatchText(textarea.value);
+
+      if (parsed.length === 0) {
+        showToast("인식된 회원이 없습니다. 명단을 확인해주세요.");
+        return;
+      }
+
+      const today = todayStr();
+      let addedCount = 0, duesAddedCount = 0, totalAmt = 0;
+
+      parsed.forEach((item) => {
+        // 동명이인도 제한 없이 모두 등록
+        const mem = {
+          id: uid('m'),
+          subGroupId: subGroupId,
+          name: item.name,
+          phone: item.phone || "",
+          affiliation: item.affiliation || "",
+          role: "일반회원"
+        };
+        club.members.push(mem);
+        addedCount++;
+
+        if (syncDues && item.amount > 0) {
+          club.monthlyDues.unshift({
+            id: uid('due'),
+            subGroupId: mem.subGroupId,
+            yearMonth: duesLabel,
+            memberId: mem.id,
+            amount: item.amount,
+            note: item.note || (item.affiliation ? `${item.affiliation}` : ""),
+            isPaid: true,
+            paidDate: today
+          });
+          duesAddedCount++;
+          totalAmt += item.amount;
+        }
+      });
+
+      saveState();
+      document.getElementById('modal-batch-import').classList.add('hidden');
+      renderAll();
+      const skipTxt = '';
+      if (duesAddedCount > 0) {
+        showToast(`🎉 ${addedCount}명 등록 & ${totalAmt.toLocaleString()}원(${duesAddedCount}건) 장부 반영 완료!${skipTxt}`);
+      } else if (addedCount > 0) {
+        showToast(`🎉 ${addedCount}명이 일괄 등록되었습니다!${skipTxt}`);
+      } else {
+        showToast(`새로 등록할 회원이 없습니다.${skipTxt || ' 명단을 확인해주세요.'}`);
+      }
+    });
+
+    // 회원 검색창 실시간 필터링
+    document.getElementById('input-member-search').addEventListener('input', () => {
+      renderMembers();
+    });
+
+    // 회원 추가 & 상세정보 수정 모달
+    window.openEditMemberModal = function(memberId) {
+      requireAdmin('회원 정보 수정', () => {
+        const club = getActiveClub();
+        const m = club.members.find(x => x.id === memberId);
+        if (!m) return;
+        document.getElementById('member-modal-title').textContent = '회원 정보 수정 / 추가 입력';
+        document.getElementById('input-member-edit-id').value = m.id;
+        document.getElementById('input-member-subgroup').value = m.subGroupId || (club.subGroups[0] ? club.subGroups[0].id : 'all');
+        document.getElementById('input-member-role').value = m.role || '일반회원';
+        document.getElementById('input-member-name').value = m.name || '';
+        document.getElementById('input-member-affiliation').value = m.affiliation || '';
+        document.getElementById('input-member-phone').value = m.phone || '';
+        document.getElementById('input-member-address').value = m.address || '';
+        document.getElementById('input-member-memo').value = m.memo || '';
+        document.getElementById('modal-add-member').classList.remove('hidden');
+      });
+    };
+
+    document.getElementById('btn-open-add-member').addEventListener('click', () => {
+      requireAdminClub('회원 추가', () => {
+        document.getElementById('member-modal-title').textContent = '신규 회원 등록';
+        document.getElementById('input-member-edit-id').value = '';
+        document.getElementById('input-member-role').value = '일반회원';
+        document.getElementById('input-member-name').value = '';
+        document.getElementById('input-member-affiliation').value = '';
+        document.getElementById('input-member-phone').value = '';
+        document.getElementById('input-member-address').value = '';
+        document.getElementById('input-member-memo').value = '';
+        document.getElementById('modal-add-member').classList.remove('hidden');
+      });
+    });
+    document.getElementById('btn-close-member-modal').addEventListener('click', () => {
+      document.getElementById('modal-add-member').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-add-member').addEventListener('click', () => {
+      document.getElementById('modal-add-member').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-add-member').addEventListener('click', () => {
+      const club = getActiveClub();
+      const editId = document.getElementById('input-member-edit-id').value;
+      const subGroupId = document.getElementById('input-member-subgroup').value;
+      const name = document.getElementById('input-member-name').value.trim();
+      const affiliation = document.getElementById('input-member-affiliation').value.trim();
+      const phone = document.getElementById('input-member-phone').value.trim();
+      const address = document.getElementById('input-member-address').value.trim();
+      const memo = document.getElementById('input-member-memo').value.trim();
+      const role = document.getElementById('input-member-role').value;
+
+      if (!name) {
+        showToast("회원 이름을 입력해주세요.");
+        return;
+      }
+
+      if (editId) {
+        const target = club.members.find(x => x.id === editId);
+        if (target) {
+          target.subGroupId = subGroupId;
+          target.name = name;
+          target.affiliation = affiliation;
+          target.phone = phone;
+          target.address = address;
+          target.memo = memo;
+          target.role = role;
+        }
+        showToast(`'${name}' 회원 정보가 수정되었습니다!`);
+      } else {
+        club.members.push({
+          id: uid('m'),
+          subGroupId,
+          name,
+          affiliation,
+          phone,
+          address,
+          memo,
+          role
+        });
+        showToast(`'${name}' 회원이 추가되었습니다!`);
+      }
+
+      saveState();
+      document.getElementById('modal-add-member').classList.add('hidden');
+      renderAll();
+    });
+
+    // 회비 추가 모달
+    document.getElementById('btn-open-add-due').addEventListener('click', () => {
+      requireAdminClub('회비 기록', () => {
+      document.getElementById('modal-add-due').classList.remove('hidden');
+      });
+    });
+    document.getElementById('btn-close-due-modal').addEventListener('click', () => {
+      document.getElementById('modal-add-due').classList.add('hidden');
+    });
+    document.getElementById('btn-cancel-add-due').addEventListener('click', () => {
+      document.getElementById('modal-add-due').classList.add('hidden');
+    });
+    document.getElementById('btn-submit-add-due').addEventListener('click', () => {
+      const club = getActiveClub();
+      const yearMonth = document.getElementById('input-due-month').value.trim();
+      const memberId = document.getElementById('input-due-member').value;
+      const amount = toInt(document.getElementById('input-due-amount').value) || 30000;
+      const isPaid = document.getElementById('input-due-is-paid').checked;
+
+      if (!yearMonth) {
+        showToast("해당 년월을 입력해주세요.");
+        return;
+      }
+
+      const member = getMember(memberId);
+      const newDue = {
+        id: uid('due'),
+        subGroupId: member.subGroupId,
+        yearMonth,
+        memberId,
+        amount,
+        isPaid,
+        paidDate: isPaid ? todayStr() : ""
+      };
+
+      club.monthlyDues.unshift(newDue);
+      saveState();
+      document.getElementById('modal-add-due').classList.add('hidden');
+      renderDues();
+      showToast("회비 기록이 추가되었습니다!");
+    });
+
+    // 공지문 복사 모달
+    document.getElementById('btn-close-notice-modal').addEventListener('click', () => {
+      document.getElementById('modal-copy-notice').classList.add('hidden');
+    });
+    async function copyText(text, el) {
+      let ok = false;
+      try {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          await navigator.clipboard.writeText(text);
+          ok = true;
+        }
+      } catch (err) { ok = false; }
+      if (!ok && el) {
+        try { el.focus(); el.select(); el.setSelectionRange(0, el.value.length); ok = document.execCommand('copy'); } catch (err) { ok = false; }
+      }
+      return ok;
+    }
+    document.getElementById('btn-do-copy-notice').addEventListener('click', async () => {
+      const textarea = document.getElementById('notice-text-content');
+      const ok = await copyText(textarea.value, textarea);
+      if (ok) {
+        showToast("📋 단톡방 공지문이 복사되었습니다!");
+        setTimeout(() => { document.getElementById('modal-copy-notice').classList.add('hidden'); }, 700);
+      } else {
+        textarea.focus(); textarea.select();
+        showToast("복사에 실패했습니다. 글을 길게 눌러 직접 복사해 주세요.");
+      }
+    });
+
+    document.getElementById('settlement-meeting-select').addEventListener('change', () => {
+      renderSettlement();
+    });
+
+
+
+    // --- 백업 / 복원 ---
+    function buildBackupText() {
+      return JSON.stringify({
+        app: '모든모임매니저', version: 10, exportedAt: new Date().toISOString(),
+        data: { activeClubId: appState.activeClubId, clubs: appState.clubs }
+      }, null, 2);
+    }
+    function refreshBackupInfo() {
+      const el = document.getElementById('backup-last');
+      el.textContent = appState.lastBackup ? `마지막 백업: ${appState.lastBackup}` : '아직 백업한 적이 없습니다.';
+    }
+    function markBackedUp() {
+      appState.lastBackup = todayStr();
+      saveState();
+      refreshBackupInfo();
+    }
+    document.getElementById('btn-open-backup').addEventListener('click', () => {
+      refreshBackupInfo();
+      document.getElementById('textarea-backup-paste').value = '';
+      document.getElementById('input-backup-file').value = '';
+      document.getElementById('modal-backup').classList.remove('hidden');
+    });
+    document.getElementById('btn-close-backup-modal').addEventListener('click', () => {
+      document.getElementById('modal-backup').classList.add('hidden');
+    });
+    document.getElementById('btn-backup-download').addEventListener('click', () => {
+      try {
+        const blob = new Blob([buildBackupText()], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `모임매니저_백업_${todayStr()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+        markBackedUp();
+        showToast("💾 백업 파일을 저장했습니다. (다운로드 폴더 확인)");
+      } catch (err) {
+        showToast("파일 저장이 안 되면 '백업 내용 복사'를 이용해 주세요.");
+      }
+    });
+    document.getElementById('btn-backup-copy').addEventListener('click', async () => {
+      const tmp = document.createElement('textarea');
+      tmp.value = buildBackupText();
+      tmp.style.position = 'fixed'; tmp.style.opacity = '0';
+      document.body.appendChild(tmp);
+      const ok = await copyText(tmp.value, tmp);
+      tmp.remove();
+      if (ok) { markBackedUp(); showToast("📋 백업 내용이 복사되었습니다. 카톡 '나와의 채팅'에 붙여두세요."); }
+      else showToast("복사에 실패했습니다. '백업 파일로 저장'을 이용해 주세요.");
+    });
+    function restoreFromText(text) {
+      requireAdmin('백업 복원', () => {
+        let obj;
+        try { obj = JSON.parse(text); } catch (err) { showToast("백업 내용이 올바른 형식이 아닙니다."); return; }
+        const data = (obj && obj.data && Array.isArray(obj.data.clubs)) ? obj.data : obj;
+        if (!data || !Array.isArray(data.clubs)) { showToast("모임 자료가 들어 있는 백업이 아닙니다."); return; }
+        const n = data.clubs.length;
+        document.getElementById('modal-backup').classList.add('hidden');
+        showDeleteConfirm(
+          "백업 복원 확인",
+          `백업에 들어 있는 <strong>모임 ${n}개</strong>로 복원합니다.<br><span class="text-rose-500 font-medium">지금 화면의 자료는 백업 내용으로 바뀝니다.</span>`,
+          () => {
+            try { localStorage.setItem(STORAGE_KEY + '_prev', JSON.stringify(appState)); } catch (err) {}
+            appState = normalizeState({ activeClubId: data.activeClubId, clubs: data.clubs, isAdminMode: appState.isAdminMode, adminPin: appState.adminPin, lastBackup: appState.lastBackup });
+            saveState();
+            renderAll();
+            showToast("✅ 백업에서 복원했습니다.");
+          },
+          '복원하기'
+        );
+      });
+    }
+    document.getElementById('input-backup-file').addEventListener('change', async (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      try { restoreFromText(await f.text()); } catch (err) { showToast("파일을 읽지 못했습니다."); }
+    });
+    document.getElementById('btn-backup-paste-restore').addEventListener('click', () => {
+      const v = document.getElementById('textarea-backup-paste').value.trim();
+      if (!v) { showToast("붙여넣은 내용이 없습니다."); return; }
+      restoreFromText(v);
+    });
+
+    // 헤더 높이가 글씨 크기에 따라 달라지므로 하위 탭 바 위치를 맞춤
+    function fitStickyBars() {
+      const h = document.getElementById('app-header'), b = document.getElementById('subgroup-bar');
+      if (h && b) b.style.top = h.offsetHeight + 'px';
+    }
+    window.addEventListener('resize', fitStickyBars);
+    window.addEventListener('load', fitStickyBars);
+    if (window.ResizeObserver) new ResizeObserver(fitStickyBars).observe(document.getElementById('app-header'));
+
+
+    // --- [자동화 결산보고서 엔진] ---
+    function computeReportData() {
+      const club = getActiveClub();
+      const periodSel = document.getElementById('report-period-select');
+      const selectedPeriod = periodSel ? periodSel.value : 'ALL';
+      const subId = club.activeSubGroupId || 'all';
+      const cfg = club.reportConfig || {};
+      const extra = Array.isArray(club.extraLedger) ? club.extraLedger : [];
+
+      const matchSub = itemSub => (subId === 'all' || itemSub === subId);
+
+      // 1) 회비/경조사 장부 완납 건 자동 집계
+      const paidDues = (club.monthlyDues || []).filter(d => {
+        if (!d.isPaid || !matchSub(d.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && d.yearMonth !== selectedPeriod) return false;
+        return true;
+      });
+
+      // 구분(yearMonth)별로 깔끔하게 묶어 요약 + 건수 표시
+      const duesGroups = {};
+      paidDues.forEach(d => {
+        const key = d.yearMonth || '기타';
+        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0 };
+        duesGroups[key].count += 1;
+        duesGroups[key].amount += d.amount;
+      });
+
+      // 2) 추가 수입 (찬조금/기타수입)
+      const extraIncomes = extra.filter(x => {
+        if (x.type !== 'income' || !matchSub(x.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        return true;
+      });
+
+      // 3) 모임 1/N 지출 자동 집계
+      const meetingExpenses = [];
+      (club.meetings || []).forEach(mt => {
+        if (!matchSub(mt.subGroupId)) return;
+        if (selectedPeriod !== 'ALL' && mt.dateStr && !mt.dateStr.startsWith(selectedPeriod)) return;
+        (mt.expenses || []).forEach(e => {
+          meetingExpenses.push({
+            date: (mt.dateStr || '').slice(0, 10) || '-',
+            title: `[${mt.title}] ${e.title}`,
+            amount: e.amount,
+            note: `결제: ${getMember(e.payerId).name}`
+          });
+        });
+      });
+
+      // 4) 일반 추가 지출 (화환, 답례품, 운영비 등)
+      const extraExpenses = extra.filter(x => {
+        if (x.type !== 'expense' || !matchSub(x.subGroupId)) return false;
+        if (selectedPeriod !== 'ALL' && x.date && !x.date.startsWith(selectedPeriod)) return false;
+        return true;
+      });
+
+      const carryOver = toInt(cfg.carryOver);
+      const duesTotal = paidDues.reduce((s, d) => s + d.amount, 0);
+      const extraIncomeTotal = extraIncomes.reduce((s, x) => s + x.amount, 0);
+      const totalIncome = carryOver + duesTotal + extraIncomeTotal;
+
+      const meetingExpTotal = meetingExpenses.reduce((s, e) => s + e.amount, 0);
+      const extraExpTotal = extraExpenses.reduce((s, x) => s + x.amount, 0);
+      const totalExpense = meetingExpTotal + extraExpTotal;
+      const balance = totalIncome - totalExpense;
+
+      // 서명란 기본값 (회원 직책에서 자동 추론)
+      const findRoleName = role => {
+        const m = (club.members || []).find(x => x.role === role);
+        return m ? m.name : '';
+      };
+
+      return {
+        club,
+        subGroup: getSubGroup(subId),
+        selectedPeriod,
+        title: cfg.title || `${club.name} 결산보고서`,
+        periodText: cfg.period || (selectedPeriod === 'ALL' ? '전체 기간' : selectedPeriod),
+        bankAccount: cfg.bankAccount || '',
+        secretary: cfg.secretary || findRoleName('총무') || '-',
+        auditor: cfg.auditor || findRoleName('부회장') || findRoleName('운영진') || '-',
+        president: cfg.president || findRoleName('회장') || '-',
+        carryOver,
+        duesGroups: Object.values(duesGroups),
+        duesCount: paidDues.length,
+        duesTotal,
+        extraIncomes,
+        totalIncome,
+        meetingExpenses,
+        extraExpenses,
+        totalExpense,
+        balance
+      };
+    }
+
+    function renderReport() {
+      const club = getActiveClub();
+      const area = document.getElementById('report-printable-area');
+      const periodSel = document.getElementById('report-period-select');
+      if (!area || !periodSel) return;
+
+      if (!club.id) {
+        area.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">먼저 모임을 만들어 주세요.</div>`;
+        return;
+      }
+
+      // 기간 옵션 동적 갱신 (이전 선택값 유지)
+      const prevVal = periodSel.value || 'ALL';
+      const periods = new Set();
+      (club.monthlyDues || []).forEach(d => { if (d.yearMonth) periods.add(d.yearMonth); });
+      (club.extraLedger || []).forEach(x => { if (x.date && x.date.length >= 7) periods.add(x.date.slice(0, 7)); });
+      const sortedPeriods = Array.from(periods).sort().reverse();
+      periodSel.innerHTML = `<option value="ALL">전체 기간 통합</option>` +
+        sortedPeriods.map(p => `<option value="${esc(p)}">${esc(p)}</option>`).join('');
+      if (prevVal === 'ALL' || sortedPeriods.includes(prevVal)) {
+        periodSel.value = prevVal;
+      }
+
+      const r = computeReportData();
+
+      area.innerHTML = `
+        <div class="border-b-2 border-slate-800 pb-3 flex items-end justify-between">
+          <div>
+            <span class="text-[11px] font-bold text-indigo-600">모모(MOMO) 자동 결산보고서</span>
+            <h3 class="text-lg font-extrabold text-slate-900 leading-tight mt-0.5">${esc(r.title)}</h3>
+          </div>
+          <span class="text-[11px] text-slate-500 font-medium">작성일: ${todayStr()}</span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-1.5 text-xs bg-slate-50 p-2.5 rounded-xl border border-slate-200">
+          <div><span class="text-slate-400">모임:</span> <strong class="text-slate-800">${esc(r.club.name)}</strong></div>
+          <div><span class="text-slate-400">소모임:</span> <strong class="text-slate-800">${esc(r.subGroup.name)}</strong></div>
+          <div><span class="text-slate-400">기간:</span> <strong class="text-slate-800">${esc(r.periodText)}</strong></div>
+          <div><span class="text-slate-400">보고자:</span> <strong class="text-slate-800">${esc(r.secretary)}</strong></div>
+        </div>
+
+        <!-- 3단 자동 요약 카드 -->
+        <div class="grid grid-cols-3 gap-2 text-center">
+          <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-emerald-700 font-bold">총 수입 (A)</p>
+            <p class="text-sm font-extrabold text-emerald-900 mt-0.5">${r.totalIncome.toLocaleString()}원</p>
+          </div>
+          <div class="bg-rose-50 border border-rose-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-rose-700 font-bold">총 지출 (B)</p>
+            <p class="text-sm font-extrabold text-rose-900 mt-0.5">${r.totalExpense.toLocaleString()}원</p>
+          </div>
+          <div class="bg-indigo-50 border border-indigo-200 rounded-xl p-2.5">
+            <p class="text-[11px] text-indigo-700 font-bold">이월 잔액</p>
+            <p class="text-sm font-extrabold ${r.balance < 0 ? 'text-rose-600' : 'text-indigo-900'} mt-0.5">${r.balance.toLocaleString()}원</p>
+          </div>
+        </div>
+
+        <!-- 1. 수입 내역 -->
+        <div class="space-y-1.5">
+          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-emerald-600 pl-2">1. 수입 내역 (회비 · 경조사 · 찬조 · 이월금)</h4>
+          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-800 text-white text-[11px]">
+                <tr>
+                  <th class="p-2">항목</th>
+                  <th class="p-2 text-right">금액</th>
+                  <th class="p-2 text-right w-14 no-print">관리</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${r.carryOver > 0 ? `
+                  <tr>
+                    <td class="p-2 font-medium text-slate-700">전월(전기) 이월 잔액</td>
+                    <td class="p-2 text-right font-bold text-slate-900">${r.carryOver.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print"><button onclick="openReportConfigModal()" class="text-indigo-600 text-[11px] font-bold">수정</button></td>
+                  </tr>
+                ` : ''}
+                ${r.duesGroups.map(g => `
+                  <tr>
+                    <td class="p-2 font-medium text-slate-700">${esc(g.label)} 수납 <span class="text-[11px] text-slate-400">(${g.count}건 완납)</span></td>
+                    <td class="p-2 text-right font-bold text-emerald-700">${g.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
+                  </tr>
+                `).join('')}
+                ${r.extraIncomes.map(x => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-emerald-700">${x.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print space-x-1">
+                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
+                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+                ${r.carryOver === 0 && r.duesGroups.length === 0 && r.extraIncomes.length === 0 ? `
+                  <tr><td colspan="3" class="p-3 text-center text-slate-400">수입 내역이 없습니다.</td></tr>
+                ` : ''}
+                <tr class="bg-emerald-50/70 font-extrabold text-emerald-900">
+                  <td class="p-2">수입 합계 (A)</td>
+                  <td class="p-2 text-right">${r.totalIncome.toLocaleString()}원</td>
+                  <td class="p-2 no-print"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 2. 지출 내역 -->
+        <div class="space-y-1.5">
+          <h4 class="text-xs font-extrabold text-slate-800 border-l-4 border-rose-600 pl-2">2. 지출 내역 (모임 정산 · 운영 경비)</h4>
+          <div class="border border-slate-200 rounded-xl overflow-hidden text-xs">
+            <table class="w-full text-left border-collapse">
+              <thead class="bg-slate-800 text-white text-[11px]">
+                <tr>
+                  <th class="p-2">항목</th>
+                  <th class="p-2 text-right">금액</th>
+                  <th class="p-2 text-right w-14 no-print">관리</th>
+                </tr>
+              </thead>
+              <tbody class="divide-y divide-slate-100">
+                ${r.meetingExpenses.map(e => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(e.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(e.date)} · ${esc(e.note)}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-rose-700">${e.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right text-[11px] text-slate-400 no-print">자동</td>
+                  </tr>
+                `).join('')}
+                ${r.extraExpenses.map(x => `
+                  <tr>
+                    <td class="p-2">
+                      <div class="font-medium text-slate-800">${esc(x.title)}</div>
+                      <div class="text-[10px] text-slate-400">${esc(x.date)}${x.note ? ' · ' + esc(x.note) : ''}</div>
+                    </td>
+                    <td class="p-2 text-right font-bold text-rose-700">${x.amount.toLocaleString()}원</td>
+                    <td class="p-2 text-right no-print space-x-1">
+                      <button onclick="openEditReportEntry('${x.id}')" class="text-slate-400 hover:text-indigo-600">✏️</button>
+                      <button onclick="handleDeleteReportEntry('${x.id}')" class="text-slate-400 hover:text-rose-600">🗑️</button>
+                    </td>
+                  </tr>
+                `).join('')}
+                ${r.meetingExpenses.length === 0 && r.extraExpenses.length === 0 ? `
+                  <tr><td colspan="3" class="p-3 text-center text-slate-400">지출 내역이 없습니다.</td></tr>
+                ` : ''}
+                <tr class="bg-rose-50/70 font-extrabold text-rose-900">
+                  <td class="p-2">지출 합계 (B)</td>
+                  <td class="p-2 text-right">${r.totalExpense.toLocaleString()}원</td>
+                  <td class="p-2 no-print"></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- 3. 보관 계좌 & 확인 서명란 -->
+        <div class="bg-slate-50 border border-slate-200 rounded-xl p-3 space-y-2 text-xs">
+          <div class="flex items-center justify-between">
+            <span class="font-bold text-slate-600">보관 계좌</span>
+            <span class="font-bold text-slate-800">${esc(r.bankAccount || '미등록 (⚙️ 설정에서 입력)')}</span>
+          </div>
+          <div class="grid grid-cols-3 gap-1.5 pt-2 border-t border-slate-200 text-center">
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">작성 (총무)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.secretary)}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">확인 (감사/부회장)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.auditor)}</p>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-lg p-2">
+              <p class="text-[10px] text-slate-400">승인 (회장)</p>
+              <p class="font-bold text-slate-800 mt-0.5">${esc(r.president)}</p>
+            </div>
+          </div>
+        </div>
+      `;
+    }
+
+    // 보고서 설정 모달 열기/저장
+    window.openReportConfigModal = function() {
+      requireAdmin('결산보고서 설정', () => {
+        const club = getActiveClub();
+        if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+        const cfg = club.reportConfig || {};
+        document.getElementById('input-rep-title').value = cfg.title || `${club.name} 결산보고서`;
+        document.getElementById('input-rep-period').value = cfg.period || '';
+        document.getElementById('input-rep-carryover').value = cfg.carryOver || 0;
+        document.getElementById('input-rep-bank').value = cfg.bankAccount || '';
+        document.getElementById('input-rep-secretary').value = cfg.secretary || '';
+        document.getElementById('input-rep-auditor').value = cfg.auditor || '';
+        document.getElementById('input-rep-president').value = cfg.president || '';
+        document.getElementById('modal-report-config').classList.remove('hidden');
+      });
+    };
+    document.getElementById('btn-open-report-config').addEventListener('click', openReportConfigModal);
+    document.getElementById('btn-close-report-config').addEventListener('click', () => document.getElementById('modal-report-config').classList.add('hidden'));
+    document.getElementById('btn-cancel-report-config').addEventListener('click', () => document.getElementById('modal-report-config').classList.add('hidden'));
+    document.getElementById('btn-submit-report-config').addEventListener('click', () => {
+      const club = getActiveClub();
+      if (!club.id) return;
+      club.reportConfig = {
+        title: document.getElementById('input-rep-title').value.trim(),
+        period: document.getElementById('input-rep-period').value.trim(),
+        carryOver: Math.max(0, parseInt(document.getElementById('input-rep-carryover').value, 10) || 0),
+        bankAccount: document.getElementById('input-rep-bank').value.trim(),
+        secretary: document.getElementById('input-rep-secretary').value.trim(),
+        auditor: document.getElementById('input-rep-auditor').value.trim(),
+        president: document.getElementById('input-rep-president').value.trim()
+      };
+      saveState();
+      document.getElementById('modal-report-config').classList.add('hidden');
+      renderReport();
+      showToast("✅ 결산보고서 설정이 저장되었습니다.");
+    });
+
+    // 추가 수입·지출 항목 등록/수정/삭제
+    document.getElementById('btn-open-add-report-entry').addEventListener('click', () => {
+      requireAdmin('결산 항목 등록', () => {
+        const club = getActiveClub();
+        if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+        document.getElementById('report-entry-modal-title').textContent = '수입·지출 항목 등록';
+        document.getElementById('input-entry-edit-id').value = '';
+        document.getElementById('input-entry-type').value = 'expense';
+        document.getElementById('input-entry-date').value = todayStr();
+        document.getElementById('input-entry-title').value = '';
+        document.getElementById('input-entry-amount').value = '';
+        document.getElementById('input-entry-note').value = '';
+        document.getElementById('modal-report-entry').classList.remove('hidden');
+      });
+    });
+
+    window.openEditReportEntry = function(entryId) {
+      requireAdmin('결산 항목 수정', () => {
+        const club = getActiveClub();
+        const x = (club.extraLedger || []).find(item => item.id === entryId);
+        if (!x) return;
+        document.getElementById('report-entry-modal-title').textContent = '수입·지출 항목 수정';
+        document.getElementById('input-entry-edit-id').value = x.id;
+        document.getElementById('input-entry-type').value = x.type;
+        document.getElementById('input-entry-date').value = x.date;
+        document.getElementById('input-entry-title').value = x.title;
+        document.getElementById('input-entry-amount').value = x.amount;
+        document.getElementById('input-entry-note').value = x.note || '';
+        document.getElementById('modal-report-entry').classList.remove('hidden');
+      });
+    };
+
+    window.handleDeleteReportEntry = function(entryId) {
+      requireAdmin('결산 항목 삭제', () => {
+        const club = getActiveClub();
+        const x = (club.extraLedger || []).find(item => item.id === entryId);
+        if (!x) return;
+        showDeleteConfirm(
+          "결산 항목 삭제",
+          `'<strong>${esc(x.title)}</strong>' (${x.amount.toLocaleString()}원) 내역을 삭제하시겠습니까?`,
+          () => {
+            club.extraLedger = (club.extraLedger || []).filter(item => item.id !== entryId);
+            saveState();
+            renderReport();
+            showToast("결산 항목이 삭제되었습니다.");
+          }
+        );
+      });
+    };
+
+    document.getElementById('btn-close-report-entry').addEventListener('click', () => document.getElementById('modal-report-entry').classList.add('hidden'));
+    document.getElementById('btn-cancel-report-entry').addEventListener('click', () => document.getElementById('modal-report-entry').classList.add('hidden'));
+    document.getElementById('btn-submit-report-entry').addEventListener('click', () => {
+      const club = getActiveClub();
+      if (!club.id) return;
+      if (!Array.isArray(club.extraLedger)) club.extraLedger = [];
+      const editId = document.getElementById('input-entry-edit-id').value;
+      const type = document.getElementById('input-entry-type').value;
+      const date = document.getElementById('input-entry-date').value.trim() || todayStr();
+      const title = document.getElementById('input-entry-title').value.trim();
+      const amount = Math.max(0, parseInt(document.getElementById('input-entry-amount').value, 10) || 0);
+      const note = document.getElementById('input-entry-note').value.trim();
+
+      if (!title || amount <= 0) {
+        showToast("항목명과 올바른 금액을 입력해주세요.");
+        return;
+      }
+
+      if (editId) {
+        const target = club.extraLedger.find(x => x.id === editId);
+        if (target) {
+          target.type = type; target.date = date; target.title = title; target.amount = amount; target.note = note;
+        }
+        showToast("결산 항목이 수정되었습니다.");
+      } else {
+        club.extraLedger.unshift({
+          id: uid('ex'),
+          subGroupId: club.activeSubGroupId || 'all',
+          type, date, title, amount, note
+        });
+        showToast("결산 항목이 등록되었습니다.");
+      }
+      saveState();
+      document.getElementById('modal-report-entry').classList.add('hidden');
+      renderReport();
+    });
+
+    document.getElementById('report-period-select').addEventListener('change', renderReport);
+
+    // PDF 저장 / 인쇄
+    document.getElementById('btn-report-print-pdf').addEventListener('click', () => {
+      if (!getActiveClub().id) { showToast("먼저 모임을 만들어 주세요."); return; }
+      window.print();
+    });
+
+    // 밴드 · 카톡 · SNS 공유 텍스트 생성 및 복사
+    document.getElementById('btn-report-share-sns').addEventListener('click', () => {
+      const r = computeReportData();
+      if (!r.club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
+
+      let text = `📊 [${r.title}]
+`;
+      text += `• 모임: ${r.club.name} (${r.subGroup.name})
+`;
+      text += `• 기간: ${r.periodText} (작성일: ${todayStr()})
+`;
+      text += `------------------------------------
+`;
+      text += `💰 총 수입(A): ${r.totalIncome.toLocaleString()}원
+`;
+      if (r.carryOver > 0) text += `  - 전월 이월금: ${r.carryOver.toLocaleString()}원
+`;
+      r.duesGroups.forEach(g => { text += `  - ${g.label} 수납(${g.count}건): ${g.amount.toLocaleString()}원
+`; });
+      r.extraIncomes.forEach(x => { text += `  - ${x.title}: ${x.amount.toLocaleString()}원
+`; });
+
+      text += `
+💸 총 지출(B): ${r.totalExpense.toLocaleString()}원
+`;
+      r.meetingExpenses.forEach(e => { text += `  - ${e.title}: ${e.amount.toLocaleString()}원
+`; });
+      r.extraExpenses.forEach(x => { text += `  - ${x.title}: ${x.amount.toLocaleString()}원
+`; });
+
+      text += `------------------------------------
+`;
+      text += `🏦 차기 이월 잔액: ${r.balance.toLocaleString()}원
+`;
+      if (r.bankAccount) text += `💳 보관 계좌: ${r.bankAccount}
+`;
+      text += `✅ 작성(총무): ${r.secretary} / 확인: ${r.auditor} / 승인: ${r.president}`;
+
+      document.getElementById('notice-text-content').value = text;
+      document.getElementById('modal-copy-notice').classList.remove('hidden');
+    });
+
+
+    // 초기 구동
+    renderAll();
+    fitStickyBars();
+  </script>
+</body>
+</html>
