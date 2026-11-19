@@ -2567,7 +2567,7 @@
             </thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="font-extrabold">
-              <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
+              <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
               <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
               <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
@@ -2814,8 +2814,8 @@
         if (last) {
           const f = spec.foot, red = '#e11d48';
           let y = yEnd;
-          box(X[0], y, X[2], y + FOOT[0]); box(X[2], y, X[3], y + FOOT[0]); box(X[3], y, X[4], y + FOOT[0]); box(X[4], y, X[5], y + FOOT[0]);
-          txt('입 금 계', X[0], X[2], y + FOOT[0] / 2, { size: 14, weight: 800 });
+          box(X[0], y, X[1], y + FOOT[0]); box(X[1], y, X[2], y + FOOT[0]); box(X[2], y, X[3], y + FOOT[0]); box(X[3], y, X[4], y + FOOT[0]); box(X[4], y, X[5], y + FOOT[0]);
+          txt('입 금 계', X[1], X[2], y + FOOT[0] / 2, { size: 14, weight: 800 });
           txt(fm(f.incTotal), X[2], X[3], y + FOOT[0] / 2, { weight: 800, align: 'right' });
           txt('지 출 계', X[3], X[4], y + FOOT[0] / 2, { size: 14, weight: 800 });
           txt(fm(f.expTotal), X[4], X[5], y + FOOT[0] / 2, { weight: 800, align: 'right' });
@@ -4790,7 +4790,7 @@
           </thead>
           <tbody>${bodyRows}</tbody>
           <tfoot class="font-extrabold">
-            <tr class="h-8 border-t-2 border-slate-900"><td colspan="2" class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
+            <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
             <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
             <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
             <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
