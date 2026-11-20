@@ -391,10 +391,6 @@
             <button type="button" id="btn-range-month" class="py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">이번 달</button>
           </div>
         </div>
-        <div class="grid grid-cols-2 gap-1.5">
-          <button type="button" id="btn-view-table" class="py-2 rounded-lg text-xs font-bold">📋 기본표</button>
-          <button type="button" id="btn-view-group" class="py-2 rounded-lg text-xs font-bold">🗂️ 항목별 모아보기</button>
-        </div>
         <button id="btn-report-a4" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-sm transition">🖼️ 사진 저장 (A4)</button>
       </div>
 
@@ -4863,6 +4859,7 @@
             date: mtYmd(mt) || '-',
             item: e.item || '',
             title: `[${mt.title}] ${e.title}`,
+            ref: { k: 'mtExp', mt: mt.id, id: e.id },
             amount: e.amount,
             note: `결제: ${getMember(e.payerId).name}`
           });
@@ -4879,7 +4876,7 @@
       const meetingIncomes = [];
       (club.meetings || []).forEach(mt => {
         if (!inRange(mtYmd(mt))) return;
-        (mt.incomes || []).forEach(x => meetingIncomes.push({ date: mtYmd(mt) || '-', title: x.name || x.memo, note: x.name ? x.memo : mt.title, amount: x.amount }));
+        (mt.incomes || []).forEach(x => meetingIncomes.push({ date: mtYmd(mt) || '-', title: x.name || x.memo, note: x.name ? x.memo : mt.title, amount: x.amount, ref: { k: 'mtInc', mt: mt.id, id: x.id } }));
       });
       let carryOver = 0;
       if (rFrom) {
@@ -4933,19 +4930,13 @@
       };
     }
 
-    let reportView = 'table';
-    function syncReportViewBtns() {
-      const on = 'bg-indigo-600 text-white', off = 'bg-slate-100 text-slate-700';
-      const a = document.getElementById('btn-view-table'), b = document.getElementById('btn-view-group');
-      if (!a || !b) return;
-      a.className = 'py-2 rounded-lg text-xs font-bold ' + (reportView === 'table' ? on : off);
-      b.className = 'py-2 rounded-lg text-xs font-bold ' + (reportView === 'group' ? on : off);
-    }
     window.openReportGroupDetail = function (side, i) {
       const g = (window._rptGroups || {})[side] && window._rptGroups[side][i];
       if (!g) return;
       const old = document.getElementById('rpt-detail-modal'); if (old) old.remove();
       const rows = g.items.slice().sort(byDateAsc);
+      const renItems = g.items.filter(x => x.ref);
+      const canRename = renItems.length > 0;
       const fm = n => Number(n).toLocaleString();
       const w = document.createElement('div');
       w.id = 'rpt-detail-modal';
@@ -4957,6 +4948,10 @@
           <div class="flex gap-1.5"><button type="button" id="rpt-detail-a4" class="px-3 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold">🖼️ 사진 저장</button><button type="button" id="rpt-detail-close" class="px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold">닫기</button></div>
         </div>
         <div class="overflow-y-auto p-3">
+          ${canRename ? `<div class="mb-3 p-2 rounded-xl bg-amber-50 border border-amber-200 space-y-1.5">
+            <p class="text-[11px] font-bold text-amber-900">항목 이름 고치기 (여기 있는 ${renItems.length}건 모두 바뀌어요)</p>
+            <div class="flex gap-1.5"><input id="rpt-rename-input" type="text" value="${esc(g.name === '항목 미지정' ? '' : g.name)}" placeholder="바꿀 항목 이름" class="flex-1 min-w-0 border border-slate-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" id="rpt-rename-btn" class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">바꾸기</button></div>
+          </div>` : `<p class="mb-3 text-[10px] text-slate-400">회비 장부에서 자동으로 모은 항목이라 이름은 고칠 수 없어요.</p>`}
           <table class="w-full border-collapse text-xs text-slate-900">
             <thead><tr class="bg-slate-50 font-extrabold"><th class="border border-slate-300 py-1 w-16">날짜</th><th class="border border-slate-300">내역</th><th class="border border-slate-300 w-20">금액</th></tr></thead>
             <tbody>${rows.map(x => `<tr class="h-8"><td class="border border-slate-300 text-center">${esc(String(x.date || '').slice(5, 10).replace('-', '.'))}</td><td class="border border-slate-300 px-1.5 break-words">${esc(x.det || '')}</td><td class="border border-slate-300 px-1.5 text-right">${fm(x.amt)}</td></tr>`).join('')}</tbody>
@@ -4966,6 +4961,27 @@
       document.body.appendChild(w);
       const close = () => w.remove();
       w.querySelector('#rpt-detail-close').onclick = close;
+      const rn = w.querySelector('#rpt-rename-btn');
+      if (rn) rn.onclick = () => {
+        const nv = (w.querySelector('#rpt-rename-input').value || '').trim();
+        if (!nv) { showToast('바꿀 항목 이름을 입력해 주세요.'); return; }
+        if (nv === g.name) { showToast('같은 이름이에요.'); return; }
+        requireAdmin('항목 이름 수정', () => {
+          const club = getActiveClub();
+          let n = 0;
+          renItems.forEach(x => {
+            const f = x.ref;
+            if (f.k === 'led') { const t = (club.extraLedger || []).find(y => y.id === f.id); if (t) { t.title = nv; n++; } }
+            else {
+              const mt = (club.meetings || []).find(m => m.id === f.mt); if (!mt) return;
+              if (f.k === 'mtInc') { const t = (mt.incomes || []).find(y => y.id === f.id); if (t) { t.name = nv; n++; } }
+              else { const t = (mt.expenses || []).find(y => y.id === f.id); if (t) { t.item = nv; n++; } }
+            }
+          });
+          saveState(); close(); renderAll();
+          showToast(`${n}건의 항목을 "${nv}"(으)로 바꿨어요.`);
+        });
+      };
       w.querySelector('#rpt-detail-a4').onclick = () => {
         const m = window._rptMeta || {};
         saveA4Pages({ kind: 'detail', title: m.title || '', left: `항목 : ${g.name}`, right: m.period || '',
@@ -4975,7 +4991,6 @@
       w.addEventListener('click', e => { if (e.target === w) close(); });
     };
     function renderReport() {
-      syncReportViewBtns();
       const club = getActiveClub();
       const area = document.getElementById('report-printable-area');
       if (!area) return;
@@ -4991,12 +5006,12 @@
       const fm = n => Number(n).toLocaleString();
       const incRows = [];
       r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date, grp: '회비', det: `${g.label} ${g.count}명` }));
-      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
-      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
+      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: { k: 'led', id: x.id } }));
+      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: x.ref }));
       incRows.sort(byDateAsc);
       const expRows = [];
-      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date, grp: String(e.item || '').trim() || '항목 미지정', det: String(e.title).replace(/^\[[^\]]*\]\s*/, '') }));
-      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
+      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date, grp: String(e.item || '').trim() || '항목 미지정', det: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), ref: e.ref }));
+      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: { k: 'led', id: x.id } }));
       expRows.sort(byDateAsc);
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
@@ -5006,42 +5021,27 @@
         [...incRows.map(x => fm(x.amt)), fm(incSum)],
         [...expRows.map(x => fm(x.amt)), fm(r.totalExpense), sgn(diff), sgn(r.carryOver), sgn(r.balance)]
       );
-      if (reportView === 'group') {
-        const mk = rows => {
-          const m = new Map();
-          rows.forEach(x => { const g = m.get(x.grp) || { name: x.grp, cnt: 0, sum: 0, items: [] }; g.cnt++; g.sum += Number(x.amt) || 0; g.items.push(x); m.set(x.grp, g); });
-          return [...m.values()].sort((a, b) => b.sum - a.sum);
-        };
-        window._rptGroups = { inc: mk(incRows), exp: mk(expRows) };
-        window._rptMeta = { title: r.club.name, period: r.periodText };
-        const sec = (side, title, tot, color) => `
-          <div class="space-y-1">
-            <p class="font-extrabold text-sm ${color}">${title}</p>
-            <table class="w-full border-collapse border-2 border-slate-900 text-xs text-slate-900">
-              <thead><tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd} w-12">건수</th><th class="${bd} w-24">합계</th></tr></thead>
-              <tbody>${window._rptGroups[side].map((g, i) => `<tr class="h-9 cursor-pointer active:bg-indigo-50" onclick="openReportGroupDetail('${side}',${i})"><td class="${bd} px-1.5 font-bold break-words">${esc(g.name)} <span class="text-slate-400">›</span></td><td class="${bd} px-1 text-center">${g.cnt}</td><td class="${bd} px-1.5 text-right">${fm(g.sum)}</td></tr>`).join('') || `<tr><td colspan="3" class="${bd} text-center text-slate-400 h-9">내용 없음</td></tr>`}</tbody>
-              <tfoot class="font-extrabold"><tr class="h-9 bg-slate-50"><td class="${bd} text-center" colspan="2">${title} 계</td><td class="${bd} px-1.5 text-right">${fm(tot)}</td></tr></tfoot>
-            </table>
-          </div>`;
-        area.innerHTML = carryBarHtml() + `
-          <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.club.name)}</h3>
-          <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1"><span>${esc(r.periodText)}</span><span>항목별 모아보기</span></div>
-          ${sec('inc', '입금', incSum, 'text-emerald-700')}
-          ${sec('exp', '지출', r.totalExpense, 'text-rose-700')}
-          <div class="flex justify-between font-extrabold text-sm border-t-2 border-slate-900 pt-2"><span>(입금)-(지출)</span><span class="${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</span></div>
-          <p class="text-[10px] text-slate-400 no-print">항목을 누르면 그 기간 내역이 날짜순으로 나와요. 보기 전용이에요. (사진 저장(A4)은 기본표로 저장돼요. 항목을 누르면 그 항목 상세내역을 사진으로 저장할 수 있어요)</p>`;
-        return;
-      }
+      const mkGroups = rows => {
+        const m = new Map();
+        rows.forEach(x => { const g = m.get(x.grp) || { name: x.grp, cnt: 0, sum: 0, items: [] }; g.cnt++; g.sum += Number(x.amt) || 0; g.items.push(x); m.set(x.grp, g); });
+        return [...m.values()].sort((a, b) => b.sum - a.sum);
+      };
+      window._rptGroups = { inc: mkGroups(incRows), exp: mkGroups(expRows) };
+      window._rptMeta = { title: r.club.name, period: r.periodText };
+      const gIdx = side => { const m = {}; window._rptGroups[side].forEach((g, i) => { m[g.name] = i; }); return m; };
+      const incIdx = gIdx('inc'), expIdx = gIdx('exp');
       let bodyRows = '';
       for (const it of a4Rows(Math.max(incRows.length, expRows.length))) {
         if (it.sep) { bodyRows += a4SepRow(it.sep); continue; }
         const a = it.k >= 0 ? incRows[it.k] : undefined, e = it.k >= 0 ? expRows[it.k] : undefined;
         const ac = '', ec = '';
+        const ai = a ? ` onclick="openReportGroupDetail('inc',${incIdx[a.grp]})" style="cursor:pointer"` : '';
+        const ei = e ? ` onclick="openReportGroupDetail('exp',${expIdx[e.grp]})" style="cursor:pointer"` : '';
         bodyRows += `<tr class="h-8">
-          <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.name) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ai}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center break-words text-[10px]"${ac}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ac}>${a ? fm(a.amt) : ''}</td>
-          <td class="${bd} px-1 text-center break-words"${ec}>${e ? esc(e.item) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ei}>${e ? esc(e.item) : ''}</td>
           <td class="${bd} px-0.5 text-center break-words text-[10px]"${ec}>${e ? esc(e.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ec}>${e ? fm(e.amt) : ''}</td>
         </tr>`;
@@ -5066,7 +5066,7 @@
             <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
           </tfoot>
         </table>
-        <p class="text-[10px] text-slate-400 no-print pt-1">결산보고는 보기 전용이에요. 고칠 내용은 정산이나 입출정산에서 수정해 주세요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
+        <p class="text-[10px] text-slate-400 no-print pt-1">결산보고는 보기 전용이에요. 항목을 누르면 그 항목의 날짜별 상세내역이 나오고, 항목 이름만 거기서 고칠 수 있어요. 금액·내역은 정산이나 입출정산에서 수정해 주세요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
       `;
     }
 
@@ -5218,8 +5218,6 @@
     document.getElementById('btn-range-month').addEventListener('click', () => { const t = todayStr(), ym = t.slice(0, 7); const last = new Date(+t.slice(0, 4), +t.slice(5, 7), 0).getDate(); setRange(ym + '-01', ym + '-' + String(last).padStart(2, '0')); });
 
     document.getElementById('btn-report-a4').addEventListener('click', () => reportSaveA4());
-    document.getElementById('btn-view-table').addEventListener('click', () => { reportView = 'table'; renderReport(); });
-    document.getElementById('btn-view-group').addEventListener('click', () => { reportView = 'group'; renderReport(); });
 
 
 
