@@ -408,23 +408,23 @@
   <!-- 모바일 하단 네비게이션 탭 바 -->
   <nav class="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg">
     <div class="max-w-lg mx-auto grid grid-cols-5 h-16">
-      <button id="nav-btn-meetings" class="flex flex-col items-center justify-center space-y-1 text-indigo-600 font-semibold transition-colors">
+      <button id="nav-btn-meetings" class="flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl bg-indigo-600/15 text-indigo-600 font-bold transition-colors">
         <span class="text-lg">📅</span>
         <span class="text-[11px]">모임일정</span>
       </button>
-      <button id="nav-btn-settlement" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+      <button id="nav-btn-settlement" class="flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">💰</span>
         <span class="text-[11px]">정산</span>
       </button>
-      <button id="nav-btn-members" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+      <button id="nav-btn-members" class="flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">👥</span>
         <span class="text-[11px]">회원목록</span>
       </button>
-      <button id="nav-btn-dues" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+      <button id="nav-btn-dues" class="flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">📒</span>
         <span class="text-[11px]">회비장부</span>
       </button>
-      <button id="nav-btn-report" class="flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors">
+      <button id="nav-btn-report" class="flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl text-slate-500 font-medium hover:text-slate-900 transition-colors">
         <span class="text-lg">📊</span>
         <span class="text-[11px]">결산보고</span>
       </button>
@@ -1926,8 +1926,8 @@
     let yearScreenYear = Number(todayStr().slice(0, 4));
     let histPushed = false, ignorePop = false;
     const VIEW_IDS = ['tab-meetings-view', 'tab-settlement-view', 'tab-members-view', 'tab-dues-view', 'tab-report-view', 'screen-year'];
-    const NAV_ON = "flex flex-col items-center justify-center space-y-1 text-indigo-600 font-bold transition-colors";
-    const NAV_OFF = "flex flex-col items-center justify-center space-y-1 text-slate-500 font-medium hover:text-slate-900 transition-colors";
+    const NAV_ON = "flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl bg-indigo-600/15 text-indigo-600 font-bold transition-colors";
+    const NAV_OFF = "flex flex-col items-center justify-center space-y-1 mx-1 my-1.5 rounded-2xl text-slate-500 font-medium hover:text-slate-900 transition-colors";
 
     function topView() {
       for (let i = layerStack.length - 1; i >= 0; i--) if (layerStack[i] !== 'form') return layerStack[i];
@@ -4838,7 +4838,7 @@
       const chip = document.createElement('button');
       chip.id = 'zoom-reset-chip';
       chip.textContent = '🔍 100%로';
-      chip.style.cssText = 'position:fixed;right:12px;bottom:76px;z-index:45;display:none;padding:8px 12px;border-radius:999px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+      chip.style.cssText = 'position:fixed;right:12px;bottom:76px;z-index:60;display:none;padding:8px 12px;border-radius:999px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);';
       document.body.appendChild(chip);
       function fitZoomPad() { targets.forEach(el => { el.style.marginBottom = window._appZoom === 1 ? '' : (((window._appZoom - 1) * el.offsetHeight) + 'px'); }); }
       if (window.ResizeObserver) targets.forEach(el => new ResizeObserver(fitZoomPad).observe(el));
@@ -4854,21 +4854,54 @@
         fitZoomPad();
         fitStickyBars();
         window.scrollTo(ox + (px - ox) * z - cx, oy + (py - oy) * z - cy);
-        chip.style.display = z === 1 ? 'none' : 'block';
+        updateChip();
       }
-      chip.addEventListener('click', () => applyZoom(1, window.innerWidth / 2, window.innerHeight / 2));
-      let sd = 0, sz = 1;
+      // ---- 입력창(팝업)이 떠 있을 때는 팝업 카드만 확대/이동 ----
+      const modalCards = new Set();
+      const SKIP = ['app-header', 'calendar-bar', 'zoom-reset-chip'];
+      function findCard(t) {
+        let el = t && t.nodeType === 1 ? t : (t && t.parentElement);
+        let child = null;
+        while (el && el !== document.body) {
+          const cs = getComputedStyle(el);
+          if (cs.position === 'fixed' && el.tagName !== 'NAV' && !SKIP.includes(el.id)) return child || el;
+          child = el; el = el.parentElement;
+        }
+        return null;
+      }
+      function resetCard(c) { c.style.transform = ''; c.style.transformOrigin = ''; c._z = 1; modalCards.delete(c); updateChip(); }
+      function updateChip() { chip.style.display = (window._appZoom > 1 || modalCards.size) ? 'block' : 'none'; }
+      setInterval(() => { modalCards.forEach(c => { if (c.offsetParent === null && getComputedStyle(c).position !== 'fixed') resetCard(c); }); }, 400);
+      chip.addEventListener('click', () => { modalCards.forEach(resetCard); if (window._appZoom > 1) applyZoom(1, window.innerWidth / 2, window.innerHeight / 2); updateChip(); });
+      let sd = 0, sz = 1, mode = 'page', card = null, st = null;
       const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      const ctr = (t) => [(t[0].clientX + t[1].clientX) / 2, (t[0].clientY + t[1].clientY) / 2];
       document.addEventListener('touchstart', (e) => {
-        if (e.touches.length === 2) { sd = dist(e.touches); sz = window._appZoom; }
+        if (e.touches.length !== 2) return;
+        sd = dist(e.touches);
+        card = findCard(e.target);
+        if (card) {
+          mode = 'modal';
+          if (!card._z || card._z === 1) { card._z = 1; card._tx = 0; card._ty = 0; const r = card.getBoundingClientRect(); card._l0 = r.left; card._t0 = r.top; card.style.transformOrigin = '0 0'; }
+          const c = ctr(e.touches);
+          st = { z: card._z, px: (c[0] - card._l0 - card._tx) / card._z, py: (c[1] - card._t0 - card._ty) / card._z };
+        } else { mode = 'page'; sz = window._appZoom; }
       }, { passive: true });
       document.addEventListener('touchmove', (e) => {
         if (e.touches.length !== 2 || !sd) return;
         e.preventDefault(); window._pinchAt = Date.now();
-        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
-        applyZoom(sz * dist(e.touches) / sd, cx, cy);
+        const c = ctr(e.touches);
+        if (mode === 'modal' && card) {
+          const z = Math.max(1, Math.min(3, st.z * dist(e.touches) / sd));
+          card._z = z; card._tx = c[0] - card._l0 - st.px * z; card._ty = c[1] - card._t0 - st.py * z;
+          card.style.transform = 'translate(' + card._tx + 'px,' + card._ty + 'px) scale(' + z + ')';
+          if (z > 1) modalCards.add(card);
+          updateChip();
+          return;
+        }
+        applyZoom(sz * dist(e.touches) / sd, c[0], c[1]);
       }, { passive: false });
-      document.addEventListener('touchend', (e) => { if (e.touches.length < 2) sd = 0; }, { passive: true });
+      document.addEventListener('touchend', (e) => { if (e.touches.length < 2) { sd = 0; if (mode === 'modal' && card && card._z <= 1.01) resetCard(card); } }, { passive: true });
       ['gesturestart', 'gesturechange'].forEach(n => document.addEventListener(n, (e) => e.preventDefault()));
     })();
     if (window.ResizeObserver) { const ro = new ResizeObserver(fitStickyBars); ro.observe(document.getElementById('app-header')); ro.observe(document.getElementById('calendar-bar')); }
