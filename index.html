@@ -2541,8 +2541,9 @@
       for (const it of a4Rows(Math.max(incs.length, exps.length))) {
         if (it.sep) { rowsHtml += a4SepRow(it.sep); continue; }
         const a = it.k >= 0 ? incs[it.k] : undefined, e = it.k >= 0 ? exps[it.k] : undefined;
-        const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '';
-        const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '';
+        // 줄의 어느 칸을 눌러도 열리도록: 눌린 쪽에 내용이 없으면 같은 줄의 다른 쪽 항목을 연다
+        const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : (e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '');
+        const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : (a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '');
         rowsHtml += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
