@@ -2578,7 +2578,7 @@
               <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
-            <tfoot class="font-bold">
+            <tfoot class="font-semibold">
               <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">입금-지출</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
               <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전기이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
@@ -5065,7 +5065,7 @@
               <colgroup><col style="width:19%"><col style="width:52%"><col style="width:29%"></colgroup>
               <thead><tr class="h-7 font-extrabold bg-slate-50"><th class="border border-slate-800">날짜</th><th class="border border-slate-800">내역</th><th class="border border-slate-800">금액</th></tr></thead>
               <tbody>${rows.map(x => `<tr class="h-8"><td class="border border-slate-800 text-center text-[10px]">${esc(String(x.date || '').slice(0, 10).replace(/-/g, '.'))}</td><td class="border border-slate-800 px-1 text-center break-words">${esc(x.det || '')}</td><td class="border border-slate-800 px-1.5 text-right">${fm(x.amt)}</td></tr>`).join('')}${Array.from({ length: Math.max(0, 12 - rows.length) }, () => '<tr class="h-8"><td class="border border-slate-800"></td><td class="border border-slate-800"></td><td class="border border-slate-800"></td></tr>').join('')}</tbody>
-              <tfoot class="font-bold"><tr class="h-9 bg-slate-50"><td class="border border-slate-800"></td><td class="border border-slate-800 text-center text-sm">합 계</td><td class="border border-slate-800 px-1.5 text-right">${fm(g.sum)}</td></tr></tfoot>
+              <tfoot class="font-semibold"><tr class="h-9 bg-slate-50"><td class="border border-slate-800"></td><td class="border border-slate-800 text-center text-sm">합 계</td><td class="border border-slate-800 px-1.5 text-right">${fm(g.sum)}</td></tr></tfoot>
             </table>
             <p class="text-[10px] text-slate-400">사진 저장(A4)을 누르면 이 모양 그대로 저장돼요. 내용이 길면 여러 장으로 나뉘고 장마다 소계가 나와요.</p>
           </div>
@@ -5159,7 +5159,7 @@
             <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
           </thead>
           <tbody>${bodyRows}</tbody>
-          <tfoot class="font-bold">
+          <tfoot class="font-semibold">
             <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
             <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">입금-지출</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
             <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전기이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
