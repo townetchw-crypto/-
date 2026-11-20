@@ -2773,7 +2773,7 @@
       document.body.appendChild(ov);
       try {
         await new Promise(res => setTimeout(res, 60));
-        await saveA4Core(spec);
+        if (spec && spec.kind === 'detail') await saveA4Detail(spec); else await saveA4Core(spec);
       } finally {
         ov.remove(); window.__a4Busy = false;
       }
@@ -2938,6 +2938,9 @@
         files.push(new File([blob], nm, { type: 'image/png' }));
       }
       function TW() { return X[6] - X[0]; }
+      await deliverA4Files(files);
+    };
+    const deliverA4Files = async function(files) {
       if (files.length > 1) { showA4Preview(files); return; }
       try {
         if (navigator.canShare && navigator.canShare({ files })) {
@@ -2950,6 +2953,104 @@
       }
       downloadFile(files[0]);
       showToast('A4 사진 파일로 내려받았어요.');
+    };
+
+    // 항목 상세내역 A4: 날짜순 목록, 장마다 소계, 마지막 장에 합계 (한 장이면 합계만)
+    const saveA4Detail = async function(spec) {
+      const PW = 794, PH = 1123, K = 2.2, M = 48, TWD = PW - 2 * M, BOT = PH - 60;
+      const fam = getComputedStyle(document.body).fontFamily;
+      const fm = n => Number(n).toLocaleString();
+      const mg = document.createElement('canvas').getContext('2d');
+      const DW = [100, TWD - 100 - 150, 150];
+      const wrap = (t, wmax) => {
+        t = String(t == null ? '' : t); if (!t) return [''];
+        mg.font = `400 13px ${fam}`;
+        const lines = []; let cur = '';
+        for (const ch of t) {
+          if (mg.measureText(cur + ch).width > wmax && cur) {
+            const sp = cur.lastIndexOf(' ');
+            if (sp > 0 && ch !== ' ') { lines.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; }
+            else { lines.push(cur); cur = ch.trim() === '' ? '' : ch; }
+          } else cur += ch;
+        }
+        if (cur) lines.push(cur);
+        return lines;
+      };
+      const rows = spec.items.slice().sort((a, b) => String(a.date || '9999').localeCompare(String(b.date || '9999')))
+        .map(it => { const ln = wrap(it.memo, DW[1] - 12); return { it, ln, h: Math.max(30, ln.length * 16.25 + 12) }; });
+      const SUBH = 32, TOTH = 36, HEADH = 28;
+      const top1 = 150 + HEADH, topN = 112 + HEADH;
+      // 쪽 나누기
+      const chunks = []; { let cur = [], hh = 0, cap = BOT - top1 - SUBH;
+        rows.forEach((rw, k) => {
+          if (cur.length && hh + rw.h > cap) { chunks.push(cur); cur = []; hh = 0; cap = BOT - topN - SUBH; }
+          cur.push(k); hh += rw.h;
+        });
+        chunks.push(cur);
+        const capLast = (chunks.length === 1 ? BOT - top1 - TOTH : BOT - topN - SUBH - TOTH);
+        const lastH = chunks[chunks.length - 1].reduce((t, k) => t + rows[k].h, 0);
+        if (lastH > capLast) {
+          const L = chunks.pop();
+          if (L.length > 1) { chunks.push(L.slice(0, L.length - 1)); chunks.push(L.slice(L.length - 1)); }
+          else { chunks.push(L); chunks.push([]); }
+        }
+      }
+      const files = [];
+      for (let pi = 0; pi < chunks.length; pi++) {
+        const first = pi === 0, last = pi === chunks.length - 1, single = chunks.length === 1;
+        const cv = document.createElement('canvas');
+        cv.width = Math.round(PW * K); cv.height = Math.round(PH * K);
+        const g = cv.getContext('2d'); g.scale(K, K);
+        g.fillStyle = '#fff'; g.fillRect(0, 0, PW, PH);
+        const T = (t, x1, x2, ym, o) => {
+          t = String(t == null ? '' : t); if (!t) return; o = o || {};
+          g.font = `${o.weight || 400} ${o.size || 13}px ${fam}`;
+          g.fillStyle = o.color || '#0f172a'; g.textBaseline = 'middle';
+          const al = o.align || 'center'; g.textAlign = al;
+          g.fillText(t, al === 'right' ? x2 - 8 : (al === 'left' ? x1 + 6 : (x1 + x2) / 2), ym);
+        };
+        const rect = (x1, y1, w, h, fill) => {
+          if (fill) { g.fillStyle = fill; g.fillRect(x1, y1, w, h); }
+          g.strokeStyle = '#1e293b'; g.lineWidth = 0.8; g.strokeRect(x1, y1, w, h);
+        };
+        T(spec.title, M, PW - M, first ? 72 : 52, { size: first ? 26 : 18, weight: 800 });
+        T(spec.left, M, PW / 2, first ? 122 : 92, { size: 14, weight: 700, align: 'left' });
+        T(spec.right, PW / 2, PW - M, first ? 122 : 92, { size: 14, weight: 700, align: 'right' });
+        let y = first ? 150 : 112;
+        let x = M;
+        [['날짜', DW[0]], ['내역', DW[1]], ['금액', DW[2]]].forEach(([t, w]) => { rect(x, y, w, HEADH, '#f8fafc'); T(t, x, x + w, y + HEADH / 2, { weight: 800 }); x += w; });
+        y += HEADH;
+        let pageSum = 0;
+        chunks[pi].forEach(k => {
+          const rw = rows[k]; pageSum += Number(rw.it.amt) || 0;
+          const ym = y + rw.h / 2; let xx = M;
+          DW.forEach(w => { rect(xx, y, w, rw.h); xx += w; });
+          T(String(rw.it.date || '').slice(0, 10).replace(/-/g, '.'), M, M + DW[0], ym, { size: 12 });
+          const lh = 16.25, y0 = ym - (rw.ln.length - 1) * lh / 2;
+          rw.ln.forEach((ln, i) => T(ln, M + DW[0], M + DW[0] + DW[1], y0 + i * lh));
+          T(fm(rw.it.amt), M + DW[0] + DW[1], M + TWD, ym, { align: 'right' });
+          y += rw.h;
+        });
+        const reserve = single ? TOTH : (SUBH + (last ? TOTH : 0));
+        // A4 높이에 맞춰 빈 줄 채우기 (세로줄이 끝까지 이어지도록)
+        let rem = BOT - reserve - y;
+        const nb = Math.floor(rem / 30), left = rem - nb * 30;
+        const blanks = nb > 0 ? Array.from({ length: nb }, (_, i) => (i === nb - 1 ? 30 + left : 30)) : (left > 0 ? [left] : []);
+        blanks.forEach(h => { let xb = M; DW.forEach(w => { rect(xb, y, w, h); xb += w; }); y += h; });
+        const sumRow = (label, v, h, fill) => {
+          rect(M, y, DW[0], h, fill); rect(M + DW[0], y, DW[1], h, fill); rect(M + DW[0] + DW[1], y, DW[2], h, fill);
+          T(label, M + DW[0], M + DW[0] + DW[1], y + h / 2, { weight: 800 });
+          T(fm(v), M + DW[0] + DW[1], M + TWD, y + h / 2, { weight: 800, align: 'right' });
+          y += h;
+        };
+        if (!single) sumRow('소계', pageSum, SUBH, '#f8fafc');
+        if (last) sumRow('합 계', spec.total, TOTH, '#eef2ff');
+        if (chunks.length > 1) T(String(pi + 1), M, PW - M, PH - 30, { size: 13, color: '#334155' });
+        const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
+        if (!blob) { showToast('사진 만들기에 실패했어요.'); return; }
+        files.push(new File([blob], `${spec.fname}_${todayStr()}${chunks.length > 1 ? '_' + (pi + 1) + 'of' + chunks.length : ''}.png`, { type: 'image/png' }));
+      }
+      await deliverA4Files(files);
     };
     function downloadFile(f) {
       const a = document.createElement('a'); a.href = URL.createObjectURL(f); a.download = f.name;
@@ -4853,7 +4954,7 @@
       w.innerHTML = `<div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col">
         <div class="flex items-center justify-between p-3 border-b border-slate-200">
           <p class="font-extrabold text-slate-900 text-sm">${esc(g.name)} · ${g.cnt}건 · ${fm(g.sum)}원</p>
-          <button type="button" id="rpt-detail-close" class="px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold">닫기</button>
+          <div class="flex gap-1.5"><button type="button" id="rpt-detail-a4" class="px-3 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold">🖼️ 사진 저장</button><button type="button" id="rpt-detail-close" class="px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold">닫기</button></div>
         </div>
         <div class="overflow-y-auto p-3">
           <table class="w-full border-collapse text-xs text-slate-900">
@@ -4865,6 +4966,12 @@
       document.body.appendChild(w);
       const close = () => w.remove();
       w.querySelector('#rpt-detail-close').onclick = close;
+      w.querySelector('#rpt-detail-a4').onclick = () => {
+        const m = window._rptMeta || {};
+        saveA4Pages({ kind: 'detail', title: m.title || '', left: `항목 : ${g.name}`, right: m.period || '',
+          label: side === 'inc' ? '입금' : '지출', color: side === 'inc' ? '#047857' : '#be123c', name: g.name,
+          items: g.items.map(x => ({ date: x.date, memo: x.det, amt: x.amt })), total: g.sum, fname: '상세_' + g.name });
+      };
       w.addEventListener('click', e => { if (e.target === w) close(); });
     };
     function renderReport() {
@@ -4906,6 +5013,7 @@
           return [...m.values()].sort((a, b) => b.sum - a.sum);
         };
         window._rptGroups = { inc: mk(incRows), exp: mk(expRows) };
+        window._rptMeta = { title: r.club.name, period: r.periodText };
         const sec = (side, title, tot, color) => `
           <div class="space-y-1">
             <p class="font-extrabold text-sm ${color}">${title}</p>
@@ -4921,7 +5029,7 @@
           ${sec('inc', '입금', incSum, 'text-emerald-700')}
           ${sec('exp', '지출', r.totalExpense, 'text-rose-700')}
           <div class="flex justify-between font-extrabold text-sm border-t-2 border-slate-900 pt-2"><span>(입금)-(지출)</span><span class="${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</span></div>
-          <p class="text-[10px] text-slate-400 no-print">항목을 누르면 그 기간 내역이 날짜순으로 나와요. 보기 전용이에요. (A4 사진 저장은 기본표로 저장돼요)</p>`;
+          <p class="text-[10px] text-slate-400 no-print">항목을 누르면 그 기간 내역이 날짜순으로 나와요. 보기 전용이에요. (사진 저장(A4)은 기본표로 저장돼요. 항목을 누르면 그 항목 상세내역을 사진으로 저장할 수 있어요)</p>`;
         return;
       }
       let bodyRows = '';
