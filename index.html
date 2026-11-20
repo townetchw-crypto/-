@@ -601,7 +601,7 @@
       <input type="hidden" id="settle-entry-id" value="">
       <div class="space-y-2.5 text-xs sm:text-sm">
         <div id="settle-entry-name-wrap">
-          <label class="block font-semibold text-slate-700 mb-1">항목 (회원을 고르거나 직접 입력)</label>
+          <label id="settle-entry-name-label" class="block font-semibold text-slate-700 mb-1">항목 (회원을 고르거나 직접 입력)</label>
           <input id="settle-entry-name" list="settle-member-list" type="text" placeholder="예: 홍길동" class="w-full border border-slate-300 rounded-lg p-2.5 focus:ring-2 focus:ring-indigo-500 outline-none">
           <datalist id="settle-member-list"></datalist>
         </div>
@@ -979,17 +979,18 @@
           </div>
         </div>
         <div>
-          <label class="block font-semibold text-slate-700 mb-1">항목명 *</label>
-          <input id="input-entry-title" type="text" placeholder="예: 경조사 화환, 답례품 제작, 회장 찬조금" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          <label class="block font-semibold text-slate-700 mb-1">항목 *</label>
+          <input id="input-entry-title" list="entry-title-list" type="text" placeholder="예: 화환, 답례품, 찬조금" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
         <div class="grid grid-cols-2 gap-2">
           <div>
             <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
             <input id="input-entry-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+            <datalist id="entry-title-list"></datalist>
           </div>
           <div>
-            <label class="block font-semibold text-slate-700 mb-1">비고</label>
-            <input id="input-entry-note" type="text" placeholder="예: 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
+            <label class="block font-semibold text-slate-700 mb-1">내역</label>
+            <input id="input-entry-note" type="text" placeholder="예: 3개, 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
           </div>
         </div>
       </div>
@@ -1802,6 +1803,13 @@
     }
     window.setInOutFilter = setInOutFilter;
 
+    function fillEntryTitleList(type) {
+      const club = getActiveClub();
+      const led = (Array.isArray(club.extraLedger) ? club.extraLedger : []).filter(x => x.type === type).map(x => x.title);
+      const exp = type === 'expense' ? (club.meetings || []).flatMap(m => (m.expenses || []).map(x => x.item)) : [];
+      const dl = document.getElementById('entry-title-list');
+      if (dl) dl.innerHTML = [...new Set([...led, ...exp].filter(Boolean))].map(n => `<option value="${esc(n)}"></option>`).join('');
+    }
     function openInOutEntryModal(presetType) {
       const club = getActiveClub();
       if (!club.id) { showToast("먼저 모임을 만들어 주세요."); return; }
@@ -1814,6 +1822,7 @@
       document.getElementById('input-entry-title').value = '';
       document.getElementById('input-entry-amount').value = '';
       document.getElementById('input-entry-note').value = '';
+      fillEntryTitleList(presetType === 'income' ? 'income' : 'expense');
       document.getElementById('modal-report-entry').classList.remove('hidden');
     }
     window.openInOutEntryModal = openInOutEntryModal;
@@ -2548,7 +2557,8 @@
           <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ta}>${a ? fm(a.amount) : ''}</td>
-          <td class="${bd} px-1 text-center break-words"${te}>${e ? esc(e.title) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${te}>${e ? esc(e.item || '') : ''}</td>
+          <td class="${bd} px-0.5 text-center break-words text-[10px]"${te}>${e ? esc(e.title) : ''}</td>
           <td class="${bd} px-1 text-right"${te}>${e ? fm(e.amount) : ''}</td>
         </tr>`;
       }
@@ -2563,15 +2573,15 @@
           <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
             ${lay.colgroup}
             <thead>
-              <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
-              <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
+              <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="3" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
+              <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
             </thead>
             <tbody>${rowsHtml}</tbody>
             <tfoot class="font-extrabold">
-              <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
-              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
-              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
-              <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
+              <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
+              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
+              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
+              <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
             </tfoot>
           </table>
           <p class="text-[10px] text-slate-400">줄을 누르면 고치거나 지울 수 있어요. 이월금은 앞선 모임들의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈이 있으면 수입란에 적어 주세요.</p>
@@ -2588,8 +2598,8 @@
       const W = Math.max(260, Math.min(window.innerWidth || 390, 640) - 60);
       const huge = Math.max(mi, me) > 78, k = huge ? 0.91 : 1;
       const a3 = Math.max(19, Math.ceil(mi * k / W * 100)), a5 = Math.max(18, Math.ceil(me * k / W * 100));
-      const rem = 100 - a3 - a5, f = n => (rem * n / 65).toFixed(1);
-      const cg = `<colgroup><col style="width:${f(21.5)}%"><col style="width:${f(21.5)}%"><col style="width:${a3}%"><col style="width:${f(22)}%"><col style="width:${a5}%"></colgroup>`;
+      const rem = 100 - a3 - a5, f = n => (rem * n / 66).toFixed(1);
+      const cg = `<colgroup><col style="width:${f(16)}%"><col style="width:${f(17)}%"><col style="width:${a3}%"><col style="width:${f(16)}%"><col style="width:${f(17)}%"><col style="width:${a5}%"></colgroup>`;
       return { colgroup: cg, cls: huge ? ' big-num' : '' };
     }
     function settleCarryFor(mt) {
@@ -2640,11 +2650,18 @@
         document.getElementById('settle-entry-type').value = isInc ? 'income' : 'expense';
         document.getElementById('settle-entry-id').value = ent ? ent.id : '';
         document.getElementById('settle-entry-title').textContent = (ent ? '' : '') + (isInc ? '💰 수입 ' : '💸 지출 ') + (ent ? '수정' : '입력');
-        document.getElementById('settle-entry-name-wrap').classList.toggle('hidden', !isInc);
-        document.getElementById('settle-entry-memo-label').textContent = isInc ? '내역' : '지출 내역';
-        document.getElementById('settle-entry-memo').placeholder = isInc ? '예: 회비, 그린피' : '예: 그린피, 식사, 대관료';
-        document.getElementById('settle-member-list').innerHTML = (getActiveClub().members || []).map(m => `<option value="${esc(m.name)}"></option>`).join('');
-        document.getElementById('settle-entry-name').value = ent && isInc ? ent.name : '';
+        document.getElementById('settle-entry-name-wrap').classList.remove('hidden');
+        document.getElementById('settle-entry-name-label').textContent = isInc ? '항목 (회원을 고르거나 직접 입력)' : '항목 (예: 그린피, 식사 — 같은 항목끼리 모아 볼 수 있어요)';
+        document.getElementById('settle-entry-name').placeholder = isInc ? '예: 홍길동' : '예: 그린피';
+        document.getElementById('settle-entry-memo-label').textContent = '내역';
+        document.getElementById('settle-entry-memo').placeholder = isInc ? '예: 회비, 그린피' : '예: 16명, 대관료';
+        const clubNow = getActiveClub();
+        const nameOpts = isInc ? (clubNow.members || []).map(m => m.name) : [...new Set([
+          ...(clubNow.meetings || []).flatMap(m => (m.expenses || []).map(x => x.item)),
+          ...(Array.isArray(clubNow.extraLedger) ? clubNow.extraLedger : []).filter(x => x.type === 'expense').map(x => x.title)
+        ].filter(Boolean))];
+        document.getElementById('settle-member-list').innerHTML = nameOpts.map(n => `<option value="${esc(n)}"></option>`).join('');
+        document.getElementById('settle-entry-name').value = ent ? (isInc ? ent.name : (ent.item || '')) : '';
         document.getElementById('settle-entry-memo').value = ent ? (isInc ? ent.memo : ent.title) : '';
         document.getElementById('settle-entry-amount').value = ent ? ent.amount : '';
         document.getElementById('btn-delete-settle-entry').classList.toggle('hidden', !ent);
@@ -2663,7 +2680,7 @@
       const memo = document.getElementById('settle-entry-memo').value.trim();
       const amount = toInt(document.getElementById('settle-entry-amount').value);
       if (isInc && !name && !memo) { showToast('항목이나 내역을 입력해 주세요.'); return; }
-      if (!isInc && !memo) { showToast('지출 내역을 입력해 주세요.'); return; }
+      if (!isInc && !name && !memo) { showToast('항목이나 내역을 입력해 주세요.'); return; }
       if (!amount || amount < 0) { showToast('금액을 입력해 주세요.'); return; }
       if (isInc) {
         mt.incomes = mt.incomes || [];
@@ -2671,7 +2688,7 @@
         if (t) { t.name = name; t.memo = memo; t.amount = amount; } else mt.incomes.push({ id: uid('inc'), name, memo, amount });
       } else {
         const t = id ? mt.expenses.find(x => x.id === id) : null;
-        if (t) { t.title = memo; t.amount = amount; } else mt.expenses.push({ id: uid('exp'), title: memo, amount, payerId: '', splitMemberIds: [], paidMemberIds: [] });
+        if (t) { t.item = name; t.title = memo; t.amount = amount; } else mt.expenses.push({ id: uid('exp'), item: name, title: memo, amount, payerId: '', splitMemberIds: [], paidMemberIds: [] });
       }
       saveState(); closeSettleEntry(); renderAll();
       showToast(id ? '수정되었습니다.' : (isInc ? '수입이 기입되었습니다.' : '지출이 기입되었습니다.'));
@@ -2739,7 +2756,7 @@
       });
       return out;
     }
-    function a4SepRow(p) { return `<tr class="no-print"><td colspan="5" class="text-center text-[10px] font-bold text-slate-500 bg-slate-100 py-1">─ ${p}쪽 ─</td></tr>`; }
+    function a4SepRow(p) { return `<tr class="no-print"><td colspan="6" class="text-center text-[10px] font-bold text-slate-500 bg-slate-100 py-1">─ ${p}쪽 ─</td></tr>`; }
     // ---- A4 사진 저장: 표를 A4 크기로 그리고, 줄이 많으면 여러 장으로 나눔 ----
     window.saveA4Pages = async function(spec) {
       if (window.__a4Busy) return;
@@ -2758,7 +2775,7 @@
     };
     const saveA4Core = async function(spec) {
       const PW = 794, PH = 1123, K = 2.2, M = 48;
-      const cols = [130, 130, 120, 198, 120];
+      const cols = [96, 125, 128, 96, 125, 128];
       const X = [M]; cols.forEach(w => X.push(X[X.length - 1] + w));
       const Y0 = 150, H1 = 36, H2 = 30, ROW = 36, FOOT = [36, 36, 36, 44], FH = 152;
       const bodyTop = Y0 + H1 + H2, limit = PH - 56;
@@ -2795,10 +2812,10 @@
         txt(spec.title, M, PW - M, 72, { size: 26, weight: 800 });
         txt(spec.left, M, PW / 2, 122, { size: 14, weight: 700, align: 'left' });
         txt(spec.right, PW / 2, PW - M, 122, { size: 14, weight: 700, align: 'right' });
-        box(X[0], Y0, X[3], Y0 + H1); box(X[3], Y0, X[5], Y0 + H1);
+        box(X[0], Y0, X[3], Y0 + H1); box(X[3], Y0, X[6], Y0 + H1);
         txt('입 금 내 역', X[0], X[3], Y0 + H1 / 2, { size: 15, weight: 800, ls: 4 });
-        txt('지 출 내 역', X[3], X[5], Y0 + H1 / 2, { size: 15, weight: 800, ls: 4 });
-        ['항목', '내역', '금액', '내역', '금액'].forEach((t, c) => {
+        txt('지 출 내 역', X[3], X[6], Y0 + H1 / 2, { size: 15, weight: 800, ls: 4 });
+        ['항목', '내역', '금액', '항목', '내역', '금액'].forEach((t, c) => {
           box(X[c], Y0 + H1, X[c + 1], Y0 + H1 + H2, '#f8fafc');
           txt(t, X[c], X[c + 1], Y0 + H1 + H2 / 2, { size: 12.5, weight: 800 });
         });
@@ -2806,32 +2823,32 @@
         const RH = (pages.length === 1 && R > 18) ? Math.floor((limit - bodyTop - FH) / R) : ROW;
         for (let r = 0; r < R; r++) {
           const y = bodyTop + r * RH, ym = y + RH / 2, k = a + r;
-          for (let c = 0; c < 5; c++) box(X[c], y, X[c + 1], y + RH);
+          for (let c = 0; c < 6; c++) box(X[c], y, X[c + 1], y + RH);
           const A = k < b ? spec.inc[k] : null, E = k < b ? spec.exp[k] : null;
           if (A) { txt(A.name, X[0], X[1], ym); txt(A.memo, X[1], X[2], ym, { size: 11.5 }); txt(fm(A.amt), X[2], X[3], ym, { align: 'right' }); }
-          if (E) { txt(E.name, X[3], X[4], ym); txt(fm(E.amt), X[4], X[5], ym, { align: 'right' }); }
+          if (E) { txt(E.item, X[3], X[4], ym); txt(E.memo, X[4], X[5], ym, { size: 11.5 }); txt(fm(E.amt), X[5], X[6], ym, { align: 'right' }); }
         }
         let yEnd = bodyTop + R * RH;
         if (last) {
           const f = spec.foot, red = '#e11d48';
           let y = yEnd;
-          box(X[0], y, X[1], y + FOOT[0]); box(X[1], y, X[2], y + FOOT[0]); box(X[2], y, X[3], y + FOOT[0]); box(X[3], y, X[4], y + FOOT[0]); box(X[4], y, X[5], y + FOOT[0]);
+          box(X[0], y, X[1], y + FOOT[0]); box(X[1], y, X[2], y + FOOT[0]); box(X[2], y, X[3], y + FOOT[0]); box(X[3], y, X[4], y + FOOT[0]); box(X[4], y, X[5], y + FOOT[0]); box(X[5], y, X[6], y + FOOT[0]);
           txt('입 금 계', X[1], X[2], y + FOOT[0] / 2, { size: 14, weight: 800 });
           txt(fm(f.incTotal), X[2], X[3], y + FOOT[0] / 2, { weight: 800, align: 'right' });
-          txt('지 출 계', X[3], X[4], y + FOOT[0] / 2, { size: 14, weight: 800 });
-          txt(fm(f.expTotal), X[4], X[5], y + FOOT[0] / 2, { weight: 800, align: 'right' });
+          txt('지 출 계', X[4], X[5], y + FOOT[0] / 2, { size: 14, weight: 800 });
+          txt(fm(f.expTotal), X[5], X[6], y + FOOT[0] / 2, { weight: 800, align: 'right' });
           y += FOOT[0];
-          g.strokeStyle = '#0f172a'; g.lineWidth = 1.5; [-2, 2].forEach(d => { g.beginPath(); g.moveTo(X[0], y + d); g.lineTo(X[5], y + d); g.stroke(); });
+          g.strokeStyle = '#0f172a'; g.lineWidth = 1.5; [-2, 2].forEach(d => { g.beginPath(); g.moveTo(X[0], y + d); g.lineTo(X[6], y + d); g.stroke(); });
           [['(입금)-(지출)', f.diff, FOOT[1], true], ['전월이월금', f.carry, FOOT[2], false], ['합 계', f.grand, FOOT[3], true]].forEach(([lb, v, h, neg]) => {
-            box(X[0], y, X[1], y + h); box(X[1], y, X[2], y + h); box(X[2], y, X[3], y + h); box(X[3], y, X[4], y + h); box(X[4], y, X[5], y + h);
-            txt(lb, X[3], X[4], y + h / 2, { size: 14, weight: 800 });
-            txt(sgn(v), X[4], X[5], y + h / 2, { weight: 800, align: 'right', color: (neg && v < 0) ? red : '#0f172a' });
+            box(X[0], y, X[1], y + h); box(X[1], y, X[2], y + h); box(X[2], y, X[3], y + h); box(X[3], y, X[4], y + h); box(X[4], y, X[5], y + h); box(X[5], y, X[6], y + h);
+            txt(lb, X[4], X[5], y + h / 2, { size: 14, weight: 800 });
+            txt(sgn(v), X[5], X[6], y + h / 2, { weight: 800, align: 'right', color: (neg && v < 0) ? red : '#0f172a' });
             y += h;
           });
           yEnd = y;
         }
         g.strokeStyle = '#0f172a'; g.lineWidth = 2; g.strokeRect(X[0], Y0, TW(), yEnd - Y0);
-        g.beginPath(); g.moveTo(X[0], Y0 + H1 + H2); g.lineTo(X[5], Y0 + H1 + H2); g.stroke();
+        g.beginPath(); g.moveTo(X[0], Y0 + H1 + H2); g.lineTo(X[6], Y0 + H1 + H2); g.stroke();
         if (pages.length > 1) txt(`${pi + 1} / ${pages.length}`, M, PW - M, PH - 28, { size: 11, color: '#64748b' });
         if (!last) txt('다음 쪽에 이어집니다 ▶', M, PW - M, PH - 28, { size: 11, color: '#64748b', align: 'right' });
         const blob = await new Promise(res => cv.toBlob(res, 'image/png'));
@@ -2839,7 +2856,7 @@
         const nm = `${spec.name}_${todayStr()}${pages.length > 1 ? '_' + (pi + 1) + 'of' + pages.length : ''}.png`;
         files.push(new File([blob], nm, { type: 'image/png' }));
       }
-      function TW() { return X[5] - X[0]; }
+      function TW() { return X[6] - X[0]; }
       if (files.length > 1) { showA4Preview(files); return; }
       try {
         if (navigator.canShare && navigator.canShare({ files })) {
@@ -2889,7 +2906,7 @@
       const mt = currentSettleMeeting(), club = getActiveClub();
       if (!mt) { showToast('정산할 모임이 없어요.'); return; }
       const inc = (mt.incomes || []).map(x => ({ name: x.name, memo: x.memo, amt: x.amount }));
-      const exp = (mt.expenses || []).map(x => ({ name: x.title, amt: x.amount }));
+      const exp = (mt.expenses || []).map(x => ({ item: x.item || '', memo: x.title, amt: x.amount }));
       const si = inc.reduce((t, x) => t + x.amt, 0), se = exp.reduce((t, x) => t + x.amt, 0), cy = settleCarryFor(mt);
       saveA4Pages({ title: club.name, left: fmtMeetingWhen(mt), right: `${mt.title} 결산`, inc, exp, name: '정산',
         foot: { incTotal: si, expTotal: se, diff: si - se, carry: cy, grand: si - se + cy } });
@@ -2903,8 +2920,9 @@
       (r.meetingIncomes || []).forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
       inc.sort(byDateAsc);
       const exp = [];
-      r.meetingExpenses.forEach(e => exp.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
-      r.extraExpenses.forEach(x => exp.push({ name: x.title, amt: x.amount }));
+      r.meetingExpenses.forEach(e => exp.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date }));
+      r.extraExpenses.forEach(x => exp.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      exp.sort(byDateAsc);
       const incSum = r.totalIncome - r.carryOver;
       saveA4Pages({ title: r.club.name, left: r.periodText, right: '결산보고서', inc, exp, name: '결산보고',
         foot: { incTotal: incSum, expTotal: r.totalExpense, diff: incSum - r.totalExpense, carry: r.carryOver, grand: r.balance } });
@@ -4662,6 +4680,7 @@
         (mt.expenses || []).forEach(e => {
           meetingExpenses.push({
             date: mtYmd(mt) || '-',
+            item: e.item || '',
             title: `[${mt.title}] ${e.title}`,
             amount: e.amount,
             note: `결제: ${getMember(e.payerId).name}`
@@ -4753,8 +4772,9 @@
       (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
       incRows.sort(byDateAsc);
       const expRows = [];
-      r.meetingExpenses.forEach(e => expRows.push({ name: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount }));
-      r.extraExpenses.forEach(x => expRows.push({ name: x.title, amt: x.amount, id: x.id }));
+      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date }));
+      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      expRows.sort(byDateAsc);
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
       const bd = 'border border-slate-800';
@@ -4767,13 +4787,13 @@
       for (const it of a4Rows(Math.max(incRows.length, expRows.length))) {
         if (it.sep) { bodyRows += a4SepRow(it.sep); continue; }
         const a = it.k >= 0 ? incRows[it.k] : undefined, e = it.k >= 0 ? expRows[it.k] : undefined;
-        const ac = a && a.id ? ` onclick="openEditReportEntry('${a.id}')" style="cursor:pointer"` : '';
-        const ec = e && e.id ? ` onclick="openEditReportEntry('${e.id}')" style="cursor:pointer"` : '';
+        const ac = '', ec = '';
         bodyRows += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ac}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ac}>${a ? fm(a.amt) : ''}</td>
-          <td class="${bd} px-1 text-center break-words"${ec}>${e ? esc(e.name) : ''}</td>
+          <td class="${bd} px-1 text-center break-words"${ec}>${e ? esc(e.item) : ''}</td>
+          <td class="${bd} px-0.5 text-center break-words text-[10px]"${ec}>${e ? esc(e.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ec}>${e ? fm(e.amt) : ''}</td>
         </tr>`;
       }
@@ -4786,18 +4806,18 @@
         <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
           ${lay.colgroup}
           <thead>
-            <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="2" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
-            <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
+            <tr class="h-8 font-extrabold"><th colspan="3" class="${bd} text-sm tracking-[0.3em]">입 금 내 역</th><th colspan="3" class="${bd} text-sm tracking-[0.3em]">지 출 내 역</th></tr>
+            <tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th><th class="${bd}">항목</th><th class="${bd}">내역</th><th class="${bd}">금액</th></tr>
           </thead>
           <tbody>${bodyRows}</tbody>
           <tfoot class="font-extrabold">
-            <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
-            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
-            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
-            <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
+            <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
+            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
+            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
+            <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
           </tfoot>
         </table>
-        <p class="text-[10px] text-slate-400 no-print pt-1">수입·지출 장부에서 직접 입력한 항목은 눌러서 수정할 수 있어요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
+        <p class="text-[10px] text-slate-400 no-print pt-1">결산보고는 보기 전용이에요. 고칠 내용은 정산이나 입출정산에서 수정해 주세요. 이월금은 앞선 달의 남은 금액이 자동으로 이어져요. 처음 시작할 때 남은 돈은 수입으로 적어 주세요.</p>
       `;
     }
 
@@ -4880,6 +4900,7 @@
         document.getElementById('input-entry-title').value = x.title;
         document.getElementById('input-entry-amount').value = x.amount;
         document.getElementById('input-entry-note').value = x.note || '';
+        fillEntryTitleList(x.type === 'income' ? 'income' : 'expense');
         document.getElementById('modal-report-entry').classList.remove('hidden');
       });
     };
@@ -4917,7 +4938,7 @@
       const note = document.getElementById('input-entry-note').value.trim();
 
       if (!title || amount <= 0) {
-        showToast("항목명과 올바른 금액을 입력해주세요.");
+        showToast("항목과 금액을 입력해 주세요.");
         return;
       }
 
