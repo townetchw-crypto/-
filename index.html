@@ -768,7 +768,7 @@
             <input id="checkbox-batch-sync-dues" type="checkbox" checked class="w-4 h-4 text-indigo-600 rounded">
             <span>금액 장부 동시 등록</span>
           </label>
-          <input id="input-batch-dues-label" type="text" value="경조사/찬조" placeholder="구분 (예: 2026-11, 경조사)" class="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-indigo-500">
+          <input id="input-batch-dues-label" type="text" value="" placeholder="구분 (예: 2026-11)" class="border border-slate-300 rounded-lg px-2 py-1 text-xs bg-white outline-none focus:ring-1 focus:ring-indigo-500">
         </div>
 
         <!-- 인식 결과 실시간 프리뷰 -->
@@ -3029,9 +3029,8 @@
         if (duesPeriodFilter === 'year' && pVal && !(d.yearMonth || '').startsWith(pVal.slice(0, 4))) return false;
         if (duesPaidFilter === 'paid' && !d.isPaid) return false;
         if (duesPaidFilter === 'unpaid' && d.isPaid) return false;
-        if (duesCatFilter === '월회비' && (d.note === '연회비' || (d.note || '').includes('찬조') || (d.note || '').includes('경조사'))) return false;
+        if (duesCatFilter === '월회비' && d.note === '연회비') return false;
         if (duesCatFilter === '연회비' && d.note !== '연회비') return false;
-        if (duesCatFilter === '찬조/부조' && !(d.note || '').includes('찬조') && !(d.note || '').includes('경조사')) return false;
         return true;
       }).sort((a, b) => {
         const dateA = a.paidDate || a.yearMonth || "";
@@ -4128,7 +4127,7 @@
     function setDuesCatFilter(cat) {
       duesCatFilter = cat;
       window.setDuesCatFilter = setDuesCatFilter;
-      const map = { 'all': 'btn-dues-flt-all', '월회비': 'btn-dues-flt-monthly', '연회비': 'btn-dues-flt-yearly', '찬조/부조': 'btn-dues-flt-gift' };
+      const map = { 'all': 'btn-dues-flt-all', '월회비': 'btn-dues-flt-monthly', '연회비': 'btn-dues-flt-yearly' };
       Object.entries(map).forEach(([k, id]) => {
         const b = document.getElementById(id);
         if (b) b.className = k === cat ? 'py-1.5 rounded-lg bg-indigo-600 text-white transition' : 'py-1.5 rounded-lg bg-slate-100 text-slate-600 transition';
@@ -4140,7 +4139,7 @@
     function setDueCategory(cat) {
       document.getElementById('input-due-category').value = cat;
       window.setDueCategory = setDueCategory;
-      const map = { '월회비': 'btn-due-cat-monthly', '연회비': 'btn-due-cat-yearly', '찬조/부조': 'btn-due-cat-gift' };
+      const map = { '월회비': 'btn-due-cat-monthly', '연회비': 'btn-due-cat-yearly' };
       Object.entries(map).forEach(([k, id]) => {
         const b = document.getElementById(id);
         if (b) b.className = k === cat ? 'py-2 rounded-lg bg-indigo-600 text-white transition' : 'py-2 rounded-lg bg-slate-100 text-slate-700 transition';
@@ -4209,7 +4208,7 @@
       populateDropdowns();
       document.getElementById('due-modal-title').textContent = '회비 내역 수정';
       document.getElementById('input-due-edit-id').value = d.id;
-      const cat = d.note === '연회비' ? '연회비' : ((d.note || '').includes('찬조') || (d.note || '').includes('경조사') ? '찬조/부조' : '월회비');
+      const cat = d.note === '연회비' ? '연회비' : '월회비';
       setDueCategory(cat);
       if (cat === '연회비') document.getElementById('input-due-year').value = (d.yearMonth || todayStr()).slice(0, 4);
       else document.getElementById('input-due-month').value = /^\d{4}-\d{2}$/.test(d.yearMonth || '') ? d.yearMonth : todayStr().slice(0, 7);
@@ -4283,7 +4282,7 @@
         subGroupId: getMember(mid).subGroupId,
         yearMonth, memberId: mid, amount, isPaid,
         paidDate: isPaid ? paidDateInput : "",
-        note: cat === '월회비' ? '' : (cat === '찬조/부조' ? '경조사/찬조' : '연회비')
+        note: cat === '월회비' ? '' : '연회비'
       });
       const newDue = {
         id: uid('due'),
@@ -4293,7 +4292,7 @@
         amount,
         isPaid,
         paidDate: isPaid ? paidDateInput : "",
-        note: cat === '월회비' ? '' : (cat === '찬조/부조' ? '경조사/찬조' : '연회비')
+        note: cat === '월회비' ? '' : '연회비'
       };
 
       const editId = document.getElementById('input-due-edit-id').value;
