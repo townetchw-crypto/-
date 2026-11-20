@@ -1400,6 +1400,12 @@
       else s += ' · 종일';
       return s;
     }
+    // 결산 표 위에 보일 날짜(시간 없이 날짜와 요일만)
+    function fmtMeetingDate(mt) {
+      const p = mtInfo(mt);
+      if (!p) return String(mt && mt.dateStr || '') || '일시 미정';
+      return `${p.ymd} (${WEEKDAY_KO[ymdDow(p.ymd)]})`;
+    }
     function ddayLabel(ymd) {
       if (!ymd) return '';
       const a = ymdParts(todayStr()), b = ymdParts(ymd);
@@ -2568,7 +2574,7 @@
           <div class="flex items-center justify-between gap-1.5"><div class="flex gap-1.5"><button onclick="openSettleEntry('income')" class="shrink-0 px-3 py-2 bg-emerald-100 text-emerald-900 border border-emerald-300 text-xs font-bold rounded-lg">+ 수입</button><button onclick="openSettleEntry('expense')" class="shrink-0 px-3 py-2 bg-rose-100 text-rose-900 border border-rose-300 text-xs font-bold rounded-lg">+ 지출</button></div><button onclick="settleSaveA4()" class="shrink-0 px-3 py-2 bg-emerald-500 text-white text-xs font-bold rounded-lg">🖼️ 사진 저장 (A4)</button></div>
           <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc(club.name)}</h3>
           <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1">
-            <span class="mr-2">${esc(fmtMeetingWhen(activeMeeting))}</span>
+            <span class="mr-2">${esc(fmtMeetingDate(activeMeeting))}</span>
             <span class="truncate">${esc(activeMeeting.title)} 결산</span>
           </div>
           <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed${lay.cls}">
@@ -3090,7 +3096,7 @@
       const inc = (mt.incomes || []).map(x => ({ name: x.name, memo: x.memo, amt: x.amount }));
       const exp = (mt.expenses || []).map(x => ({ item: x.item || '', memo: x.title, amt: x.amount }));
       const si = inc.reduce((t, x) => t + x.amt, 0), se = exp.reduce((t, x) => t + x.amt, 0), cy = settleCarryFor(mt);
-      saveA4Pages({ title: club.name, left: fmtMeetingWhen(mt), right: `${mt.title} 결산`, inc, exp, name: '정산',
+      saveA4Pages({ title: club.name, left: fmtMeetingDate(mt), right: `${mt.title} 결산`, inc, exp, name: '정산',
         foot: { incTotal: si, expTotal: se, diff: si - se, carry: cy, grand: si - se + cy } });
     };
     // 결산 표 줄 만들기: 같은 항목은 한 줄로 합치고(여러 건이면 "N건"), 회비는 회원별 상세로 보관
