@@ -80,28 +80,29 @@
 <body class="bg-slate-100 text-slate-800 antialiased min-h-screen flex flex-col pb-24 md:pb-8">
 
   <!-- 최상위 네비게이션 헤더 (클럽 전환 드롭다운 포함) -->
-  <header id="app-header" class="sticky top-0 z-30 bg-white border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between">
+  <header id="app-header" class="fixed top-0 left-0 right-0 z-30 bg-white border-b border-slate-200 px-4 py-2.5 shadow-xs flex items-center justify-between gap-2">
     <!-- 모임 선택 트리거 버튼 -->
-    <button id="btn-open-club-selector" class="flex items-center min-w-0 space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
+    <button id="btn-open-club-selector" class="flex items-center flex-1 min-w-0 space-x-2 text-left p-1 -ml-1 rounded-xl hover:bg-slate-100 transition active:scale-98">
       <div id="header-club-icon-box" class="hidden w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-white font-bold shadow-md shadow-indigo-200 text-base">
         🏛️
       </div>
-      <div>
-        <div class="flex items-center space-x-1">
-          <h1 class="text-[28px] font-extrabold text-slate-900 leading-tight" id="club-title-text">한국체대 총동문회</h1>
-          <span class="text-base text-slate-400">▼</span>
+      <div class="min-w-0">
+        <div class="flex items-center space-x-1 min-w-0">
+          <h1 class="text-[28px] font-extrabold text-slate-900 leading-tight truncate" id="club-title-text">한국체대 총동문회</h1>
+          <span class="text-base text-slate-400 shrink-0">▼</span>
         </div>
         <p class="hidden text-xs text-slate-500 font-medium" id="club-subtitle-text">터치하여 다른 모임으로 전환</p>
       </div>
     </button>
 
-    <div class="flex items-center space-x-1.5">
+    <div class="flex items-center space-x-1.5 shrink-0">
       <button id="btn-open-backup" class="whitespace-nowrap shrink-0 px-2 py-1 text-xs bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-bold rounded-lg border border-emerald-300 transition">
         💾 백업
       </button>
 
     </div>
   </header>
+  <div id="header-spacer" class="no-print h-[53px] shrink-0" aria-hidden="true"></div>
 
   <!-- 캘린더 컨트롤 바 (삼성 캘린더 스타일, 상단 고정) -->
   <div id="calendar-bar" class="bg-white border-b border-slate-200 px-3 py-2 shadow-xs sticky top-[53px] z-20">
@@ -4817,6 +4818,7 @@
     function fitStickyBars() {
       const h = document.getElementById('app-header'), b = document.getElementById('calendar-bar');
       if (h && b) b.style.top = h.offsetHeight + 'px';
+      const sp = document.getElementById('header-spacer'); if (sp && h) sp.style.height = h.offsetHeight + 'px';
       const yc = document.getElementById('year-controls'); if (yc && h) yc.style.top = h.offsetHeight + 'px';
     }
     window.addEventListener('resize', fitStickyBars);
