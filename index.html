@@ -2299,6 +2299,7 @@
       let sx = 0, sy = 0, t0 = 0;
       panel.addEventListener('touchstart', e => { const t = e.changedTouches[0]; sx = t.clientX; sy = t.clientY; t0 = Date.now(); }, { passive: true });
       panel.addEventListener('touchend', e => {
+        if (window._appZoom > 1 || (window._pinchAt && Date.now() - window._pinchAt < 700)) return;
         const t = e.changedTouches[0]; const dx = t.clientX - sx, dy = t.clientY - sy;
         if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy) * 1.5 && Date.now() - t0 < 900) { calSwipedAt = Date.now(); calNav(dx < 0 ? 1 : -1); }
       }, { passive: true });
@@ -4828,22 +4829,25 @@
     window._appZoom = 1;
     (function setupAppZoom() {
       const main = document.getElementById('app-main'); if (!main) return;
+      const calPanel = document.getElementById('calendar-grid-panel');
+      const targets = [main, calPanel].filter(Boolean);
+      const vis = () => targets.find(el => el.offsetParent !== null) || main;
       const chip = document.createElement('button');
       chip.id = 'zoom-reset-chip';
       chip.textContent = '🔍 100%로';
       chip.style.cssText = 'position:fixed;right:12px;bottom:76px;z-index:45;display:none;padding:8px 12px;border-radius:999px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);';
       document.body.appendChild(chip);
-      function fitZoomPad() { main.style.marginBottom = window._appZoom === 1 ? '' : (((window._appZoom - 1) * main.offsetHeight) + 'px'); }
-      if (window.ResizeObserver) new ResizeObserver(fitZoomPad).observe(main);
+      function fitZoomPad() { targets.forEach(el => { el.style.marginBottom = window._appZoom === 1 ? '' : (((window._appZoom - 1) * el.offsetHeight) + 'px'); }); }
+      if (window.ResizeObserver) targets.forEach(el => new ResizeObserver(fitZoomPad).observe(el));
       function applyZoom(z, cx, cy) {
         z = Math.max(1, Math.min(3, z));
         const old = window._appZoom;
         if (Math.abs(z - old) < 0.001) return;
-        const r = main.getBoundingClientRect(), ox = r.left + window.scrollX, oy = r.top + window.scrollY;
+        const r = vis().getBoundingClientRect(), ox = r.left + window.scrollX, oy = r.top + window.scrollY;
         const px = ox + (window.scrollX + cx - ox) / old, py = oy + (window.scrollY + cy - oy) / old;
         window._appZoom = z;
-        main.style.transformOrigin = '0 0';
-        main.style.transform = z === 1 ? '' : 'scale(' + z + ')';
+        targets.forEach(el => { el.style.transformOrigin = '0 0'; el.style.transform = z === 1 ? '' : 'scale(' + z + ')'; });
+        const cs = document.getElementById('calendar-surface'); if (cs) cs.style.touchAction = z === 1 ? 'pan-y' : 'pan-x pan-y';
         fitZoomPad();
         fitStickyBars();
         window.scrollTo(ox + (px - ox) * z - cx, oy + (py - oy) * z - cy);
@@ -4857,7 +4861,7 @@
       }, { passive: true });
       document.addEventListener('touchmove', (e) => {
         if (e.touches.length !== 2 || !sd) return;
-        e.preventDefault();
+        e.preventDefault(); window._pinchAt = Date.now();
         const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
         applyZoom(sz * dist(e.touches) / sd, cx, cy);
       }, { passive: false });
