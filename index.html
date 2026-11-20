@@ -1564,7 +1564,7 @@
         (Array.isArray(c.monthlyDues) ? c.monthlyDues : []).forEach((d, di) => {
           if (!d || typeof d !== 'object') return;
           club.monthlyDues.push({ id: sid(d.id || ('due_' + ci + '_' + di)), subGroupId: gid(d.subGroupId), yearMonth: str(d.yearMonth),
-            memberId: sid(d.memberId), amount: Math.max(0, toInt(d.amount)), isPaid: !!d.isPaid, paidDate: str(d.paidDate), note: str(d.note) });
+            memberId: sid(d.memberId), amount: Math.max(0, toInt(d.amount)), isPaid: !!d.isPaid, paidDate: str(d.paidDate), note: str(d.note), itemName: str(d.itemName) });
         });
         if (c.formerMembers && typeof c.formerMembers === 'object') {
           Object.keys(c.formerMembers).forEach(k => { club.formerMembers[sid(k)] = str(c.formerMembers[k]); });
@@ -3095,9 +3095,9 @@
       const nm = v => String(v == null ? '' : v).trim() || '항목 미지정';
       const incRaw = [], expRaw = [];
       r.duesGroups.forEach(g => {
-        const gn = `${g.label} 회비`;
+        const gn = g.name || `${g.label} 회비`;
         const ms = (g.members && g.members.length) ? g.members : [{ name: '', date: g.date, amount: g.amount }];
-        ms.forEach(m => incRaw.push({ grp: gn, date: m.date || g.date, det: m.name || '', amt: m.amount, dues: true }));
+        ms.forEach(m => incRaw.push({ grp: gn, date: m.date || g.date, det: m.name || '', amt: m.amount, dues: true, ref: m.ref }));
       });
       r.extraIncomes.forEach(x => incRaw.push({ grp: nm(x.title), date: x.date, det: x.note || '', amt: x.amount, ref: { k: 'led', id: x.id } }));
       (r.meetingIncomes || []).forEach(x => incRaw.push({ grp: nm(x.title), date: x.date, det: x.note || '', amt: x.amount, ref: x.ref }));
@@ -4856,11 +4856,11 @@
       // 구분(yearMonth)별로 깔끔하게 묶어 요약 + 건수 표시
       const duesGroups = {};
       paidDues.forEach(d => {
-        const key = d.yearMonth || '기타';
-        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0, date: '', members: [] };
+        const key = d.itemName ? ('N:' + d.itemName) : (d.yearMonth || '기타');
+        if (!duesGroups[key]) duesGroups[key] = { label: d.itemName || (d.yearMonth || '기타'), name: d.itemName || `${d.yearMonth || '기타'} 회비`, count: 0, amount: 0, date: '', members: [] };
         const dd = normD(dueDate(d));
         if (dd && (!duesGroups[key].date || dd < duesGroups[key].date)) duesGroups[key].date = dd;
-        duesGroups[key].members.push({ name: (getMember(d.memberId) || {}).name || '', date: dd, amount: d.amount });
+        duesGroups[key].members.push({ name: (getMember(d.memberId) || {}).name || '', date: dd, amount: d.amount, ref: { k: 'due', id: d.id } });
         duesGroups[key].count += 1;
         duesGroups[key].amount += d.amount;
       });
@@ -4963,9 +4963,9 @@
       const fm = n => Number(n).toLocaleString();
       const w = document.createElement('div');
       w.id = 'rpt-detail-modal';
-      w.className = 'fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4';
+      w.className = 'fixed inset-0 bg-black/60 flex items-center justify-center p-3 pb-20';
       w.style.zIndex = '9998';
-      w.innerHTML = `<div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col">
+      w.innerHTML = `<div class="bg-white w-full max-w-md rounded-2xl max-h-[78vh] flex flex-col shadow-2xl">
         <div class="flex items-center justify-between p-3 border-b border-slate-200">
           <p class="font-extrabold text-slate-900 text-sm">${esc(g.name)} · ${g.cnt}건 · ${fm(g.sum)}원</p>
           <div class="flex gap-1.5"><button type="button" id="rpt-detail-a4" class="px-3 py-1 rounded-lg bg-emerald-500 text-white text-xs font-bold">🖼️ 사진 저장</button><button type="button" id="rpt-detail-close" class="px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold">닫기</button></div>
@@ -4974,7 +4974,7 @@
           ${canRename ? `<div class="mb-3 p-2 rounded-xl bg-amber-50 border border-amber-200 space-y-1.5">
             <p class="text-[11px] font-bold text-amber-900">항목 이름 고치기 (여기 있는 ${renItems.length}건 모두 바뀌어요)</p>
             <div class="flex gap-1.5"><input id="rpt-rename-input" type="text" value="${esc(g.name === '항목 미지정' ? '' : g.name)}" placeholder="바꿀 항목 이름" class="flex-1 min-w-0 border border-slate-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" id="rpt-rename-btn" class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">바꾸기</button></div>
-          </div>` : `<p class="mb-3 text-[10px] text-slate-400">회비 장부에서 자동으로 모은 항목이라 이름은 고칠 수 없어요.</p>`}
+          </div>` : `<p class="mb-3 text-[10px] text-slate-400">이 항목은 이름을 고칠 수 없어요.</p>`}
           <div class="space-y-2">
             <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc((window._rptMeta || {}).title || '')}</h3>
             <div class="flex items-center justify-between text-sm font-bold text-slate-800"><span class="truncate mr-2">항목 : ${esc(g.name)}</span><span class="shrink-0">${esc((window._rptMeta || {}).period || '')}</span></div>
@@ -5000,7 +5000,8 @@
           let n = 0;
           renItems.forEach(x => {
             const f = x.ref;
-            if (f.k === 'led') { const t = (club.extraLedger || []).find(y => y.id === f.id); if (t) { t.title = nv; n++; } }
+            if (f.k === 'due') { const t = (club.monthlyDues || []).find(y => y.id === f.id); if (t) { t.itemName = nv; n++; } }
+            else if (f.k === 'led') { const t = (club.extraLedger || []).find(y => y.id === f.id); if (t) { t.title = nv; n++; } }
             else {
               const mt = (club.meetings || []).find(m => m.id === f.mt); if (!mt) return;
               if (f.k === 'mtInc') { const t = (mt.incomes || []).find(y => y.id === f.id); if (t) { t.name = nv; n++; } }
