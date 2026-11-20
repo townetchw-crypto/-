@@ -2,7 +2,7 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>모든모임매니저</title>
   <link rel="manifest" href="manifest.json">
   <meta name="theme-color" content="#4f46e5">
@@ -4819,39 +4819,46 @@
       const h = document.getElementById('app-header'), b = document.getElementById('calendar-bar');
       if (h && b) b.style.top = h.offsetHeight + 'px';
       const sp = document.getElementById('header-spacer'); if (sp && h) sp.style.height = h.offsetHeight + 'px';
-      const yc = document.getElementById('year-controls'); if (yc && h) yc.style.top = h.offsetHeight + 'px';
+      const yc = document.getElementById('year-controls'); if (yc && h) yc.style.top = (h.offsetHeight / (window._appZoom || 1)) + 'px';
     }
     window.addEventListener('resize', fitStickyBars);
     window.addEventListener('load', fitStickyBars);
 
-    // 화면을 확대(핀치)해도 상단 모임명 줄과 하단 메뉴가 항상 보이는 화면 가장자리에 붙어 있도록 위치를 보정
-    // (위치 계산 없이 transform 만 바꿔서 깜빡임을 최소화)
-    let pinPending = false, pinZoomed = false;
-    function pinBarsNow() {
-      pinPending = false;
-      const vv = window.visualViewport; if (!vv) return;
-      const h = document.getElementById('app-header'), n = document.querySelector('body > nav');
-      const s = vv.scale;
-      const els = [h, n].filter(Boolean);
-      if (Math.abs(s - 1) < 0.02) {
-        if (pinZoomed) { els.forEach(el => { el.style.left = ''; el.style.right = ''; el.style.top = ''; el.style.bottom = ''; el.style.width = ''; el.style.transform = ''; el.style.transformOrigin = ''; el.style.willChange = ''; }); pinZoomed = false; }
-        return;
+    // 앱 안에서 직접 확대: 두 손가락으로 벌리면 '내용(main)'만 커지고, 상단 모임명 줄·하단 메뉴는 그대로 고정
+    window._appZoom = 1;
+    (function setupAppZoom() {
+      const main = document.getElementById('app-main'); if (!main) return;
+      const chip = document.createElement('button');
+      chip.id = 'zoom-reset-chip';
+      chip.textContent = '🔍 100%로';
+      chip.style.cssText = 'position:fixed;right:12px;bottom:76px;z-index:45;display:none;padding:8px 12px;border-radius:999px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);';
+      document.body.appendChild(chip);
+      function applyZoom(z, cx, cy) {
+        z = Math.max(1, Math.min(3, z));
+        const old = window._appZoom;
+        if (Math.abs(z - old) < 0.001) return;
+        const px = (window.scrollX + cx) / old, py = (window.scrollY + cy) / old;
+        window._appZoom = z;
+        main.style.zoom = z === 1 ? '' : String(z);
+        fitStickyBars();
+        window.scrollTo(px * z - cx, py * z - cy);
+        chip.style.display = z === 1 ? 'none' : 'block';
       }
-      if (!pinZoomed) {
-        const W = document.documentElement.clientWidth;
-        els.forEach(el => { el.style.left = '0px'; el.style.top = '0px'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.width = W + 'px'; el.style.transformOrigin = '0 0'; el.style.willChange = 'transform'; });
-        pinZoomed = true;
-      }
-      const sc = 'scale(' + (1 / s) + ')';
-      if (h) h.style.transform = 'translate(' + vv.offsetLeft + 'px,' + vv.offsetTop + 'px) ' + sc;
-      if (n) n.style.transform = 'translate(' + vv.offsetLeft + 'px,' + (vv.offsetTop + vv.height - n.offsetHeight / s) + 'px) ' + sc;
-    }
-    function pinBars() { if (!pinPending) { pinPending = true; requestAnimationFrame(pinBarsNow); } }
-    if (window.visualViewport) {
-      window.visualViewport.addEventListener('resize', pinBars);
-      window.visualViewport.addEventListener('scroll', pinBars);
-    }
-    window.addEventListener('scroll', pinBars, { passive: true });
+      chip.addEventListener('click', () => applyZoom(1, window.innerWidth / 2, window.innerHeight / 2));
+      let sd = 0, sz = 1;
+      const dist = (t) => Math.hypot(t[0].clientX - t[1].clientX, t[0].clientY - t[1].clientY);
+      document.addEventListener('touchstart', (e) => {
+        if (e.touches.length === 2) { sd = dist(e.touches); sz = window._appZoom; }
+      }, { passive: true });
+      document.addEventListener('touchmove', (e) => {
+        if (e.touches.length !== 2 || !sd) return;
+        e.preventDefault();
+        const cx = (e.touches[0].clientX + e.touches[1].clientX) / 2, cy = (e.touches[0].clientY + e.touches[1].clientY) / 2;
+        applyZoom(sz * dist(e.touches) / sd, cx, cy);
+      }, { passive: false });
+      document.addEventListener('touchend', (e) => { if (e.touches.length < 2) sd = 0; }, { passive: true });
+      ['gesturestart', 'gesturechange'].forEach(n => document.addEventListener(n, (e) => e.preventDefault()));
+    })();
     if (window.ResizeObserver) new ResizeObserver(fitStickyBars).observe(document.getElementById('app-header'));
 
 
