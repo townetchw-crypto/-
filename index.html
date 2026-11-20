@@ -2581,7 +2581,7 @@
             <tfoot class="font-extrabold">
               <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalIncome)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(totalSpent)}</td></tr>
               <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${balance < 0 ? 'text-rose-600' : ''}">${sgn(balance)}</td></tr>
-              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
+              <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전기이월금</td><td class="${bd} px-1 text-right">${sgn(carry)}</td></tr>
               <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${grand < 0 ? 'text-rose-600' : ''}">${sgn(grand)}</td></tr>
             </tfoot>
           </table>
@@ -2629,7 +2629,7 @@
       return sum;
     }
     window.editSettleCarry = function() {
-      requireAdminClub('전월이월금 입력', () => {
+      requireAdminClub('전기이월금 입력', () => {
         const mt = currentSettleMeeting();
         if (!mt) return;
         openReportConfigModal();
@@ -2920,7 +2920,7 @@
           txt(fm(f.expTotal), X[5], X[6], y + FOOT[0] / 2, { weight: 800, align: 'right' });
           y += FOOT[0];
           g.strokeStyle = '#0f172a'; g.lineWidth = 1.5; [-2, 2].forEach(d => { g.beginPath(); g.moveTo(X[0], y + d); g.lineTo(X[6], y + d); g.stroke(); });
-          [['(입금)-(지출)', f.diff, FOOT[1], true], ['전월이월금', f.carry, FOOT[2], false], ['합 계', f.grand, FOOT[3], true]].forEach(([lb, v, h, neg]) => {
+          [['(입금)-(지출)', f.diff, FOOT[1], true], ['전기이월금', f.carry, FOOT[2], false], ['합 계', f.grand, FOOT[3], true]].forEach(([lb, v, h, neg]) => {
             box(X[0], y, X[1], y + h); box(X[1], y, X[2], y + h); box(X[2], y, X[3], y + h); box(X[3], y, X[4], y + h); box(X[4], y, X[5], y + h); box(X[5], y, X[6], y + h);
             txt(lb, X[4], X[5], y + h / 2, { size: 14, weight: 800 });
             txt(sgn(v), X[5], X[6], y + h / 2, { weight: 800, align: 'right', color: (neg && v < 0) ? red : '#0f172a' });
@@ -4954,7 +4954,7 @@
           <tfoot class="font-extrabold">
             <tr class="h-8 border-t-2 border-slate-900"><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">입 금 계</td><td class="${bd} dbl-b px-1 text-right">${fm(incSum)}</td><td class="${bd} dbl-b"></td><td class="${bd} dbl-b lbl text-center text-sm">지 출 계</td><td class="${bd} dbl-b px-1 text-right">${fm(r.totalExpense)}</td></tr>
             <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0 whitespace-nowrap">(입금)-(지출)</td><td class="${bd} px-1 text-right ${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</td></tr>
-            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전월이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
+            <tr class="h-9"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">전기이월금</td><td class="${bd} px-1 text-right">${sgn(r.carryOver)}</td></tr>
             <tr class="h-11"><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd}"></td><td class="${bd} lbl text-center text-sm px-0">합 계</td><td class="${bd} px-1 text-right ${r.balance < 0 ? 'text-rose-600' : ''}">${sgn(r.balance)}</td></tr>
           </tfoot>
         </table>
