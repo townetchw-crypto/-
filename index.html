@@ -392,6 +392,10 @@
             <button type="button" id="btn-range-month" class="py-1.5 rounded-lg bg-slate-100 text-slate-700 text-xs font-bold">이번 달</button>
           </div>
         </div>
+        <div class="grid grid-cols-2 gap-1.5">
+          <button type="button" id="btn-view-table" class="py-2 rounded-lg text-xs font-bold">📋 기본표</button>
+          <button type="button" id="btn-view-group" class="py-2 rounded-lg text-xs font-bold">🗂️ 항목별 모아보기</button>
+        </div>
         <button id="btn-report-a4" class="w-full py-3 rounded-xl bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-bold shadow-sm transition">🖼️ 사진 저장 (A4)</button>
       </div>
 
@@ -4752,7 +4756,43 @@
       };
     }
 
+    let reportView = 'table';
+    function syncReportViewBtns() {
+      const on = 'bg-indigo-600 text-white', off = 'bg-slate-100 text-slate-700';
+      const a = document.getElementById('btn-view-table'), b = document.getElementById('btn-view-group');
+      if (!a || !b) return;
+      a.className = 'py-2 rounded-lg text-xs font-bold ' + (reportView === 'table' ? on : off);
+      b.className = 'py-2 rounded-lg text-xs font-bold ' + (reportView === 'group' ? on : off);
+    }
+    window.openReportGroupDetail = function (side, i) {
+      const g = (window._rptGroups || {})[side] && window._rptGroups[side][i];
+      if (!g) return;
+      const old = document.getElementById('rpt-detail-modal'); if (old) old.remove();
+      const rows = g.items.slice().sort(byDateAsc);
+      const fm = n => Number(n).toLocaleString();
+      const w = document.createElement('div');
+      w.id = 'rpt-detail-modal';
+      w.className = 'fixed inset-0 bg-black/60 flex items-end sm:items-center justify-center p-0 sm:p-4';
+      w.style.zIndex = '9998';
+      w.innerHTML = `<div class="bg-white w-full max-w-md rounded-t-2xl sm:rounded-2xl max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between p-3 border-b border-slate-200">
+          <p class="font-extrabold text-slate-900 text-sm">${esc(g.name)} · ${g.cnt}건 · ${fm(g.sum)}원</p>
+          <button type="button" id="rpt-detail-close" class="px-3 py-1 rounded-lg bg-slate-100 text-xs font-bold">닫기</button>
+        </div>
+        <div class="overflow-y-auto p-3">
+          <table class="w-full border-collapse text-xs text-slate-900">
+            <thead><tr class="bg-slate-50 font-extrabold"><th class="border border-slate-300 py-1 w-16">날짜</th><th class="border border-slate-300">내역</th><th class="border border-slate-300 w-20">금액</th></tr></thead>
+            <tbody>${rows.map(x => `<tr class="h-8"><td class="border border-slate-300 text-center">${esc(String(x.date || '').slice(5, 10).replace('-', '.'))}</td><td class="border border-slate-300 px-1.5 break-words">${esc(x.det || '')}</td><td class="border border-slate-300 px-1.5 text-right">${fm(x.amt)}</td></tr>`).join('')}</tbody>
+            <tfoot><tr class="h-8 font-extrabold bg-slate-50"><td class="border border-slate-300 text-center" colspan="2">소계</td><td class="border border-slate-300 px-1.5 text-right">${fm(g.sum)}</td></tr></tfoot>
+          </table>
+        </div></div>`;
+      document.body.appendChild(w);
+      const close = () => w.remove();
+      w.querySelector('#rpt-detail-close').onclick = close;
+      w.addEventListener('click', e => { if (e.target === w) close(); });
+    };
     function renderReport() {
+      syncReportViewBtns();
       const club = getActiveClub();
       const area = document.getElementById('report-printable-area');
       if (!area) return;
@@ -4767,13 +4807,13 @@
       // 결산서 양식: 입금내역(항목/내역/금액) | 지출내역(내역/금액)
       const fm = n => Number(n).toLocaleString();
       const incRows = [];
-      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date }));
-      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date }));
-      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date, grp: '회비', det: `${g.label} ${g.count}명` }));
+      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
+      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
       incRows.sort(byDateAsc);
       const expRows = [];
-      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date }));
-      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
+      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date, grp: String(e.item || '').trim() || '항목 미지정', det: String(e.title).replace(/^\[[^\]]*\]\s*/, '') }));
+      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '' }));
       expRows.sort(byDateAsc);
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
@@ -4783,6 +4823,31 @@
         [...incRows.map(x => fm(x.amt)), fm(incSum)],
         [...expRows.map(x => fm(x.amt)), fm(r.totalExpense), sgn(diff), sgn(r.carryOver), sgn(r.balance)]
       );
+      if (reportView === 'group') {
+        const mk = rows => {
+          const m = new Map();
+          rows.forEach(x => { const g = m.get(x.grp) || { name: x.grp, cnt: 0, sum: 0, items: [] }; g.cnt++; g.sum += Number(x.amt) || 0; g.items.push(x); m.set(x.grp, g); });
+          return [...m.values()].sort((a, b) => b.sum - a.sum);
+        };
+        window._rptGroups = { inc: mk(incRows), exp: mk(expRows) };
+        const sec = (side, title, tot, color) => `
+          <div class="space-y-1">
+            <p class="font-extrabold text-sm ${color}">${title}</p>
+            <table class="w-full border-collapse border-2 border-slate-900 text-xs text-slate-900">
+              <thead><tr class="h-7 font-extrabold bg-slate-50"><th class="${bd}">항목</th><th class="${bd} w-12">건수</th><th class="${bd} w-24">합계</th></tr></thead>
+              <tbody>${window._rptGroups[side].map((g, i) => `<tr class="h-9 cursor-pointer active:bg-indigo-50" onclick="openReportGroupDetail('${side}',${i})"><td class="${bd} px-1.5 font-bold break-words">${esc(g.name)} <span class="text-slate-400">›</span></td><td class="${bd} px-1 text-center">${g.cnt}</td><td class="${bd} px-1.5 text-right">${fm(g.sum)}</td></tr>`).join('') || `<tr><td colspan="3" class="${bd} text-center text-slate-400 h-9">내용 없음</td></tr>`}</tbody>
+              <tfoot class="font-extrabold"><tr class="h-9 bg-slate-50"><td class="${bd} text-center" colspan="2">${title} 계</td><td class="${bd} px-1.5 text-right">${fm(tot)}</td></tr></tfoot>
+            </table>
+          </div>`;
+        area.innerHTML = carryBarHtml() + `
+          <h3 class="text-center text-xl font-extrabold text-slate-900 py-2">${esc(r.club.name)}</h3>
+          <div class="flex items-center justify-between text-sm font-bold text-slate-800 pb-1"><span>${esc(r.periodText)}</span><span>항목별 모아보기</span></div>
+          ${sec('inc', '입금', incSum, 'text-emerald-700')}
+          ${sec('exp', '지출', r.totalExpense, 'text-rose-700')}
+          <div class="flex justify-between font-extrabold text-sm border-t-2 border-slate-900 pt-2"><span>(입금)-(지출)</span><span class="${diff < 0 ? 'text-rose-600' : ''}">${sgn(diff)}</span></div>
+          <p class="text-[10px] text-slate-400 no-print">항목을 누르면 그 기간 내역이 날짜순으로 나와요. 보기 전용이에요. (A4 사진 저장은 기본표로 저장돼요)</p>`;
+        return;
+      }
       let bodyRows = '';
       for (const it of a4Rows(Math.max(incRows.length, expRows.length))) {
         if (it.sep) { bodyRows += a4SepRow(it.sep); continue; }
@@ -4969,6 +5034,8 @@
     document.getElementById('btn-range-month').addEventListener('click', () => { const t = todayStr(), ym = t.slice(0, 7); const last = new Date(+t.slice(0, 4), +t.slice(5, 7), 0).getDate(); setRange(ym + '-01', ym + '-' + String(last).padStart(2, '0')); });
 
     document.getElementById('btn-report-a4').addEventListener('click', () => reportSaveA4());
+    document.getElementById('btn-view-table').addEventListener('click', () => { reportView = 'table'; renderReport(); });
+    document.getElementById('btn-view-group').addEventListener('click', () => { reportView = 'group'; renderReport(); });
 
 
 
