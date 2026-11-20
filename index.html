@@ -3089,18 +3089,40 @@
       saveA4Pages({ title: club.name, left: fmtMeetingWhen(mt), right: `${mt.title} 결산`, inc, exp, name: '정산',
         foot: { incTotal: si, expTotal: se, diff: si - se, carry: cy, grand: si - se + cy } });
     };
+    // 결산 표 줄 만들기: 같은 항목은 한 줄로 합치고(여러 건이면 "N건"), 회비는 회원별 상세로 보관
+    function buildReportRows(r) {
+      const clean = t => String(t || '').replace(/^\[[^\]]*\]\s*/, '');
+      const nm = v => String(v == null ? '' : v).trim() || '항목 미지정';
+      const incRaw = [], expRaw = [];
+      r.duesGroups.forEach(g => {
+        const gn = `${g.label} 회비`;
+        const ms = (g.members && g.members.length) ? g.members : [{ name: '', date: g.date, amount: g.amount }];
+        ms.forEach(m => incRaw.push({ grp: gn, date: m.date || g.date, det: m.name || '', amt: m.amount, dues: true }));
+      });
+      r.extraIncomes.forEach(x => incRaw.push({ grp: nm(x.title), date: x.date, det: x.note || '', amt: x.amount, ref: { k: 'led', id: x.id } }));
+      (r.meetingIncomes || []).forEach(x => incRaw.push({ grp: nm(x.title), date: x.date, det: x.note || '', amt: x.amount, ref: x.ref }));
+      r.meetingExpenses.forEach(e => expRaw.push({ grp: nm(e.item), date: e.date, det: clean(e.title), amt: e.amount, ref: e.ref }));
+      r.extraExpenses.forEach(x => expRaw.push({ grp: nm(x.title), date: x.date, det: x.note || '', amt: x.amount, ref: { k: 'led', id: x.id } }));
+      const pack = raw => {
+        const m = new Map();
+        raw.forEach(x => {
+          const g = m.get(x.grp) || { name: x.grp, cnt: 0, sum: 0, items: [], date: '', dues: false };
+          g.cnt++; g.sum += Number(x.amt) || 0; g.items.push(x); if (x.dues) g.dues = true;
+          const d = String(x.date || '').slice(0, 10);
+          if (d && d !== '-' && (!g.date || d < g.date)) g.date = d;
+          m.set(x.grp, g);
+        });
+        const groups = [...m.values()].sort(byDateAsc);
+        const rows = groups.map(g => ({ name: g.name, item: g.name, grp: g.name, amt: g.sum, date: g.date,
+          memo: g.dues ? `${g.cnt}명` : (g.cnt > 1 ? `${g.cnt}건` : (g.items[0].det || '')) }));
+        return { groups, rows };
+      };
+      return { inc: pack(incRaw), exp: pack(expRaw) };
+    }
     window.reportSaveA4 = function() {
       const r = computeReportData();
       if (!r.club.id) { showToast('먼저 모임을 만들어 주세요.'); return; }
-      const inc = [];
-      r.duesGroups.forEach(g => inc.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date }));
-      r.extraIncomes.forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
-      (r.meetingIncomes || []).forEach(x => inc.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
-      inc.sort(byDateAsc);
-      const exp = [];
-      r.meetingExpenses.forEach(e => exp.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date }));
-      r.extraExpenses.forEach(x => exp.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date }));
-      exp.sort(byDateAsc);
+      const bv = buildReportRows(r), inc = bv.inc.rows, exp = bv.exp.rows;
       const incSum = r.totalIncome - r.carryOver;
       saveA4Pages({ title: r.club.name, left: r.periodText, right: '결산보고서', inc, exp, name: '결산보고',
         foot: { incTotal: incSum, expTotal: r.totalExpense, diff: incSum - r.totalExpense, carry: r.carryOver, grand: r.balance } });
@@ -4835,9 +4857,10 @@
       const duesGroups = {};
       paidDues.forEach(d => {
         const key = d.yearMonth || '기타';
-        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0, date: '' };
+        if (!duesGroups[key]) duesGroups[key] = { label: key, count: 0, amount: 0, date: '', members: [] };
         const dd = normD(dueDate(d));
         if (dd && (!duesGroups[key].date || dd < duesGroups[key].date)) duesGroups[key].date = dd;
+        duesGroups[key].members.push({ name: (getMember(d.memberId) || {}).name || '', date: dd, amount: d.amount });
         duesGroups[key].count += 1;
         duesGroups[key].amount += d.amount;
       });
@@ -5010,15 +5033,7 @@
 
       // 결산서 양식: 입금내역(항목/내역/금액) | 지출내역(내역/금액)
       const fm = n => Number(n).toLocaleString();
-      const incRows = [];
-      r.duesGroups.forEach(g => incRows.push({ name: `${g.label} 회비`, memo: `${g.count}명`, amt: g.amount, date: g.date, grp: '회비', det: `${g.label} ${g.count}명` }));
-      r.extraIncomes.forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, id: x.id, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: { k: 'led', id: x.id } }));
-      (r.meetingIncomes || []).forEach(x => incRows.push({ name: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: x.ref }));
-      incRows.sort(byDateAsc);
-      const expRows = [];
-      r.meetingExpenses.forEach(e => expRows.push({ item: e.item || '', memo: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), amt: e.amount, date: e.date, grp: String(e.item || '').trim() || '항목 미지정', det: String(e.title).replace(/^\[[^\]]*\]\s*/, ''), ref: e.ref }));
-      r.extraExpenses.forEach(x => expRows.push({ item: x.title, memo: x.note || '', amt: x.amount, date: x.date, grp: String(x.title || '').trim() || '항목 미지정', det: x.note || '', ref: { k: 'led', id: x.id } }));
-      expRows.sort(byDateAsc);
+      const bv = buildReportRows(r), incRows = bv.inc.rows, expRows = bv.exp.rows;
       const incSum = r.totalIncome - r.carryOver;
       const diff = incSum - r.totalExpense;
       const bd = 'border border-slate-800';
@@ -5027,12 +5042,7 @@
         [...incRows.map(x => fm(x.amt)), fm(incSum)],
         [...expRows.map(x => fm(x.amt)), fm(r.totalExpense), sgn(diff), sgn(r.carryOver), sgn(r.balance)]
       );
-      const mkGroups = rows => {
-        const m = new Map();
-        rows.forEach(x => { const g = m.get(x.grp) || { name: x.grp, cnt: 0, sum: 0, items: [] }; g.cnt++; g.sum += Number(x.amt) || 0; g.items.push(x); m.set(x.grp, g); });
-        return [...m.values()].sort((a, b) => b.sum - a.sum);
-      };
-      window._rptGroups = { inc: mkGroups(incRows), exp: mkGroups(expRows) };
+      window._rptGroups = { inc: bv.inc.groups, exp: bv.exp.groups };
       window._rptMeta = { title: r.club.name, period: r.periodText };
       const gIdx = side => { const m = {}; window._rptGroups[side].forEach((g, i) => { m[g.name] = i; }); return m; };
       const incIdx = gIdx('inc'), expIdx = gIdx('exp');
