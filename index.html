@@ -2601,7 +2601,7 @@
       const a3 = Math.max(19, Math.ceil(mi * k / W * 100)), a5 = Math.max(18, Math.ceil(me * k / W * 100));
       const rem = 100 - a3 - a5, f = n => (rem * n / 66).toFixed(1);
       const cg = `<colgroup><col style="width:${f(16)}%"><col style="width:${f(17)}%"><col style="width:${a3}%"><col style="width:${f(16)}%"><col style="width:${f(17)}%"><col style="width:${a5}%"></colgroup>`;
-      return { colgroup: cg, cls: huge ? ' big-num' : '' };
+      return { colgroup: cg, cls: huge ? ' big-num' : '', pct: [f(16), f(17), a3, f(16), f(17), a5].map(Number) };
     }
     function settleCarryFor(mt) {
       const club = getActiveClub();
@@ -2780,7 +2780,15 @@
     };
     const saveA4Core = async function(spec) {
       const PW = 794, PH = 1123, K = 2.2, M = 48;
-      const cols = [96, 125, 128, 96, 125, 128];
+      const fm0 = n => Number(n).toLocaleString(), sg0 = n => n < 0 ? '- ' + fm0(-n) : fm0(n);
+      const ff = spec.foot || {};
+      // 화면과 같은 칸 너비 비율 사용
+      const lay = amtLayout(
+        [...spec.inc.map(x => fm0(x.amt)), fm0(ff.incTotal || 0)],
+        [...spec.exp.map(x => fm0(x.amt)), fm0(ff.expTotal || 0), sg0(ff.diff || 0), sg0(ff.carry || 0), sg0(ff.grand || 0)]
+      );
+      const totW = PW - 2 * M;
+      const cols = lay.pct.map(v => v * totW / 100);
       const X = [M]; cols.forEach(w => X.push(X[X.length - 1] + w));
       const Y0 = 150, H1 = 36, H2 = 30, ROW = 36, FOOT = [36, 36, 36, 44], FH = 152;
       const bodyTop = Y0 + H1 + H2, limit = PH - 56;
@@ -2789,10 +2797,52 @@
       const fm = n => Number(n).toLocaleString();
       const sgn = n => n < 0 ? '- ' + fm(-n) : fm(n);
       const n = Math.max(spec.inc.length, spec.exp.length);
-      const pages = a4Plan(n, capFull, capLast);
+      // 줄 바꿈 계산 (화면처럼 글자 크기는 그대로, 길면 줄이 늘어남)
+      const mg = document.createElement('canvas').getContext('2d');
+      const wrapLines = (t, size, weight, wmax) => {
+        t = String(t == null ? '' : t); if (!t) return [];
+        mg.font = `${weight || 400} ${size}px ${fam}`;
+        const lines = []; let cur = '';
+        for (const ch of t) {
+          if (mg.measureText(cur + ch).width > wmax && cur) {
+            const sp = cur.lastIndexOf(' ');
+            if (sp > 0 && ch !== ' ') { lines.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; }
+            else { lines.push(cur); cur = ch.trim() === '' ? '' : ch; }
+          } else cur += ch;
+        }
+        if (cur) lines.push(cur);
+        return lines;
+      };
+      const LH = 1.25, PAD = 12;
+      const rowInfo = [];
+      for (let k = 0; k < n; k++) {
+        const A = spec.inc[k], E = spec.exp[k];
+        const cells = [];
+        if (A) { cells.push([A.name, 14, X[1] - X[0]], [A.memo, 11.5, X[2] - X[1]]); }
+        if (E) { cells.push([E.item, 14, X[4] - X[3]], [E.memo, 11.5, X[5] - X[4]]); }
+        let mx = 1;
+        cells.forEach(([t, sz, w]) => { mx = Math.max(mx, wrapLines(t, sz, 400, w - 8).length); });
+        const lh = mx === 1 ? 0 : mx * 14 * LH + PAD;
+        rowInfo.push({ lines: mx, h: Math.max(ROW, Math.ceil(lh)) });
+      }
+      const AVAIL = limit - bodyTop, AVAIL_LAST = AVAIL - FH, MINBLANK = 18 * ROW;
+      const chunks = []; { let cur = [], hh = 0;
+        for (let k = 0; k < n; k++) {
+          if (cur.length && hh + rowInfo[k].h > AVAIL) { chunks.push(cur); cur = []; hh = 0; }
+          cur.push(k); hh += rowInfo[k].h;
+        }
+        chunks.push(cur);
+        const lastH = chunks[chunks.length - 1].reduce((t, k) => t + rowInfo[k].h, 0);
+        if (lastH > AVAIL_LAST) {
+          const L = chunks.pop(), keep = Math.min(5, Math.max(1, L.length - 1));
+          chunks.push(L.slice(0, L.length - keep)); chunks.push(L.slice(L.length - keep));
+          if (!chunks[chunks.length - 2].length) chunks.splice(chunks.length - 2, 1);
+        }
+      }
+      const pages = chunks;
       const files = [];
       for (let pi = 0; pi < pages.length; pi++) {
-        const [a, b] = pages[pi], last = pi === pages.length - 1;
+        const idxs = pages[pi], last = pi === pages.length - 1;
         const cv = document.createElement('canvas');
         cv.width = Math.round(PW * K); cv.height = Math.round(PH * K);
         const g = cv.getContext('2d'); g.scale(K, K);
@@ -2810,6 +2860,30 @@
           g.fillText(t, al === 'right' ? x2 - 5 : (al === 'left' ? x1 + 4 : (x1 + x2) / 2), ym);
           try { g.letterSpacing = '0px'; } catch (e) {}
         };
+        // 화면처럼 칸이 좁으면 줄바꿈 (최대 2줄, 그래도 넘으면 글씨를 조금씩 줄임)
+        const txtw = (t, x1, x2, ym, o) => {
+          t = String(t == null ? '' : t); if (!t) return;
+          o = o || {}; let size = o.size || 14;
+          const wmax = x2 - x1 - 8;
+          const setF = z => { g.font = `${o.weight || 400} ${z}px ${fam}`; };
+          const split = () => {
+            const lines = []; let cur = '';
+            for (const ch of t) {
+              if (g.measureText(cur + ch).width > wmax && cur) {
+                const sp = cur.lastIndexOf(' ');
+                if (sp > 0 && ch !== ' ') { lines.push(cur.slice(0, sp)); cur = cur.slice(sp + 1) + ch; }
+                else { lines.push(cur); cur = ch.trim() === '' ? '' : ch; }
+              } else cur += ch;
+            }
+            if (cur) lines.push(cur);
+            return lines;
+          };
+          setF(size); let lines = split();
+          while (lines.length > 6 && size > 7) { size -= 0.5; setF(size); lines = split(); }
+          g.fillStyle = o.color || '#0f172a'; g.textBaseline = 'middle'; g.textAlign = 'center';
+          const lh = size * 1.25, y0 = ym - (lines.length - 1) * lh / 2;
+          lines.forEach((ln, i) => g.fillText(ln, (x1 + x2) / 2, y0 + i * lh));
+        };
         const box = (x1, y1, x2, y2, fill, lw) => {
           if (fill) { g.fillStyle = fill; g.fillRect(x1, y1, x2 - x1, y2 - y1); }
           g.strokeStyle = '#1e293b'; g.lineWidth = lw || 0.8; g.strokeRect(x1, y1, x2 - x1, y2 - y1);
@@ -2824,16 +2898,18 @@
           box(X[c], Y0 + H1, X[c + 1], Y0 + H1 + H2, '#f8fafc');
           txt(t, X[c], X[c + 1], Y0 + H1 + H2 / 2, { size: 12.5, weight: 800 });
         });
-        const R = last ? (pages.length === 1 ? Math.max(b - a, 18) : 18) : b - a;
-        const RH = (pages.length === 1 && R > 18) ? Math.floor((limit - bodyTop - FH) / R) : ROW;
-        for (let r = 0; r < R; r++) {
-          const y = bodyTop + r * RH, ym = y + RH / 2, k = a + r;
-          for (let c = 0; c < 6; c++) box(X[c], y, X[c + 1], y + RH);
-          const A = k < b ? spec.inc[k] : null, E = k < b ? spec.exp[k] : null;
-          if (A) { txt(A.name, X[0], X[1], ym); txt(A.memo, X[1], X[2], ym, { size: 11.5 }); txt(fm(A.amt), X[2], X[3], ym, { align: 'right' }); }
-          if (E) { txt(E.item, X[3], X[4], ym); txt(E.memo, X[4], X[5], ym, { size: 11.5 }); txt(fm(E.amt), X[5], X[6], ym, { align: 'right' }); }
-        }
-        let yEnd = bodyTop + R * RH;
+        let yy = bodyTop;
+        idxs.forEach(k => {
+          const h = rowInfo[k].h, ym = yy + h / 2;
+          for (let c = 0; c < 6; c++) box(X[c], yy, X[c + 1], yy + h);
+          const A = spec.inc[k], E = spec.exp[k];
+          if (A) { txtw(A.name, X[0], X[1], ym); txtw(A.memo, X[1], X[2], ym, { size: 11.5 }); txt(fm(A.amt), X[2], X[3], ym, { align: 'right' }); }
+          if (E) { txtw(E.item, X[3], X[4], ym); txtw(E.memo, X[4], X[5], ym, { size: 11.5 }); txt(fm(E.amt), X[5], X[6], ym, { align: 'right' }); }
+          yy += h;
+        });
+        if (last) { while (yy - bodyTop < MINBLANK) { for (let c = 0; c < 6; c++) box(X[c], yy, X[c + 1], yy + ROW); yy += ROW; } }
+        let yEnd = yy;
+
         if (last) {
           const f = spec.foot, red = '#e11d48';
           let y = yEnd;
