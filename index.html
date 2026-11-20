@@ -4825,25 +4825,28 @@
     window.addEventListener('load', fitStickyBars);
 
     // 화면을 확대(핀치)해도 상단 모임명 줄과 하단 메뉴가 항상 보이는 화면 가장자리에 붙어 있도록 위치를 보정
-    function pinBars() {
+    // (위치 계산 없이 transform 만 바꿔서 깜빡임을 최소화)
+    let pinPending = false, pinZoomed = false;
+    function pinBarsNow() {
+      pinPending = false;
       const vv = window.visualViewport; if (!vv) return;
       const h = document.getElementById('app-header'), n = document.querySelector('body > nav');
       const s = vv.scale;
-      const reset = (el) => { if (el) { el.style.left = ''; el.style.right = ''; el.style.top = ''; el.style.bottom = ''; el.style.width = ''; el.style.transform = ''; el.style.transformOrigin = ''; } };
-      if (Math.abs(s - 1) < 0.02) { reset(h); reset(n); return; }
-      const W = document.documentElement.clientWidth;
-      if (h) {
-        h.style.right = 'auto'; h.style.bottom = 'auto'; h.style.width = W + 'px';
-        h.style.left = vv.offsetLeft + 'px'; h.style.top = vv.offsetTop + 'px';
-        h.style.transformOrigin = '0 0'; h.style.transform = 'scale(' + (1 / s) + ')';
+      const els = [h, n].filter(Boolean);
+      if (Math.abs(s - 1) < 0.02) {
+        if (pinZoomed) { els.forEach(el => { el.style.left = ''; el.style.right = ''; el.style.top = ''; el.style.bottom = ''; el.style.width = ''; el.style.transform = ''; el.style.transformOrigin = ''; el.style.willChange = ''; }); pinZoomed = false; }
+        return;
       }
-      if (n) {
-        n.style.right = 'auto'; n.style.bottom = 'auto'; n.style.width = W + 'px';
-        n.style.left = vv.offsetLeft + 'px';
-        n.style.top = (vv.offsetTop + vv.height - n.offsetHeight / s) + 'px';
-        n.style.transformOrigin = '0 0'; n.style.transform = 'scale(' + (1 / s) + ')';
+      if (!pinZoomed) {
+        const W = document.documentElement.clientWidth;
+        els.forEach(el => { el.style.left = '0px'; el.style.top = '0px'; el.style.right = 'auto'; el.style.bottom = 'auto'; el.style.width = W + 'px'; el.style.transformOrigin = '0 0'; el.style.willChange = 'transform'; });
+        pinZoomed = true;
       }
+      const sc = 'scale(' + (1 / s) + ')';
+      if (h) h.style.transform = 'translate(' + vv.offsetLeft + 'px,' + vv.offsetTop + 'px) ' + sc;
+      if (n) n.style.transform = 'translate(' + vv.offsetLeft + 'px,' + (vv.offsetTop + vv.height - n.offsetHeight / s) + 'px) ' + sc;
     }
+    function pinBars() { if (!pinPending) { pinPending = true; requestAnimationFrame(pinBarsNow); } }
     if (window.visualViewport) {
       window.visualViewport.addEventListener('resize', pinBars);
       window.visualViewport.addEventListener('scroll', pinBars);
