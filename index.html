@@ -1556,7 +1556,7 @@
           const exps = [];
           (Array.isArray(mt.expenses) ? mt.expenses : []).forEach((e, ei) => {
             if (!e || typeof e !== 'object') return;
-            exps.push({ id: sid(e.id || ('exp_' + ci + '_' + ti + '_' + ei)), title: str(e.title, '지출'), amount: Math.max(0, toInt(e.amount)),
+            exps.push({ id: sid(e.id || ('exp_' + ci + '_' + ti + '_' + ei)), item: str(e.item), title: str(e.title, '지출'), amount: Math.max(0, toInt(e.amount)),
               payerId: sid(e.payerId), splitMemberIds: (Array.isArray(e.splitMemberIds) ? e.splitMemberIds : []).map(sid),
               paidMemberIds: (Array.isArray(e.paidMemberIds) ? e.paidMemberIds : []).map(sid) });
           });
@@ -2552,8 +2552,8 @@
         if (it.sep) { rowsHtml += a4SepRow(it.sep); continue; }
         const a = it.k >= 0 ? incs[it.k] : undefined, e = it.k >= 0 ? exps[it.k] : undefined;
         // 줄의 어느 칸을 눌러도 열리도록: 눌린 쪽에 내용이 없으면 같은 줄의 다른 쪽 항목을 연다
-        const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : (e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '');
-        const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : (a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '');
+        const ta = a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '';
+        const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : '';
         rowsHtml += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
           <td class="${bd} px-0.5 text-center break-words text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
