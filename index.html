@@ -986,16 +986,15 @@
           <label class="block font-semibold text-slate-700 mb-1">항목 *</label>
           <input id="input-entry-title" list="entry-title-list" type="text" placeholder="예: 화환, 답례품, 찬조금" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
         </div>
-        <div class="grid grid-cols-2 gap-2">
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
-            <input id="input-entry-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
-            <datalist id="entry-title-list"></datalist>
-          </div>
-          <div>
-            <label class="block font-semibold text-slate-700 mb-1">내역</label>
-            <input id="input-entry-note" type="text" placeholder="예: 3개, 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none">
-          </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">내역</label>
+          <input id="input-entry-note" type="text" placeholder="예: 3개, 영수증 보관" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          <p class="text-[10px] text-slate-400 mt-1">계산식을 쓰면 금액이 자동으로 들어가요. 예: 15명×150000, 4대×100000, 300000+50000 (빼기는 앞뒤를 띄우세요: 500000 - 30000)</p>
+        </div>
+        <div>
+          <label class="block font-semibold text-slate-700 mb-1">금액 (원) *</label>
+          <input id="input-entry-amount" type="text" inputmode="numeric" data-money="1" placeholder="예: 100000" class="w-full border border-slate-300 rounded-lg p-2 outline-none focus:ring-2 focus:ring-indigo-500">
+          <datalist id="entry-title-list"></datalist>
         </div>
       </div>
       <div class="flex space-x-2 pt-1">
@@ -2559,7 +2558,7 @@
         const te = e ? ` onclick="openSettleEntry('expense','${e.id}')" style="cursor:pointer"` : (a ? ` onclick="openSettleEntry('income','${a.id}')" style="cursor:pointer"` : '');
         rowsHtml += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ta}>${a ? esc(a.name) : ''}</td>
-          <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
+          <td class="${bd} px-0.5 text-center break-words text-[10px]"${ta}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ta}>${a ? fm(a.amount) : ''}</td>
           <td class="${bd} px-1 text-center break-words"${te}>${e ? esc(e.item || '') : ''}</td>
           <td class="${bd} px-0.5 text-center break-words text-[10px]"${te}>${e ? esc(e.title) : ''}</td>
@@ -2736,6 +2735,10 @@
     document.getElementById('settle-entry-memo').addEventListener('input', (ev) => {
       const v = calcFromMemo(ev.target.value);
       if (v !== null) document.getElementById('settle-entry-amount').value = v;
+    });
+    document.getElementById('input-entry-note').addEventListener('input', (ev) => {
+      const v = calcFromMemo(ev.target.value);
+      if (v !== null) document.getElementById('input-entry-amount').value = v;
     });
 
     // A4 한 장 분량 계산: 합계까지 들어가는 마지막 장 23줄, 그 앞 장은 28줄
@@ -4855,7 +4858,7 @@
         const ac = '', ec = '';
         bodyRows += `<tr class="h-8">
           <td class="${bd} px-1 text-center break-words"${ac}>${a ? esc(a.name) : ''}</td>
-          <td class="${bd} px-0.5 text-center whitespace-nowrap text-[10px]"${ac}>${a ? esc(a.memo) : ''}</td>
+          <td class="${bd} px-0.5 text-center break-words text-[10px]"${ac}>${a ? esc(a.memo) : ''}</td>
           <td class="${bd} px-1 text-right"${ac}>${a ? fm(a.amt) : ''}</td>
           <td class="${bd} px-1 text-center break-words"${ec}>${e ? esc(e.item) : ''}</td>
           <td class="${bd} px-0.5 text-center break-words text-[10px]"${ec}>${e ? esc(e.memo) : ''}</td>
