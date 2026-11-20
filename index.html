@@ -4833,15 +4833,20 @@
       chip.textContent = '🔍 100%로';
       chip.style.cssText = 'position:fixed;right:12px;bottom:76px;z-index:45;display:none;padding:8px 12px;border-radius:999px;background:#4f46e5;color:#fff;font-size:12px;font-weight:700;box-shadow:0 4px 12px rgba(0,0,0,.25);';
       document.body.appendChild(chip);
+      function fitZoomPad() { main.style.marginBottom = window._appZoom === 1 ? '' : (((window._appZoom - 1) * main.offsetHeight) + 'px'); }
+      if (window.ResizeObserver) new ResizeObserver(fitZoomPad).observe(main);
       function applyZoom(z, cx, cy) {
         z = Math.max(1, Math.min(3, z));
         const old = window._appZoom;
         if (Math.abs(z - old) < 0.001) return;
-        const px = (window.scrollX + cx) / old, py = (window.scrollY + cy) / old;
+        const r = main.getBoundingClientRect(), ox = r.left + window.scrollX, oy = r.top + window.scrollY;
+        const px = ox + (window.scrollX + cx - ox) / old, py = oy + (window.scrollY + cy - oy) / old;
         window._appZoom = z;
-        main.style.zoom = z === 1 ? '' : String(z);
+        main.style.transformOrigin = '0 0';
+        main.style.transform = z === 1 ? '' : 'scale(' + z + ')';
+        fitZoomPad();
         fitStickyBars();
-        window.scrollTo(px * z - cx, py * z - cy);
+        window.scrollTo(ox + (px - ox) * z - cx, oy + (py - oy) * z - cy);
         chip.style.display = z === 1 ? 'none' : 'block';
       }
       chip.addEventListener('click', () => applyZoom(1, window.innerWidth / 2, window.innerHeight / 2));
