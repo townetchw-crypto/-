@@ -4952,11 +4952,17 @@
             <p class="text-[11px] font-bold text-amber-900">항목 이름 고치기 (여기 있는 ${renItems.length}건 모두 바뀌어요)</p>
             <div class="flex gap-1.5"><input id="rpt-rename-input" type="text" value="${esc(g.name === '항목 미지정' ? '' : g.name)}" placeholder="바꿀 항목 이름" class="flex-1 min-w-0 border border-slate-300 rounded-lg px-2 py-1.5 text-sm outline-none focus:ring-2 focus:ring-indigo-500"><button type="button" id="rpt-rename-btn" class="shrink-0 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold">바꾸기</button></div>
           </div>` : `<p class="mb-3 text-[10px] text-slate-400">회비 장부에서 자동으로 모은 항목이라 이름은 고칠 수 없어요.</p>`}
-          <table class="w-full border-collapse text-xs text-slate-900">
-            <thead><tr class="bg-slate-50 font-extrabold"><th class="border border-slate-300 py-1 w-16">날짜</th><th class="border border-slate-300">내역</th><th class="border border-slate-300 w-20">금액</th></tr></thead>
-            <tbody>${rows.map(x => `<tr class="h-8"><td class="border border-slate-300 text-center">${esc(String(x.date || '').slice(5, 10).replace('-', '.'))}</td><td class="border border-slate-300 px-1.5 break-words">${esc(x.det || '')}</td><td class="border border-slate-300 px-1.5 text-right">${fm(x.amt)}</td></tr>`).join('')}</tbody>
-            <tfoot><tr class="h-8 font-extrabold bg-slate-50"><td class="border border-slate-300 text-center" colspan="2">소계</td><td class="border border-slate-300 px-1.5 text-right">${fm(g.sum)}</td></tr></tfoot>
-          </table>
+          <div class="space-y-2">
+            <h3 class="text-center text-xl font-extrabold text-slate-900 py-1">${esc((window._rptMeta || {}).title || '')}</h3>
+            <div class="flex items-center justify-between text-sm font-bold text-slate-800"><span class="truncate mr-2">항목 : ${esc(g.name)}</span><span class="shrink-0">${esc((window._rptMeta || {}).period || '')}</span></div>
+            <table class="w-full border-collapse border-2 border-slate-900 text-[11px] sm:text-xs text-slate-900 table-fixed">
+              <colgroup><col style="width:19%"><col style="width:52%"><col style="width:29%"></colgroup>
+              <thead><tr class="h-7 font-extrabold bg-slate-50"><th class="border border-slate-800">날짜</th><th class="border border-slate-800">내역</th><th class="border border-slate-800">금액</th></tr></thead>
+              <tbody>${rows.map(x => `<tr class="h-8"><td class="border border-slate-800 text-center text-[10px]">${esc(String(x.date || '').slice(0, 10).replace(/-/g, '.'))}</td><td class="border border-slate-800 px-1 text-center break-words">${esc(x.det || '')}</td><td class="border border-slate-800 px-1.5 text-right">${fm(x.amt)}</td></tr>`).join('')}${Array.from({ length: Math.max(0, 12 - rows.length) }, () => '<tr class="h-8"><td class="border border-slate-800"></td><td class="border border-slate-800"></td><td class="border border-slate-800"></td></tr>').join('')}</tbody>
+              <tfoot class="font-extrabold"><tr class="h-9 bg-slate-50"><td class="border border-slate-800"></td><td class="border border-slate-800 text-center text-sm">합 계</td><td class="border border-slate-800 px-1.5 text-right">${fm(g.sum)}</td></tr></tfoot>
+            </table>
+            <p class="text-[10px] text-slate-400">사진 저장(A4)을 누르면 이 모양 그대로 저장돼요. 내용이 길면 여러 장으로 나뉘고 장마다 소계가 나와요.</p>
+          </div>
         </div></div>`;
       document.body.appendChild(w);
       const close = () => w.remove();
